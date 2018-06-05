@@ -23,21 +23,16 @@ struct PersistedTreeSchema {
 };
 
 template<typename KEY, typename VALUE, typename ADDRESS, size_t N, size_t M>
-class InMemoryNodeStorage {
+class NodeSerializer {
 public:
     using NodeType = Node<KEY, VALUE, ADDRESS, N, M>;
-
-private:
-    void *ptr_;
-    size_t size_;
-    size_t position_;
 
 private:
     struct serialized_inner_node_t {
         DepthType level;
         IndexType number_keys;
         KEY keys[N];
-        confs_sector_addr_t children[N + 1];
+        ADDRESS children[N + 1];
     };
 
     struct serialized_leaf_node_t {
@@ -54,31 +49,12 @@ private:
     };
 
 public:
-    InMemoryNodeStorage(size_t size) : ptr_(nullptr), size_(size), position_(0) {
-        ptr_ = malloc(size);
+    size_t size() {
+        return sizeof(serialized_nodes_t);
     }
 
-    ~InMemoryNodeStorage() {
-        if (ptr_ != nullptr) {
-            free(ptr_);
-            ptr_ = nullptr;
-        }
-    }
-
-private:
-    serialized_nodes_t *lookup(confs_sector_addr_t addr) {
-        return reinterpret_cast<serialized_nodes_t*>((uint8_t *)ptr_ + addr.block);
-    }
-
-    confs_sector_addr_t allocate() {
-        auto addr = confs_sector_addr_t{ (uint32_t)position_, 0 };
-        position_ += sizeof(serialized_nodes_t);
-        return addr;
-    }
-
-public:
-    void deserialize(ADDRESS addr, NodeType *node) {
-        auto s = lookup(addr);
+    void deserialize(const void *ptr, NodeType *node) {
+        auto s = reinterpret_cast<const serialized_nodes_t*>(ptr);
 
         assert(sizeof(node->keys) == sizeof(s->leaf.keys));
         assert(sizeof(node->values) == sizeof(s->leaf.values));
@@ -103,12 +79,8 @@ public:
         }
     }
 
-    ADDRESS serialize(ADDRESS addr, NodeType *node) {
-        if (!addr.valid()) {
-            addr = allocate();
-        }
-
-        auto s = lookup(addr);
+    void serialize(void *ptr, NodeType *node) {
+        auto s = reinterpret_cast<serialized_nodes_t*>(ptr);
 
         if (node->depth == 0) {
             s->leaf.level = node->depth;
@@ -129,7 +101,58 @@ public:
                 s->inner.children[i] = node->children[i].address();
             }
         }
+    }
+};
 
+template<typename KEY, typename VALUE, typename ADDRESS, size_t N, size_t M>
+class InMemoryNodeStorage {
+public:
+    using NodeType = Node<KEY, VALUE, ADDRESS, N, M>;
+    using SerializerType = NodeSerializer<KEY, VALUE, ADDRESS, N, M>;
+
+private:
+    void *ptr_;
+    size_t size_;
+    size_t position_;
+
+public:
+    InMemoryNodeStorage(size_t size) : ptr_(nullptr), size_(size), position_(0) {
+        ptr_ = malloc(size);
+    }
+
+    ~InMemoryNodeStorage() {
+        if (ptr_ != nullptr) {
+            free(ptr_);
+            ptr_ = nullptr;
+        }
+    }
+
+public:
+    void deserialize(ADDRESS addr, NodeType *node) {
+        SerializerType serializer;
+        serializer.deserialize(lookup(addr), node);
+    }
+
+    ADDRESS serialize(ADDRESS addr, NodeType *node) {
+        SerializerType serializer;
+
+        if (!addr.valid()) {
+            addr = allocate(serializer.size());
+        }
+
+        serializer.serialize(lookup(addr), node);
+
+        return addr;
+    }
+
+private:
+    void *lookup(confs_sector_addr_t addr) {
+        return (uint8_t *)ptr_ + addr.block;
+    }
+
+    confs_sector_addr_t allocate(size_t size) {
+        auto addr = confs_sector_addr_t{ (uint32_t)position_, 0 };
+        position_ += size;
         return addr;
     }
 };
