@@ -26,7 +26,18 @@ TEST_F(FileOpsSuite, CreateFile) {
     ASSERT_FALSE(fs.exists("test.bin"));
 
     auto file = fs.open("test.bin");
-    // file.close();
+    file.close();
+
+    ASSERT_TRUE(fs.exists("test.bin"));
+}
+
+TEST_F(FileOpsSuite, InitializeFindsPreviousTree) {
+    ASSERT_FALSE(fs.exists("test.bin"));
+
+    auto file = fs.open("test.bin");
+    file.close();
+
+    ASSERT_TRUE(fs.initialize());
 
     ASSERT_TRUE(fs.exists("test.bin"));
 }

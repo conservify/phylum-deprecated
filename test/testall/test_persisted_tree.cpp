@@ -1,8 +1,9 @@
 #include <gtest/gtest.h>
 
-#include <confs/persisted_tree.h>
 #include <confs/block_alloc.h>
 #include <confs/inodes.h>
+#include <confs/persisted_tree.h>
+#include <confs/in_memory_nodes.h>
 #include <backends/linux-memory/linux-memory.h>
 
 #include "utilities.h"
@@ -29,9 +30,9 @@ protected:
 
 TEST_F(PersistedTreeSuite, BuildTree) {
     using NodeType = Node<int32_t, int32_t, confs_sector_addr_t, 6, 6>;
-    auto memory = InMemoryNodeStorage<NodeType>{ 2048 };
-    auto nodes = MemoryConstrainedNodeCache<NodeType, 8>{ memory };
-    auto tree = PersistedTree<NodeType>{ nodes };
+    auto storage = InMemoryNodeStorage<NodeType>{ 2048 };
+    auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
+    auto tree = PersistedTree<NodeType>{ cache };
 
     tree.add(100, 5738);
 
@@ -57,9 +58,9 @@ TEST_F(PersistedTreeSuite, BuildTree) {
 
 TEST_F(PersistedTreeSuite, Remove) {
     using NodeType = Node<int32_t, int32_t, confs_sector_addr_t, 6, 6>;
-    auto memory = InMemoryNodeStorage<NodeType>{ 2048 };
-    auto nodes = MemoryConstrainedNodeCache<NodeType, 8>{ memory };
-    auto tree = PersistedTree<NodeType>{ nodes };
+    auto storage = InMemoryNodeStorage<NodeType>{ 2048 };
+    auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
+    auto tree = PersistedTree<NodeType>{ cache };
 
     tree.add(100, 5738);
 
@@ -82,9 +83,9 @@ TEST_F(PersistedTreeSuite, Remove) {
 
 TEST_F(PersistedTreeSuite, MultipleLookupRandom) {
     using NodeType = Node<int32_t, int32_t, confs_sector_addr_t, 6, 6>;
-    auto memory = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
-    auto nodes = MemoryConstrainedNodeCache<NodeType, 8>{ memory };
-    auto tree = PersistedTree<NodeType>{ nodes };
+    auto storage = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
+    auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
+    auto tree = PersistedTree<NodeType>{ cache };
     auto map = std::map<NodeType::KeyType, NodeType::ValueType>{};
 
     srand(1);
@@ -109,8 +110,8 @@ TEST_F(PersistedTreeSuite, MultipleLookupCustomKeyType) {
 
     using NodeType = Node<btree_key_t, int32_t, confs_sector_addr_t, 6, 6>;
     auto storage = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
-    auto nodes = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
-    auto tree = PersistedTree<NodeType>{ nodes };
+    auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
+    auto tree = PersistedTree<NodeType>{ cache };
     auto map = std::map<NodeType::KeyType, NodeType::ValueType>{};
 
     for (auto i = 0; i < 8; ++i) {

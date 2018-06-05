@@ -63,6 +63,12 @@ public:
         uint8_t buffer_[512];
 
     public:
+        OpenFile() {
+        }
+
+    public:
+        void close() {
+        }
     };
 
 public:

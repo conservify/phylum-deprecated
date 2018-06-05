@@ -97,7 +97,7 @@ typedef struct confs_block_magic_t {
     char key[sizeof(confs_magic_key)];
 
     void fill();
-    bool valid();
+    bool valid() const;
 } confs_block_magic_t;
 
 typedef struct confs_block_header_t {
