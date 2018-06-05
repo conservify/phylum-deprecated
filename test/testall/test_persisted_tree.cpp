@@ -83,7 +83,10 @@ TEST_F(PersistedTreeSuite, MultipleLookupRandom) {
     auto memory = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
     auto nodes = MemoryConstrainedNodeCache<NodeType, 8>{ memory };
     auto tree = PersistedTree<NodeType>{ nodes };
-    auto map = std::map<NodeType::KeyType, NodeType::ValueType>{};
+    auto map = std::map<int32_t, int32_t>{};
+
+    using StandardTree = BPlusTree<int32_t, int32_t, 6, 6>;
+    StandardTree other_tree;
 
     srand(1);
 
@@ -91,6 +94,7 @@ TEST_F(PersistedTreeSuite, MultipleLookupRandom) {
     for (auto i = 0; i < 1024; ++i) {
         auto key = random() % UINT32_MAX;
         tree.add(key, value);
+        other_tree.add(key, value);
         map[key] = value;
         ASSERT_EQ(tree.find(key), value);
 
@@ -109,7 +113,7 @@ TEST_F(PersistedTreeSuite, MultipleLookupCustomKeyType) {
     auto storage = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
     auto nodes = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
     auto tree = PersistedTree<NodeType>{ nodes };
-    auto map = std::map<NodeType::KeyType, NodeType::ValueType>{};
+    auto map = std::map<btree_key_t, int32_t>{};
 
     for (auto i = 0; i < 8; ++i) {
         auto inode = (uint32_t)(random() % 2048 + 1024);
