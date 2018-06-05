@@ -407,6 +407,19 @@ public:
         }
     }
 
+    ADDRESS create_if_necessary() {
+        if (ref_.valid()) {
+            return ref_.address();
+        }
+
+        auto nref = nodes_->allocate();
+        auto node = nodes_->resolve(nref);
+        node->clear();
+        ref_ = nodes_->flush();
+
+        return ref_.address();
+    }
+
 private:
     struct SplitOutcome {
         KEY key;
@@ -418,19 +431,6 @@ private:
             return key != 0;
         }
     };
-
-    bool create_if_necessary() {
-        if (ref_.valid()) {
-            return true;
-        }
-
-        auto nref = nodes_->allocate();
-        auto node = nodes_->resolve(nref);
-        node->clear();
-        ref_ = nodes_->flush();
-
-        return true;
-    }
 
     NodeRefType load_child(NodeType *node, IndexType i) {
         return node->children[i] = nodes_->load(node->children[i]);

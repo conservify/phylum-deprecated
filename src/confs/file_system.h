@@ -31,8 +31,8 @@ private:
         confs_sector_addr_t new_head;
 
     public:
-        TreeContext(FileSystem &fs, StorageBackendType &storage, BlockAllocator &allocator) :
-            fs(fs), nodes(storage, allocator), cache(nodes), tree(cache) {
+        TreeContext(FileSystem &fs) :
+            fs(fs), nodes(fs.storage_, fs.allocator_), cache(nodes), tree(cache) {
 
             if (fs.tree_addr_.valid()) {
                 tree.head(fs.tree_addr_);
@@ -40,10 +40,7 @@ private:
         }
 
         ~TreeContext() {
-            if (new_head.valid()) {
-                fs.sbm_.save(new_head.block);
-                fs.tree_addr_ = new_head;
-            }
+            flush();
         }
 
     public:
@@ -53,6 +50,20 @@ private:
 
         uint64_t find(INodeKey key) {
             return tree.find(key);
+        }
+
+        void touch() {
+            new_head = tree.create_if_necessary();
+        }
+
+        bool flush() {
+            if (new_head.valid()) {
+                fs.sbm_.save(new_head.block);
+                fs.tree_addr_ = new_head;
+                new_head.invalid();
+                return true;
+            }
+            return true;
         }
     };
 
@@ -77,9 +88,11 @@ public:
         if (!storage_.initialize(geometry_)) {
             return false;
         }
+
         if (!storage_.open()) {
             return false;
         }
+
         if (!sbm_.locate()) {
             if (!format()) {
                 return false;
@@ -91,8 +104,53 @@ public:
         return tree_addr_.valid();
     }
 
+    bool exists(const char *name) {
+        TreeContext tc{ *this };
+
+        auto id = crc32_checksum((uint8_t *)name, strlen(name));
+        auto key = make_key(2, id);
+
+        return tc.find(key) != 0;
+    }
+
+    OpenFile open(const char *name) {
+        TreeContext tc{ *this };
+
+        auto id = crc32_checksum((uint8_t *)name, strlen(name));
+        auto key = make_key(2, id);
+
+        auto existing = tc.find(key);
+        if (existing == 0) {
+            tc.add(key, 1);
+        }
+
+        return { };
+    }
+
+    bool close() {
+        return storage_.close();
+    }
+
+private:
+    bool touch() {
+        TreeContext tc{ *this };
+        tc.touch();
+        return true;
+    }
+
+    bool format() {
+        if (!sbm_.create()) {
+            return false;
+        }
+        if (!sbm_.locate()) {
+            return false;
+        }
+
+        return touch();
+    }
+
     confs_sector_addr_t find_tree() {
-        TreeContext tc{ *this, storage_, allocator_ };
+        TreeContext tc{ *this };
 
         auto tree_block = sbm_.tree_block();
         auto addr = confs_sector_addr_t{ tree_block, 0 };
@@ -114,53 +172,6 @@ public:
         }
 
         return found;
-    }
-
-    bool exists(const char *name) {
-        TreeContext tc{ *this, storage_, allocator_ };
-
-        auto id = crc32_checksum((uint8_t *)name, strlen(name));
-        auto key = make_key(2, id);
-
-        return tc.find(key) != 0;
-    }
-
-    OpenFile open(const char *name) {
-        TreeContext tc{ *this, storage_, allocator_ };
-
-        auto id = crc32_checksum((uint8_t *)name, strlen(name));
-        auto key = make_key(2, id);
-
-        auto existing = tc.find(key);
-        if (existing == 0) {
-            tc.add(key, 1);
-        }
-
-        return { };
-    }
-
-    bool close() {
-        return storage_.close();
-    }
-
-private:
-    bool format() {
-        if (!sbm_.create()) {
-            return false;
-        }
-        if (!sbm_.locate()) {
-            return false;
-        }
-
-        return create_tree();
-    }
-
-    bool create_tree() {
-        TreeContext tc{ *this, storage_, allocator_ };
-
-        tc.add(make_key(1, 0), 1);
-
-        return true;
     }
 };
 
