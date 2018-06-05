@@ -25,150 +25,16 @@ struct PersistedTreeSchema {
     static constexpr size_t Children = N + 1;
 };
 
-template<typename NODE>
-class NodeSerializer {
-public:
-    using NodeType = NODE;
-    using KEY = typename NODE::KeyType;
-    using VALUE = typename NODE::ValueType;
-    using ADDRESS = typename NODE::AddressType;
-
-private:
-    struct serialized_inner_node_t {
-        DepthType level;
-        IndexType number_keys;
-        KEY keys[NODE::InnerSize];
-        ADDRESS children[NODE::InnerSize + 1];
-    };
-
-    struct serialized_leaf_node_t {
-        DepthType level;
-        IndexType number_keys;
-        KEY keys[NODE::LeafSize];
-        VALUE values[NODE::LeafSize];
-    };
-
-    union serialized_nodes_t {
-        DepthType level;
-        serialized_inner_node_t inner;
-        serialized_leaf_node_t leaf;
-    };
-
-public:
-    size_t size() {
-        return sizeof(serialized_nodes_t);
-    }
-
-    void deserialize(const void *ptr, NodeType *node) {
-        auto s = reinterpret_cast<const serialized_nodes_t*>(ptr);
-
-        assert(sizeof(node->keys) == sizeof(s->leaf.keys));
-        assert(sizeof(node->values) == sizeof(s->leaf.values));
-
-        if (s->level == 0) {
-            node->depth = s->leaf.level;
-            node->number_keys = s->leaf.number_keys;
-            memcpy(&node->keys, &s->leaf.keys, sizeof(node->keys));
-            memcpy(&node->values, &s->leaf.values, sizeof(node->values));
-        }
-        else {
-            node->depth = s->inner.level;
-            node->number_keys = s->inner.number_keys;
-            memcpy(&node->keys, &s->inner.keys, sizeof(node->keys));
-            for (auto i = (IndexType)0; i < NODE::InnerSize + 1; ++i) {
-                node->children[i].clear();
-                if (s->inner.children[i].valid()) {
-                    node->children[i].address(s->inner.children[i]);
-                }
-            }
-            assert(!node->empty());
-        }
-    }
-
-    void serialize(void *ptr, NodeType *node) {
-        auto s = reinterpret_cast<serialized_nodes_t*>(ptr);
-
-        if (node->depth == 0) {
-            s->leaf.level = node->depth;
-            s->leaf.number_keys = node->number_keys;
-            memcpy(&s->leaf.keys, &node->keys, sizeof(node->keys));
-            memcpy(&s->leaf.values, &node->values, sizeof(node->values));
-        }
-        else {
-            assert(!node->empty());
-
-            s->inner.level = node->depth;
-            s->inner.number_keys = node->number_keys;
-            memcpy(&s->inner.keys, &node->keys, sizeof(node->keys));
-            for (auto i = (IndexType)0; i < NODE::InnerSize + 1; ++i) {
-                if (i <= node->number_keys) {
-                    assert(node->children[i].address().valid());
-                }
-                s->inner.children[i] = node->children[i].address();
-            }
-        }
-    }
+struct TreeHead {
+    timestamp_t timestamp;
 };
 
 template<typename NODE, typename ADDRESS>
 class NodeStorage {
 public:
-    virtual void deserialize(ADDRESS addr, NODE *node) = 0;
-    virtual ADDRESS serialize(ADDRESS addr, NODE *node) = 0;
+    virtual bool deserialize(ADDRESS addr, NODE *node, TreeHead *head) = 0;
+    virtual ADDRESS serialize(ADDRESS addr, const NODE *node, const TreeHead *head) = 0;
 
-};
-
-template<typename NODE, typename ADDRESS = typename NODE::AddressType>
-class InMemoryNodeStorage : public NodeStorage<NODE, ADDRESS> {
-public:
-    using NodeType = NODE;
-    using SerializerType = NodeSerializer<NodeType>;
-
-private:
-    void *ptr_;
-    size_t size_;
-    size_t position_;
-
-public:
-    InMemoryNodeStorage(size_t size) : ptr_(nullptr), size_(size), position_(0) {
-        ptr_ = malloc(size);
-    }
-
-    ~InMemoryNodeStorage() {
-        if (ptr_ != nullptr) {
-            free(ptr_);
-            ptr_ = nullptr;
-        }
-    }
-
-public:
-    virtual void deserialize(ADDRESS addr, NodeType *node) override {
-        SerializerType serializer;
-        serializer.deserialize(lookup(addr), node);
-    }
-
-    virtual ADDRESS serialize(ADDRESS addr, NodeType *node) override {
-        SerializerType serializer;
-
-        if (!addr.valid()) {
-            addr = allocate(serializer.size());
-        }
-
-        serializer.serialize(lookup(addr), node);
-
-        return addr;
-    }
-
-private:
-    void *lookup(confs_sector_addr_t addr) {
-        return (uint8_t *)ptr_ + addr.block;
-    }
-
-    confs_sector_addr_t allocate(size_t size) {
-        auto addr = confs_sector_addr_t{ (uint32_t)position_, 0 };
-        position_ += size;
-        return addr;
-    }
 };
 
 template<typename ADDRESS>
@@ -265,7 +131,7 @@ public:
         }
     }
 
-    bool empty() {
+    bool empty() const {
         return number_keys == 0;
     }
 
@@ -304,7 +170,7 @@ public:
 
 public:
     virtual NodeRefType allocate() = 0;
-    virtual NodeRefType load(NodeRefType ref) = 0;
+    virtual NodeRefType load(NodeRefType ref, bool head = false) = 0;
     virtual NodeType *resolve(NodeRefType ref) = 0;
     virtual NodeRefType flush() = 0;
     virtual void clear() = 0;
@@ -323,6 +189,7 @@ private:
     NodeType nodes_[SIZE];
     NodeRefType pending_[SIZE];
     IndexType index_{ 0 };
+    TreeHead information_{ 0 };
 
 public:
     MemoryConstrainedNodeCache(NodeStorageType &storage) : storage_(&storage) {
@@ -343,7 +210,7 @@ public:
         return ref;
     }
 
-    virtual NodeRefType load(NodeRefType ref) override {
+    virtual NodeRefType load(NodeRefType ref, bool head = false) override {
         assert(ref.address().valid());
 
         auto new_ref = allocate();
@@ -352,7 +219,7 @@ public:
 
         auto node = &nodes_[ref.index()];
 
-        storage_->deserialize(ref.address(), node);
+        storage_->deserialize(ref.address(), node, head ? &information_ : nullptr);
 
         #ifdef CONFS_PERSISTED_TREE_LOGGING
         sdebug << "Load: " << ref.address() << " " << *node << std::endl;
@@ -380,7 +247,9 @@ public:
             }
         }
 
-        auto head = flush(pending_[head_index]);
+        information_.timestamp++;
+
+        auto head = flush(pending_[head_index], true);
 
         clear();
 
@@ -395,7 +264,7 @@ public:
     }
 
 private:
-    NodeRefType flush(NodeRefType ref) {
+    NodeRefType flush(NodeRefType ref, bool head = false) {
         assert(ref.index() != 0xff);
 
         auto node = &nodes_[ref.index()];
@@ -407,8 +276,7 @@ private:
             }
         }
 
-        auto addr = storage_->serialize(ref.address(), node);
-        ref.address(addr);
+        ref.address(storage_->serialize(ref.address(), node, head ? &information_ : nullptr));
 
         #ifdef CONFS_PERSISTED_TREE_LOGGING
         sdebug << "   " << " W(#" << (int32_t)ref.index() << " " << ref.address() << " = " << *node << ")" << std::endl;
@@ -453,7 +321,7 @@ public:
 
         assert(ref_.valid());
 
-        auto nref = nodes_->load(ref_);
+        auto nref = nodes_->load(ref_, true);
         auto node = nodes_->resolve(nref);
         auto d = node->depth;
         while (d-- != 0) {
@@ -481,7 +349,7 @@ public:
 
         assert(ref_.valid());
 
-        auto nref = nodes_->load(ref_);
+        auto nref = nodes_->load(ref_, true);
         auto node = nodes_->resolve(nref);
 
         SplitOutcome split_outcome;
@@ -515,7 +383,7 @@ public:
     }
 
     bool remove(const KEY key) {
-        auto nref = nodes_->load(ref_);
+        auto nref = nodes_->load(ref_, true);
         auto node = nodes_->resolve(nref);
 
         auto d = node->depth;

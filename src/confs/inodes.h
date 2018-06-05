@@ -68,67 +68,6 @@ public:
   }
 */
 
-template<typename NODE, typename ADDRESS = typename NODE::AddressType>
-class StorageBackendNodeStorage : public NodeStorage<NODE, ADDRESS> {
-public:
-    using NodeType = NODE;
-    using SerializerType = NodeSerializer<NodeType>;
-
-private:
-    StorageBackend *storage_;
-    BlockAllocator *allocator_;
-    confs_sector_addr_t location_;
-
-public:
-    StorageBackendNodeStorage(StorageBackend &storage, BlockAllocator &allocator) : storage_(&storage), allocator_(&allocator) {
-    }
-
-public:
-    void deserialize(ADDRESS addr, NodeType *node) {
-        SerializerType serializer;
-
-        uint8_t buffer[512];
-        if (!storage_->read(addr, buffer, serializer.size())) {
-            return;
-        }
-
-        serializer.deserialize(buffer, node);
-    }
-
-    ADDRESS serialize(ADDRESS addr, NodeType *node) {
-        SerializerType serializer;
-
-        // We always dicsard the incoming address. Our memory backend refuses
-        // writes to unerased areas.
-        if (!location_.valid()) {
-            auto block = allocator_->allocate();
-            if (!storage_->erase(block)) {
-                return { };
-            }
-
-            location_ = { block, 0 };
-        }
-        else {
-            location_.sector++;
-            if (location_.sector == storage_->geometry().sectors_per_block()) {
-                location_ = allocator_->allocate();
-            }
-        }
-
-        // sdebug << "Serialize: " << location_ << std::endl;
-
-        uint8_t buffer[512];
-        serializer.serialize(buffer, node);
-
-        if (!storage_->write(location_, buffer, serializer.size())) {
-            return { };
-        }
-
-        return location_;
-    }
-
-};
-
 }
 
 #endif

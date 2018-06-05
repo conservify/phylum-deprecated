@@ -6,6 +6,7 @@
 #include "confs/super_block.h"
 #include "confs/crc.h"
 #include "confs/inodes.h"
+#include "confs/backend_nodes.h"
 
 namespace confs {
 
@@ -22,7 +23,7 @@ private:
 
 private:
     struct TreeContext {
-    private:
+    public:
         FileSystem &fs;
         StorageBackendNodeStorage<NodeType> nodes;
         MemoryConstrainedNodeCache<NodeType, 8> cache;
@@ -79,24 +80,40 @@ public:
         if (!storage_.open()) {
             return false;
         }
-        if (!sbm_.create()) {
-            return false;
-        }
         if (!sbm_.locate()) {
-            return false;
+            if (!format()) {
+                return false;
+            }
         }
 
         tree_addr_ = find_tree();
 
-        return true;
+        return tree_addr_.valid();
     }
 
     confs_sector_addr_t find_tree() {
+        TreeContext tc{ *this, storage_, allocator_ };
+
         auto tree_block = sbm_.tree_block();
+        auto addr = confs_sector_addr_t{ tree_block, 0 };
+        auto found = confs_sector_addr_t{ };
 
-        sdebug << "Tree Block: " << tree_block << std::endl;
+        while (addr.sector < storage_.geometry().sectors_per_block()) {
+            // sdebug << "Finding: " << addr << std::endl;
 
-        return { };
+            TreeHead head;
+            NodeType node;
+            if (tc.nodes.deserialize(addr, &node, &head)) {
+                found = addr;
+            }
+            else {
+                break;
+            }
+
+            addr.sector++;
+        }
+
+        return found;
     }
 
     bool exists(const char *name) {
@@ -124,6 +141,26 @@ public:
 
     bool close() {
         return storage_.close();
+    }
+
+private:
+    bool format() {
+        if (!sbm_.create()) {
+            return false;
+        }
+        if (!sbm_.locate()) {
+            return false;
+        }
+
+        return create_tree();
+    }
+
+    bool create_tree() {
+        TreeContext tc{ *this, storage_, allocator_ };
+
+        tc.add(make_key(1, 0), 1);
+
+        return true;
     }
 };
 
