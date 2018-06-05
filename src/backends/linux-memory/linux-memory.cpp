@@ -11,6 +11,13 @@ bool LinuxMemoryBackend::initialize(confs_geometry_t geometry) {
     return true;
 }
 
+void LinuxMemoryBackend::randomize() {
+    size_ = geometry_.number_of_sectors() * geometry_.sector_size;
+    for (size_t i = 0; i < size_ / sizeof(uint32_t); i++) {
+        ((uint32_t *)ptr_)[i] = rand();
+    }
+}
+
 bool LinuxMemoryBackend::open() {
     assert(geometry_.valid());
 
@@ -18,8 +25,6 @@ bool LinuxMemoryBackend::open() {
 
     size_ = geometry_.number_of_sectors() * geometry_.sector_size;
     ptr_ = (uint8_t *)malloc(size_);
-
-    assert(ptr_ != nullptr);
 
     log_.append(LogEntry{ OperationType::Opened, ptr_ });
 

@@ -29,6 +29,8 @@ protected:
 };
 
 TEST_F(SuperBlockSuite, LocatingUnformatted) {
+    storage_.randomize();
+
     ASSERT_FALSE(sbm_.locate());
 }
 
