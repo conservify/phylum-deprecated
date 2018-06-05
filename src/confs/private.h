@@ -1,6 +1,11 @@
 #ifndef __CONFS_PRIVATE_H_INCLUDED
 #define __CONFS_PRIVATE_H_INCLUDED
 
+#include <iostream>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+
 namespace confs {
 
 enum class confs_status_t {

@@ -1,9 +1,11 @@
 #include <gtest/gtest.h>
 
+#include <confs/persisted_tree.h>
+#include <confs/block_alloc.h>
+#include <confs/inodes.h>
+#include <backends/linux-memory/linux-memory.h>
+
 #include "utilities.h"
-#include "confs/persisted_tree.h"
-#include "confs/block_alloc.h"
-#include "backends/linux-memory/linux-memory.h"
 
 using namespace confs;
 
