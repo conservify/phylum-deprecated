@@ -1,6 +1,9 @@
 #ifndef __CONFS_PERSISTED_TREE_H_INCLUDED
 #define __CONFS_PERSISTED_TREE_H_INCLUDED
 
+#include "confs/private.h"
+#include "confs/tree.h"
+
 namespace confs {
 
 using DepthType = uint8_t;
@@ -437,10 +440,14 @@ private:
     NodeRefType ref_;
 
 public:
-    PersistedTree(NodeCacheType &nodes) : nodes_(&nodes) {
+    PersistedTree(NodeCacheType &nodes, ADDRESS address = ADDRESS()) : nodes_(&nodes), ref_(address) {
     }
 
 public:
+    void head(ADDRESS address) {
+        ref_ = { address };
+    }
+
     VALUE find(KEY key) {
         create_if_necessary();
 
@@ -469,7 +476,7 @@ public:
         return value;
     }
 
-    void add(KEY key, VALUE value) {
+    ADDRESS add(KEY key, VALUE value) {
         create_if_necessary();
 
         assert(ref_.valid());
@@ -496,11 +503,15 @@ public:
             new_node->keys[0] = split_outcome.key;
             new_node->children[0] = split_outcome.left;
             new_node->children[1] = split_outcome.right;
-            ref_ = nodes_->flush();
         }
-        else {
-            nodes_->flush();
-        }
+
+        ref_ = nodes_->flush();
+
+        return address();
+    }
+
+    ADDRESS address() {
+        return ref_.address();
     }
 
     bool remove(const KEY key) {

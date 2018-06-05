@@ -80,6 +80,8 @@ typedef struct confs_geometry_t {
     }
 } confs_geometry_t;
 
+using Geometry = confs_geometry_t;
+
 static const char confs_magic_key[] = "asdfasdf";
 
 typedef struct confs_block_alloc_sector_t {
@@ -112,6 +114,7 @@ typedef struct confs_sb_link_t {
 
 typedef struct confs_super_block_t {
     confs_sb_link_t link;
+    uint32_t number_of_files;
     block_index_t tree;
 } confs_super_block_t;
 

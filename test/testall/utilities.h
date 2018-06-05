@@ -17,8 +17,4 @@ typedef int64_t btree_value_t;
 
 std::map<btree_key_t, btree_value_t> random_data();
 
-inline uint64_t make_key(uint32_t inode, uint32_t offset) {
-    return ((uint64_t)offset << 32) | (uint64_t)inode;
-}
-
 #endif

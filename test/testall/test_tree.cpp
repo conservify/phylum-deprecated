@@ -2,6 +2,7 @@
 
 #include <confs/tree.h>
 #include <confs/private.h>
+#include <confs/inodes.h>
 
 #include "utilities.h"
 
