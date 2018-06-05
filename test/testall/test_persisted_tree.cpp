@@ -26,9 +26,10 @@ protected:
 };
 
 TEST_F(PersistedTreeSuite, BuildTree) {
-    auto memory = InMemoryNodeStorage<int32_t, int32_t, confs_sector_addr_t, 6, 6>{ 2048 };
-    auto nodes = MemoryConstrainedNodeCache<int32_t, int32_t, confs_sector_addr_t, 6, 6, 8>{ memory };
-    auto tree = PersistedTree<int32_t, int32_t, confs_sector_addr_t, 6, 6>{ nodes };
+    using NodeType = Node<int32_t, int32_t, confs_sector_addr_t, 6, 6>;
+    auto memory = InMemoryNodeStorage<NodeType>{ 2048 };
+    auto nodes = MemoryConstrainedNodeCache<NodeType, 8>{ memory };
+    auto tree = PersistedTree<NodeType>{ nodes };
 
     tree.add(100, 5738);
 
@@ -53,9 +54,10 @@ TEST_F(PersistedTreeSuite, BuildTree) {
 }
 
 TEST_F(PersistedTreeSuite, Remove) {
-    auto memory = InMemoryNodeStorage<int32_t, int32_t, confs_sector_addr_t, 6, 6>{ 2048 };
-    auto nodes = MemoryConstrainedNodeCache<int32_t, int32_t, confs_sector_addr_t, 6, 6, 8>{ memory };
-    auto tree = PersistedTree<int32_t, int32_t, confs_sector_addr_t, 6, 6>{ nodes };
+    using NodeType = Node<int32_t, int32_t, confs_sector_addr_t, 6, 6>;
+    auto memory = InMemoryNodeStorage<NodeType>{ 2048 };
+    auto nodes = MemoryConstrainedNodeCache<NodeType, 8>{ memory };
+    auto tree = PersistedTree<NodeType>{ nodes };
 
     tree.add(100, 5738);
 
@@ -77,9 +79,10 @@ TEST_F(PersistedTreeSuite, Remove) {
 }
 
 TEST_F(PersistedTreeSuite, MultipleLookupRandom) {
-    auto memory = InMemoryNodeStorage<int32_t, int32_t, confs_sector_addr_t, 6, 6>{ 1024 * 1024 };
-    auto nodes = MemoryConstrainedNodeCache<int32_t, int32_t, confs_sector_addr_t, 6, 6, 8>{ memory };
-    auto tree = PersistedTree<int32_t, int32_t, confs_sector_addr_t, 6, 6>{ nodes };
+    using NodeType = Node<int32_t, int32_t, confs_sector_addr_t, 6, 6>;
+    auto memory = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
+    auto nodes = MemoryConstrainedNodeCache<NodeType, 8>{ memory };
+    auto tree = PersistedTree<NodeType>{ nodes };
     auto map = std::map<int32_t, int32_t>{};
 
     using StandardTree = BPlusTree<int32_t, int32_t, 6, 6>;
@@ -106,9 +109,10 @@ TEST_F(PersistedTreeSuite, MultipleLookupRandom) {
 TEST_F(PersistedTreeSuite, MultipleLookupCustomKeyType) {
     std::vector<uint32_t> inodes;
 
-    auto storage = InMemoryNodeStorage<btree_key_t, int32_t, confs_sector_addr_t, 6, 6>{ 1024 * 1024 };
-    auto nodes = MemoryConstrainedNodeCache<btree_key_t, int32_t, confs_sector_addr_t, 6, 6, 8>{ storage };
-    auto tree = PersistedTree<btree_key_t, int32_t, confs_sector_addr_t, 6, 6>{ nodes };
+    using NodeType = Node<btree_key_t, int32_t, confs_sector_addr_t, 6, 6>;
+    auto storage = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
+    auto nodes = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
+    auto tree = PersistedTree<NodeType>{ nodes };
     auto map = std::map<btree_key_t, int32_t>{};
 
     for (auto i = 0; i < 8; ++i) {
@@ -129,23 +133,3 @@ TEST_F(PersistedTreeSuite, MultipleLookupCustomKeyType) {
         ASSERT_EQ(tree.find(pair.first), pair.second);
     }
 }
-
-template<class S>
-class Example {
-public:
-    typename S::KeyType key;
-
-};
-
-TEST_F(PersistedTreeSuite, Schema) {
-    using Schema = PersistedTreeSchema<int32_t, int32_t, confs_sector_addr_t, 6, 6>;
-    using TreeType = PersistedTree<Schema::KeyType, Schema::ValueType, Schema::AddressType, Schema::Keys, Schema::Values>;
-    using NodesType = MemoryConstrainedNodeCache<Schema::KeyType, Schema::ValueType, Schema::AddressType, Schema::Keys, Schema::Values, 8>;
-
-    auto storage = InMemoryNodeStorage<Schema::KeyType, Schema::ValueType, Schema::AddressType, Schema::Keys, Schema::Values>{ 1024 * 1024 };
-    NodesType nodes{ storage };
-    TreeType tree{ nodes };
-
-    sdebug << "sizeof(NodeType) = " << sizeof(Schema::NodeType) << std::endl;
-}
-

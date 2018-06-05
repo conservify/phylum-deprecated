@@ -22,24 +22,27 @@ struct PersistedTreeSchema {
     static constexpr size_t Children = N + 1;
 };
 
-template<typename KEY, typename VALUE, typename ADDRESS, size_t N, size_t M>
+template<typename NODE>
 class NodeSerializer {
 public:
-    using NodeType = Node<KEY, VALUE, ADDRESS, N, M>;
+    using NodeType = NODE;
+    using KEY = typename NODE::KeyType;
+    using VALUE = typename NODE::ValueType;
+    using ADDRESS = typename NODE::AddressType;
 
 private:
     struct serialized_inner_node_t {
         DepthType level;
         IndexType number_keys;
-        KEY keys[N];
-        ADDRESS children[N + 1];
+        KEY keys[NODE::InnerSize];
+        ADDRESS children[NODE::InnerSize + 1];
     };
 
     struct serialized_leaf_node_t {
         DepthType level;
         IndexType number_keys;
-        KEY keys[M];
-        VALUE values[M];
+        KEY keys[NODE::LeafSize];
+        VALUE values[NODE::LeafSize];
     };
 
     union serialized_nodes_t {
@@ -69,7 +72,7 @@ public:
             node->depth = s->inner.level;
             node->number_keys = s->inner.number_keys;
             memcpy(&node->keys, &s->inner.keys, sizeof(node->keys));
-            for (auto i = (IndexType)0; i < N + 1; ++i) {
+            for (auto i = (IndexType)0; i < NODE::InnerSize + 1; ++i) {
                 node->children[i].clear();
                 if (s->inner.children[i].valid()) {
                     node->children[i].address(s->inner.children[i]);
@@ -94,7 +97,7 @@ public:
             s->inner.level = node->depth;
             s->inner.number_keys = node->number_keys;
             memcpy(&s->inner.keys, &node->keys, sizeof(node->keys));
-            for (auto i = (IndexType)0; i < N + 1; ++i) {
+            for (auto i = (IndexType)0; i < NODE::InnerSize + 1; ++i) {
                 if (i <= node->number_keys) {
                     assert(node->children[i].address().valid());
                 }
@@ -104,11 +107,19 @@ public:
     }
 };
 
-template<typename KEY, typename VALUE, typename ADDRESS, size_t N, size_t M>
-class InMemoryNodeStorage {
+template<typename NODE, typename ADDRESS>
+class NodeStorage {
 public:
-    using NodeType = Node<KEY, VALUE, ADDRESS, N, M>;
-    using SerializerType = NodeSerializer<KEY, VALUE, ADDRESS, N, M>;
+    virtual void deserialize(ADDRESS addr, NODE *node) = 0;
+    virtual ADDRESS serialize(ADDRESS addr, NODE *node) = 0;
+
+};
+
+template<typename NODE, typename ADDRESS = typename NODE::AddressType>
+class InMemoryNodeStorage : public NodeStorage<NODE, ADDRESS> {
+public:
+    using NodeType = NODE;
+    using SerializerType = NodeSerializer<NodeType>;
 
 private:
     void *ptr_;
@@ -128,12 +139,12 @@ public:
     }
 
 public:
-    void deserialize(ADDRESS addr, NodeType *node) {
+    virtual void deserialize(ADDRESS addr, NodeType *node) override {
         SerializerType serializer;
         serializer.deserialize(lookup(addr), node);
     }
 
-    ADDRESS serialize(ADDRESS addr, NodeType *node) {
+    virtual ADDRESS serialize(ADDRESS addr, NodeType *node) override {
         SerializerType serializer;
 
         if (!addr.valid()) {
@@ -163,7 +174,7 @@ private:
     IndexType index_{ 0xff };
     ADDRESS address_;
 
-private:
+public:
     NodeRef(uint8_t index) : index_(index) {
     }
 
@@ -178,6 +189,10 @@ public:
 
     IndexType index() const {
         return index_;
+    }
+
+    void index(IndexType index) {
+        index_ = index;
     }
 
 public:
@@ -195,9 +210,6 @@ public:
 
     template<typename NADDRESS>
     friend std::ostream& operator<<(std::ostream& os, const NodeRef<NADDRESS> &n);
-
-    template<typename KEY, typename VALUE, typename NADDRESS, size_t N, size_t M, size_t S>
-    friend class MemoryConstrainedNodeCache;
 
     template<typename KEY, typename VALUE, typename NADDRESS, size_t N, size_t M>
     friend std::ostream& operator<<(std::ostream& os, const Node<KEY, VALUE, NADDRESS, N, M> &n);
@@ -221,7 +233,12 @@ public:
 template<typename KEY, typename VALUE, typename ADDRESS, size_t N, size_t M>
 class Node {
 public:
+    static constexpr size_t InnerSize = N;
+    static constexpr size_t LeafSize = M;
     using NodeRefType = NodeRef<ADDRESS>;
+    using KeyType = KEY;
+    using ValueType = VALUE;
+    using AddressType = ADDRESS;
 
 public:
     DepthType depth;
@@ -276,11 +293,11 @@ std::ostream& operator<<(std::ostream& os, const NodeRef<ADDRESS> &n) {
     return os << "Ref<#" << (size_t)n.index_ << " addr=" << n.address() << ">";
 }
 
-template<typename KEY, typename VALUE, typename ADDRESS, size_t N, size_t M>
+template<typename NODE>
 class NodeCache {
 public:
-    using NodeType = Node<KEY, VALUE, ADDRESS, N, M>;
-    using NodeRefType = NodeRef<ADDRESS>;
+    using NodeType = NODE;
+    using NodeRefType = NodeRef<typename NODE::AddressType>;
 
 public:
     virtual NodeRefType allocate() = 0;
@@ -291,27 +308,28 @@ public:
 
 };
 
-template<typename KEY, typename VALUE, typename ADDRESS, size_t N, size_t M, size_t SIZE>
-class MemoryConstrainedNodeCache : public NodeCache<KEY, VALUE, ADDRESS, N, M> {
+template<typename NODE, size_t SIZE>
+class MemoryConstrainedNodeCache : public NodeCache<NODE> {
 public:
-    using NodeType = Node<KEY, VALUE, ADDRESS, N, M>;
-    using NodeRefType = NodeRef<ADDRESS>;
+    using NodeType = NODE;
+    using NodeRefType = NodeRef<typename NODE::AddressType>;
+    using NodeStorageType = NodeStorage<NodeType, typename NODE::AddressType>;
 
 private:
-    InMemoryNodeStorage<KEY, VALUE, ADDRESS, N, M> *storage_;
+    NodeStorageType *storage_;
     NodeType nodes_[SIZE];
     NodeRefType pending_[SIZE];
     IndexType index_{ 0 };
 
 public:
-    MemoryConstrainedNodeCache(InMemoryNodeStorage<KEY, VALUE, ADDRESS, N, M> &storage) : storage_(&storage) {
+    MemoryConstrainedNodeCache(NodeStorageType &storage) : storage_(&storage) {
         clear();
     }
 
 public:
     virtual NodeType *resolve(NodeRefType ref) override {
-        assert(ref.index_ != 0xff);
-        return &nodes_[ref.index_];
+        assert(ref.index() != 0xff);
+        return &nodes_[ref.index()];
     }
 
     virtual NodeRefType allocate() override {
@@ -326,10 +344,10 @@ public:
         assert(ref.address().valid());
 
         auto new_ref = allocate();
-        ref.index_ = new_ref.index_;
-        pending_[ref.index_] = ref;
+        ref.index(new_ref.index());
+        pending_[ref.index()] = ref;
 
-        auto node = &nodes_[ref.index_];
+        auto node = &nodes_[ref.index()];
 
         storage_->deserialize(ref.address(), node);
 
@@ -350,12 +368,12 @@ public:
         }
 
         IndexType head_index = 0;
-        DepthType head_depth = nodes_[pending_[head_index].index_].depth;
+        DepthType head_depth = nodes_[pending_[head_index].index()].depth;
 
         for (auto i = (IndexType)1; i < index_; ++i) {
-            if (nodes_[pending_[i].index_].depth > head_depth) {
-                head_depth = nodes_[pending_[i].index_].depth;
-                head_index = pending_[i].index_;
+            if (nodes_[pending_[i].index()].depth > head_depth) {
+                head_depth = nodes_[pending_[i].index()].depth;
+                head_index = pending_[i].index();
             }
         }
 
@@ -375,12 +393,12 @@ public:
 
 private:
     NodeRefType flush(NodeRefType ref) {
-        assert(ref.index_ != 0xff);
+        assert(ref.index() != 0xff);
 
         auto node = &nodes_[ref.index()];
         if (node->depth > 0) {
             for (auto i = 0; i <= node->number_keys; ++i) {
-                if (node->children[i].index_ != 0xff) {
+                if (node->children[i].index() != 0xff) {
                     node->children[i] = flush(node->children[i]);
                 }
             }
@@ -390,7 +408,7 @@ private:
         ref.address(addr);
 
         #ifdef CONFS_PERSISTED_TREE_LOGGING
-        sdebug << "   " << " W(#" << (int32_t)ref.index_ << " " << ref.address() << " = " << *node << ")" << std::endl;
+        sdebug << "   " << " W(#" << (int32_t)ref.index() << " " << ref.address() << " = " << *node << ")" << std::endl;
         #endif
 
         return ref;
@@ -404,12 +422,15 @@ private:
  * https://en.wikibooks.org/wiki/Algorithm_Implementation/Trees/B%2B_tree
  * It has been modified from its original form somewhat.
  */
-template<typename KEY, typename VALUE, typename ADDRESS, size_t N, size_t M>
+template<typename NODE, size_t N = NODE::InnerSize, size_t M = NODE::LeafSize>
 class PersistedTree {
 public:
-    using NodeCacheType = NodeCache<KEY, VALUE, ADDRESS, N, M>;
-    using NodeRefType = NodeRef<ADDRESS>;
+    using KEY = typename NODE::KeyType;
+    using VALUE = typename NODE::ValueType;
+    using ADDRESS = typename NODE::AddressType;
     using NodeType = Node<KEY, VALUE, ADDRESS, N, M>;
+    using NodeCacheType = NodeCache<NodeType>;
+    using NodeRefType = NodeRef<ADDRESS>;
 
 private:
     NodeCacheType *nodes_;
