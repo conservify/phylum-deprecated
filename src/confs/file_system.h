@@ -15,11 +15,16 @@ class FileSystem {
 private:
     using NodeType = Node<INodeKey, uint64_t, confs_sector_addr_t, 6, 6>;
 
-    confs_geometry_t geometry_{ 1024, 4, 4, 512 };
+    Geometry geometry_{ 1024, 4, 4, 512 };
     StorageBackendType storage_;
     BlockAllocator allocator_{ storage_ };
     SuperBlockManager sbm_{ storage_, allocator_ };
     confs_sector_addr_t tree_addr_;
+
+public:
+    StorageBackendType &storage() {
+        return storage_;
+    }
 
 private:
     struct TreeContext {
@@ -138,17 +143,6 @@ private:
         return true;
     }
 
-    bool format() {
-        if (!sbm_.create()) {
-            return false;
-        }
-        if (!sbm_.locate()) {
-            return false;
-        }
-
-        return touch();
-    }
-
     confs_sector_addr_t find_tree() {
         TreeContext tc{ *this };
 
@@ -156,9 +150,8 @@ private:
         auto addr = confs_sector_addr_t{ tree_block, 0 };
         auto found = confs_sector_addr_t{ };
 
+        // We could compare TreeHead timestamps, though we always append.
         while (addr.sector < storage_.geometry().sectors_per_block()) {
-            // sdebug << "Finding: " << addr << std::endl;
-
             TreeHead head;
             NodeType node;
             if (tc.nodes.deserialize(addr, &node, &head)) {
@@ -173,6 +166,18 @@ private:
 
         return found;
     }
+
+    bool format() {
+        if (!sbm_.create()) {
+            return false;
+        }
+        if (!sbm_.locate()) {
+            return false;
+        }
+
+        return touch();
+    }
+
 };
 
 }

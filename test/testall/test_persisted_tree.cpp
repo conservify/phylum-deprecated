@@ -12,7 +12,7 @@ using namespace confs;
 
 class PersistedTreeSuite : public ::testing::Test {
 protected:
-    confs_geometry_t geometry_{ 1024, 4, 4, 512 };
+    Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend storage_;
     BlockAllocator allocator_{ storage_ };
 

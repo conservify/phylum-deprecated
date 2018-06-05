@@ -19,7 +19,7 @@ enum class OperationType {
     Opened,
     EraseBlock,
     Write,
-    Read,
+    Read
 };
 
 class LogEntry {
@@ -93,7 +93,7 @@ public:
         // sdebug << entry << std::endl;
     }
 
-    uint32_t size() {
+    uint32_t size() const {
         return entries_.size();
     }
 

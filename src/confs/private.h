@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <cassert>
 
 namespace confs {
 
@@ -34,6 +35,11 @@ using timestamp_t = uint32_t;
 constexpr sector_index_t CONFS_SECTOR_HEAD = 1;
 constexpr block_index_t BLOCK_INDEX_INVALID = ((block_index_t)-1);
 constexpr sector_index_t SECTOR_INDEX_INVALID = ((sector_index_t)-1);
+
+/**
+ *
+ */
+constexpr int32_t SectorSize = 512;
 
 typedef struct confs_sector_addr_t {
     block_index_t block;
@@ -72,6 +78,9 @@ typedef struct confs_geometry_t {
     }
 
     bool valid() const {
+        if (sector_size != SectorSize) {
+            return false;
+        }
         return number_of_blocks > 0 && pages_per_block > 0 && sectors_per_page > 0 && sector_size > 0;
     }
 
@@ -154,6 +163,90 @@ inline bool operator<=(const btree_key_t &lhs, const btree_key_t &rhs) {
 inline bool operator>=(const btree_key_t &lhs, const btree_key_t &rhs) {
     return !operator<(lhs, rhs);
 }
+
+struct BlockAddress {
+    block_index_t block;
+    uint32_t position;
+
+    bool valid() const {
+        return block != 0;
+    }
+
+    void invalid() {
+        block = 0;
+    }
+};
+
+struct BlockIterator {
+public:
+    block_index_t block;
+    uint32_t position;
+
+public:
+    BlockIterator() {
+    }
+
+    BlockIterator(BlockAddress addr) : block(addr.block), position(addr.position) {
+    }
+
+    BlockIterator(block_index_t block, uint32_t position = 0) : block(block), position(position) {
+    }
+
+    BlockIterator(confs_sector_addr_t addr) : block(addr.block), position(addr.sector * SectorSize) {
+    }
+
+public:
+    uint32_t remaining_in_sector(confs_geometry_t &g) {
+        return g.sector_size - (position % g.sector_size);
+    }
+
+    uint32_t remaining_in_block(confs_geometry_t &g) {
+        return g.block_size() - position;
+    }
+
+    sector_index_t sector_offset(confs_geometry_t &g) {
+        return position % g.sector_size;
+    }
+
+    sector_index_t sector_number(confs_geometry_t &g) {
+        return position / g.sector_size;
+    }
+
+    confs_sector_addr_t sector(confs_geometry_t &g) {
+        return { block, sector_number(g) };
+    }
+
+    void seek(uint32_t n) {
+        position = n;
+    }
+
+    void add(uint32_t n) {
+        position += n;
+    }
+
+    bool find_room(confs_geometry_t &g, uint32_t n) {
+        assert(n <= g.sector_size);
+
+        auto sector_remaining = remaining_in_sector(g);
+        if (sector_remaining > n) {
+            return true;
+        }
+
+        auto block_remaining = remaining_in_block(g);
+        if (block_remaining < n) {
+            return false;
+        }
+
+        position += sector_remaining;
+
+        return true;
+    }
+
+    BlockAddress address() {
+        return { block, position };
+    }
+
+};
 
 }
 
