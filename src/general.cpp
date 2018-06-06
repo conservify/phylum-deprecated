@@ -5,6 +5,8 @@ namespace confs {
 
 std::ostream &sdebug = std::cout;
 
+constexpr char BlockMagic::MagicKey[];
+
 void BlockMagic::fill() {
     memcpy(key, MagicKey, sizeof(MagicKey));
 }

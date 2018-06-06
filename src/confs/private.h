@@ -18,9 +18,65 @@ using timestamp_t = uint32_t;
 constexpr int32_t SectorSize = 512;
 
 constexpr sector_index_t CONFS_SECTOR_HEAD = 1;
+constexpr timestamp_t TIMESTAMP_INVALID = ((timestamp_t)-1);
 constexpr block_index_t BLOCK_INDEX_INVALID = ((block_index_t)-1);
 constexpr sector_index_t SECTOR_INDEX_INVALID = ((sector_index_t)-1);
+constexpr block_age_t BLOCK_AGE_INVALID = ((block_age_t)-1);
 constexpr uint32_t POSITION_INDEX_INVALID = ((uint32_t)-1);
+
+struct BlockMagic {
+    static constexpr char MagicKey[] = "cffssffc";
+
+    char key[sizeof(MagicKey)] = { 0 };
+
+    void fill();
+    bool valid() const;
+};
+
+enum class BlockType {
+    Anchor,
+    SuperBlockLink,
+    SuperBlock,
+    File,
+    Tree,
+    Error,
+    Unallocated
+};
+
+struct BlockAllocSector {
+    BlockMagic magic;
+    BlockType type;
+    block_age_t age{ BLOCK_AGE_INVALID };
+    timestamp_t timestamp{ TIMESTAMP_INVALID };
+    block_index_t linked_block{ BLOCK_INDEX_INVALID };
+
+    BlockAllocSector(BlockType type = BlockType::Error) : type(type) {
+    }
+
+    void fill() {
+        magic.fill();
+    }
+
+    bool valid() const {
+        return magic.valid();
+    }
+};
+
+struct BlockTailSector {
+    BlockMagic magic;
+    block_index_t linked_block{ BLOCK_INDEX_INVALID };
+
+    BlockTailSector() {
+    }
+
+    void fill() {
+        magic.fill();
+    }
+
+    bool valid() const {
+        return magic.valid();
+    }
+};
 
 struct SectorAddress {
     block_index_t block;
@@ -70,42 +126,6 @@ struct Geometry {
     }
 };
 
-static const char MagicKey[] = "asdfasdf";
-
-struct BlockMagic {
-    char key[sizeof(MagicKey)] = { 0 };
-
-    void fill();
-    bool valid() const;
-};
-
-enum class BlockType {
-    Anchor,
-    IndexInner,
-    IndexLeaf,
-    File,
-    INode,
-    SuperBlock,
-    SuperBlockChain,
-    Error,
-    Unallocated
-};
-
-struct BlockAllocSector {
-    BlockType type{ BlockType::Error };
-    block_index_t linked_block{ 0 };
-};
-
-struct BlockTailSector {
-
-};
-
-struct BlockHeader {
-    block_age_t age{ 0 };
-    timestamp_t timestamp{ 0 };
-    BlockMagic magic;
-};
-
 struct BlockAddress {
 public:
     block_index_t block;
@@ -149,12 +169,20 @@ public:
         return { block, sector_number(g) };
     }
 
+    BlockAddress address() {
+        return { block, position };
+    }
+
     void seek(uint32_t n) {
         position = n;
     }
 
     void add(uint32_t n) {
         position += n;
+    }
+
+    bool beginning_of_block() {
+        return position == 0;
     }
 
     bool find_room(Geometry &g, uint32_t n) {
@@ -175,10 +203,6 @@ public:
         return true;
     }
 
-    BlockAddress address() {
-        return { block, position };
-    }
-
 };
 
 extern std::ostream &sdebug;
@@ -196,6 +220,28 @@ inline std::ostream& operator<<(std::ostream& os, const Geometry &g) {
 
 inline std::ostream& operator<<(std::ostream& os, const BlockAddress &addr) {
     return os << addr.block << ":" << addr.position;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const BlockType &t) {
+    switch (t) {
+    case BlockType::Anchor: return os << "Anchor";
+    case BlockType::SuperBlockLink: return os << "SuperBlockLink";
+    case BlockType::SuperBlock: return os << "SuperBlock";
+    case BlockType::File: return os << "File";
+    case BlockType::Tree: return os << "Tree";
+    case BlockType::Error: return os << "Error";
+    default: {
+        return os << "<unknown>";
+    }
+    }
+}
+
+inline std::ostream& operator<<(std::ostream& os, const BlockAllocSector &h) {
+    return os << "BAS<type=" << h.type << " age=" << h.age << " ts=" << h.timestamp << " link=" << h.linked_block << ">";
+}
+
+inline std::ostream& operator<<(std::ostream& os, const BlockTailSector &h) {
+    return os << "BTS<>";
 }
 
 }

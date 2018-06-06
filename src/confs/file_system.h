@@ -164,12 +164,26 @@ private:
             TreeHead head;
             NodeType node;
 
-            if (nodes_.deserialize(iter, &node, &head)) {
-                found = iter;
-                iter.add(required);
+            if (iter.beginning_of_block()) {
+                TreeBlockHeader header;
+                if (!storage_.read(iter, &header, sizeof(TreeBlockHeader))) {
+                    return { };
+                }
+
+                if (!header.valid()) {
+                    return found;
+                }
+
+                iter.add(SectorSize);
             }
             else {
-                break;
+                if (nodes_.deserialize(iter, &node, &head)) {
+                    found = iter;
+                    iter.add(required);
+                }
+                else {
+                    break;
+                }
             }
         }
 

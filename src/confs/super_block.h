@@ -8,15 +8,21 @@
 namespace confs {
 
 struct SuperBlockLink {
-    BlockHeader header;
+    BlockAllocSector header;
     sector_index_t sector{ 0 };
     block_index_t chained_block{ 0 };
+
+    SuperBlockLink(BlockType type = BlockType::SuperBlockLink) : header(type) {
+    }
 };
 
 struct SuperBlock {
     SuperBlockLink link;
     uint32_t number_of_files{ 0 };
     block_index_t tree{ 0 };
+
+    SuperBlock() : link(BlockType::SuperBlock) {
+    }
 };
 
 class SuperBlockManager {

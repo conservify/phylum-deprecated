@@ -77,7 +77,7 @@ bool SuperBlockManager::find_link(block_index_t block, SuperBlockLink &found, Se
         }
 
         if (link.header.magic.valid()) {
-            if (link.header.timestamp > found.header.timestamp) {
+            if (found.header.timestamp == TIMESTAMP_INVALID || link.header.timestamp > found.header.timestamp) {
                 found = link;
                 where = { block, s };
             }

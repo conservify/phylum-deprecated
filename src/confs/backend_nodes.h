@@ -6,6 +6,27 @@
 
 namespace confs {
 
+struct TreeBlockHeader {
+    BlockAllocSector header;
+
+    TreeBlockHeader() : header(BlockType::Tree) {
+    }
+
+    void fill() {
+        header.magic.fill();
+        header.age = 0;
+        header.timestamp = 0;
+    }
+
+    bool valid() const {
+        return header.valid();
+    }
+};
+
+inline std::ostream& operator<<(std::ostream& os, const TreeBlockHeader &h) {
+    return os << "TreeBlock<" << h.header << ">";
+}
+
 template<typename NODE>
 class StorageBackendNodeStorage : public NodeStorage<NODE, BlockAddress> {
 public:
@@ -53,18 +74,13 @@ public:
         // We always dicsard the incoming address. Our memory backend refuses
         // writes to unerased areas.
         if (!location_.valid()) {
-            auto block = allocator_->allocate();
-            if (!storage_->erase(block)) {
-                return { };
-            }
-
-            location_ = { block, 0 };
+            location_ = initialize_block(allocator_->allocate());
         }
         else {
             location_.add(required);
 
             if (!location_.find_room(geometry, required)) {
-                location_ = BlockAddress{ allocator_->allocate(), 0 };
+                location_ = initialize_block(allocator_->allocate());
             }
         }
 
@@ -81,6 +97,23 @@ public:
         }
 
         return location_;
+    }
+
+private:
+    BlockAddress initialize_block(block_index_t block) {
+        TreeBlockHeader header;
+
+        header.fill();
+
+        if (!storage_->erase(block)) {
+            return { };
+        }
+
+        if (!storage_->write({ block, 0 }, 0, &header, sizeof(TreeBlockHeader))) {
+            return { };
+        }
+
+        return BlockAddress { block, SectorSize };
     }
 
 };
