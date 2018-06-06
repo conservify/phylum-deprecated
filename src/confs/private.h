@@ -9,33 +9,18 @@
 
 namespace confs {
 
-enum class BlockType {
-    Anchor,
-    IndexInner,
-    IndexLeaf,
-    File,
-    INode,
-    SuperBlock,
-    SuperBlockChain,
-    Error,
-    Unallocated = 0xff
-};
-
 using block_age_t = uint32_t;
 using block_index_t = uint32_t;
 using page_index_t = uint16_t;
 using sector_index_t = uint16_t;
 using timestamp_t = uint32_t;
 
+constexpr int32_t SectorSize = 512;
+
 constexpr sector_index_t CONFS_SECTOR_HEAD = 1;
 constexpr block_index_t BLOCK_INDEX_INVALID = ((block_index_t)-1);
 constexpr sector_index_t SECTOR_INDEX_INVALID = ((sector_index_t)-1);
 constexpr uint32_t POSITION_INDEX_INVALID = ((uint32_t)-1);
-
-/**
- *
- */
-constexpr int32_t SectorSize = 512;
 
 struct SectorAddress {
     block_index_t block;
@@ -85,10 +70,6 @@ struct Geometry {
     }
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Geometry &g) {
-    return os << "Geometry<" << g.number_of_blocks << " " << g.pages_per_block << " " << g.sectors_per_page << " " << g.sector_size << ">";
-}
-
 static const char MagicKey[] = "asdfasdf";
 
 struct BlockMagic {
@@ -96,6 +77,18 @@ struct BlockMagic {
 
     void fill();
     bool valid() const;
+};
+
+enum class BlockType {
+    Anchor,
+    IndexInner,
+    IndexLeaf,
+    File,
+    INode,
+    SuperBlock,
+    SuperBlockChain,
+    Error,
+    Unallocated
 };
 
 struct BlockAllocSector {
@@ -112,43 +105,6 @@ struct BlockHeader {
     timestamp_t timestamp{ 0 };
     BlockMagic magic;
 };
-
-extern std::ostream &sdebug;
-
-inline std::ostream& operator<<(std::ostream& os, const SectorAddress &addr) {
-    if (!addr.valid()) {
-        return os << "<invalid>";
-    }
-    return os << addr.block << ":" << addr.sector;
-}
-
-struct btree_key_t {
-    uint64_t data = { 0 };
-
-    btree_key_t(uint64_t data = 0) : data(data) {
-    }
-
-    friend std::ostream &operator<<(std::ostream &os, const btree_key_t &e);
-};
-
-inline bool operator==(const btree_key_t &lhs, const btree_key_t &rhs) {
-    return lhs.data == rhs.data;
-}
-inline bool operator!=(const btree_key_t &lhs, const btree_key_t &rhs) {
-    return !operator==(lhs, rhs);
-}
-inline bool operator<(const btree_key_t &lhs, const btree_key_t &rhs) {
-    return memcmp(&lhs.data, &rhs.data, sizeof(uint64_t)) < 0;
-}
-inline bool operator>(const btree_key_t &lhs, const btree_key_t &rhs) {
-    return operator<(rhs, lhs);
-}
-inline bool operator<=(const btree_key_t &lhs, const btree_key_t &rhs) {
-    return !operator>(lhs, rhs);
-}
-inline bool operator>=(const btree_key_t &lhs, const btree_key_t &rhs) {
-    return !operator<(lhs, rhs);
-}
 
 struct BlockAddress {
 public:
@@ -224,6 +180,19 @@ public:
     }
 
 };
+
+extern std::ostream &sdebug;
+
+inline std::ostream& operator<<(std::ostream& os, const SectorAddress &addr) {
+    if (!addr.valid()) {
+        return os << "<invalid>";
+    }
+    return os << addr.block << ":" << addr.sector;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const Geometry &g) {
+    return os << "Geometry<" << g.number_of_blocks << " " << g.pages_per_block << " " << g.sectors_per_page << " " << g.sector_size << ">";
+}
 
 inline std::ostream& operator<<(std::ostream& os, const BlockAddress &addr) {
     return os << addr.block << ":" << addr.position;

@@ -194,11 +194,6 @@ public:
             auto this_leaf = 0;
             for (unsigned i = 0; i < leaf->num_keys; ++i) {
                 if (leaf->keys[i] > key && leaf->keys[i] < last_key) {
-                    // btree_key_t this_key = leaf->keys[i];
-                    // uint64_t raw = this_key.data;
-                    // uint32_t inode = raw & ((uint32_t)-1);
-                    // uint32_t offset = (raw >> 32) & ((uint32_t)-1);
-                    // std::cout << leaf << " Leaf[" << i << "] = " << inode << " " << offset << " " << total_leaves << std::endl;
                     this_leaf++;
                 }
             }

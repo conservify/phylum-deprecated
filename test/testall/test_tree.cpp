@@ -8,7 +8,7 @@
 
 using namespace confs;
 
-using StandardTree = BPlusTree<btree_key_t, int64_t, 6, 6>;
+using StandardTree = BPlusTree<uint64_t, int64_t, 6, 6>;
 
 using std::pair;
 using std::map;
@@ -38,14 +38,6 @@ protected:
 TEST_F(TreeSuite, SimpleAddLookup) {
     StandardTree tree;
 
-    // sdebug << "sizeof(InnerNode) = " << tree.sizeof_inner_node() << std::endl;
-    // sdebug << "sizeof(LeafNode) = " << tree.sizeof_leaf_node() << std::endl;
-    // sdebug << "sizeof(unsigned) = " << sizeof(unsigned) << std::endl;
-    // sdebug << "sizeof(btree_key_t) = " << sizeof(btree_key_t) << std::endl;
-    // sdebug << "sizeof(int64_t) = " << sizeof(int64_t) << std::endl;
-
-    // Returns the size of a leaf node.
-    // It is useful when optimizing performance with cache alignment.
     ASSERT_EQ(tree.lookup(10), 0);
 
     ASSERT_TRUE(tree.add(10, 128));

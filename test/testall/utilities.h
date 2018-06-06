@@ -13,8 +13,6 @@
 
 using namespace confs;
 
-typedef int64_t btree_value_t;
-
-std::map<btree_key_t, btree_value_t> random_data();
+std::map<uint64_t, uint64_t> random_data();
 
 #endif

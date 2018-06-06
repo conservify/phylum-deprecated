@@ -108,7 +108,7 @@ TEST_F(PersistedTreeSuite, MultipleLookupRandom) {
 TEST_F(PersistedTreeSuite, MultipleLookupCustomKeyType) {
     std::vector<uint32_t> inodes;
 
-    using NodeType = Node<btree_key_t, int32_t, BlockAddress, 6, 6>;
+    using NodeType = Node<uint64_t, int32_t, BlockAddress, 6, 6>;
     auto storage = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
     auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
     auto tree = PersistedTree<NodeType>{ cache };
