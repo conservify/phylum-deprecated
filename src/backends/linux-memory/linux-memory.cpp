@@ -58,18 +58,18 @@ bool LinuxMemoryBackend::erase(block_index_t block) {
     return true;
 }
 
-bool LinuxMemoryBackend::read(SectorAddress addr, void *d, size_t n) {
+bool LinuxMemoryBackend::read(SectorAddress addr, size_t offset, void *d, size_t n) {
     assert(addr.valid());
     assert(geometry_.contains(addr));
     assert(n <= geometry_.sector_size);
 
-    auto o = addr.block * geometry_.block_size() + (addr.sector * geometry_.sector_size);
+    auto o = addr.block * geometry_.block_size() + (addr.sector * geometry_.sector_size) + offset;
     assert(o + n < size_);
 
     auto p = ptr_ + o;
     memcpy(d, p, n);
 
-    log_.append(LogEntry{ OperationType::Read, addr, p, n });
+    log_.append(LogEntry{ OperationType::Read, addr, p, offset, n });
 
     return true;
 }
@@ -84,18 +84,18 @@ static void verify_erased(SectorAddress addr, uint8_t *p, size_t n) {
     }
 }
 
-bool LinuxMemoryBackend::write(SectorAddress addr, void *d, size_t n) {
+bool LinuxMemoryBackend::write(SectorAddress addr, size_t offset, void *d, size_t n) {
     assert(geometry_.contains(addr));
     assert(n <= geometry_.sector_size);
 
-    auto o = addr.block * geometry_.block_size() + (addr.sector * geometry_.sector_size);
+    auto o = addr.block * geometry_.block_size() + (addr.sector * geometry_.sector_size) + offset;
     assert(o + n < size_);
 
     auto p = ptr_ + o;
     verify_erased(addr, p, n);
     memcpy(p, d, n);
 
-    log_.append(LogEntry{ OperationType::Write, addr, p, n });
+    log_.append(LogEntry{ OperationType::Write, addr, p, offset, n });
 
     return true;
 }

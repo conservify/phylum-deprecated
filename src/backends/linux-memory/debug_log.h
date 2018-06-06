@@ -28,20 +28,21 @@ private:
     block_index_t block_;
     sector_index_t sector_;
     uint8_t *ptr_;
+    size_t offset_;
     size_t size_;
     uint8_t *copy_;
 
 public:
     LogEntry(OperationType type, uint8_t *ptr) :
-        type_(type), block_(BLOCK_INDEX_INVALID), sector_(SECTOR_INDEX_INVALID), ptr_(ptr), size_(0), copy_(nullptr) {
+        type_(type), block_(BLOCK_INDEX_INVALID), sector_(SECTOR_INDEX_INVALID), ptr_(ptr), offset_(0), size_(0), copy_(nullptr) {
     }
 
     LogEntry(OperationType type, block_index_t block, uint8_t *ptr) :
-        type_(type), block_(block), sector_(SECTOR_INDEX_INVALID), ptr_(ptr), size_(0), copy_(nullptr) {
+        type_(type), block_(block), sector_(SECTOR_INDEX_INVALID), ptr_(ptr), offset_(0), size_(0), copy_(nullptr) {
     }
 
-    LogEntry(OperationType type, SectorAddress addr, uint8_t *ptr, size_t size) :
-        type_(type), block_(addr.block), sector_(addr.sector), ptr_(ptr), size_(size), copy_(nullptr) {
+    LogEntry(OperationType type, SectorAddress addr, uint8_t *ptr, size_t offset, size_t size) :
+        type_(type), block_(addr.block), sector_(addr.sector), ptr_(ptr), offset_(offset), size_(size), copy_(nullptr) {
     }
 
     virtual ~LogEntry() {

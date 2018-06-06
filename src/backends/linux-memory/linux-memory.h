@@ -33,8 +33,8 @@ public:
     Geometry &geometry() override;
     size_t size() override;
     bool erase(block_index_t block) override;
-    bool read(SectorAddress addr, void *d, size_t n) override;
-    bool write(SectorAddress addr, void *d, size_t n) override;
+    bool read(SectorAddress addr, size_t offset, void *d, size_t n) override;
+    bool write(SectorAddress addr, size_t offset, void *d, size_t n) override;
     void randomize();
 
 };

@@ -227,23 +227,23 @@ int32_t SuperBlockManager::chain_length() {
 }
 
 bool SuperBlockManager::read(SectorAddress addr, SuperBlockLink &link) {
-    return storage_->read(addr, &link, sizeof(SuperBlockLink));
+    return storage_->read(addr, 0, &link, sizeof(SuperBlockLink));
 }
 
 bool SuperBlockManager::write(SectorAddress addr, SuperBlockLink &link) {
-    return storage_->write(addr, &link, sizeof(SuperBlockLink));
+    return storage_->write(addr, 0, &link, sizeof(SuperBlockLink));
 }
 
 bool SuperBlockManager::read(SectorAddress addr, SuperBlock &sb) {
-    return storage_->read(addr, &sb, sizeof(SuperBlock));
+    return storage_->read(addr, 0, &sb, sizeof(SuperBlock));
 }
 
 bool SuperBlockManager::write(SectorAddress addr, SuperBlock &sb) {
-    return storage_->write(addr, &sb, sizeof(SuperBlock));
+    return storage_->write(addr, 0, &sb, sizeof(SuperBlock));
 }
 
 bool SuperBlockManager::write(SectorAddress addr, PendingWrite write) {
-    return storage_->write(addr, write.ptr, write.n);
+    return storage_->write(addr, 0, write.ptr, write.n);
 }
 
 }

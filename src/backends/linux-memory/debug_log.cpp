@@ -11,10 +11,10 @@ std::ostream& operator<<(std::ostream& os, const LogEntry& e) {
         os << "EraseBlock(" << e.block_ << ")";
         break;
     case OperationType::Read:
-        os << "Read(" << e.block_ << "." << e.sector_ << ")";
+        os << "Read(" << e.block_ << "." << e.sector_ << "+" << e.offset_ << ")";
         break;
     case OperationType::Write:
-        os << "Write(" << e.block_ << "." << e.sector_ << ")";
+        os << "Write(" << e.block_ << "." << e.sector_ << "+" << e.offset_ << ")";
         break;
     default:
         os << "Unknown";
