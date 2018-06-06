@@ -376,9 +376,6 @@ public:
         NODE_LEAF = 0xC0FFEE
     };
 
-    struct LeafNode;
-    struct InnerNode;
-
     struct Node {
         InnerNode *inner() {
             return reinterpret_cast<InnerNode*>(this);

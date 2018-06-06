@@ -92,15 +92,15 @@ inline std::ostream& operator<<(std::ostream& os, const Geometry &g) {
 static const char MagicKey[] = "asdfasdf";
 
 struct BlockMagic {
-    char key[sizeof(MagicKey)];
+    char key[sizeof(MagicKey)] = { 0 };
 
     void fill();
     bool valid() const;
 };
 
 struct BlockAllocSector {
-    BlockType type;
-    block_index_t linked_block;
+    BlockType type{ BlockType::Error };
+    block_index_t linked_block{ 0 };
 };
 
 struct BlockTailSector {
@@ -108,8 +108,8 @@ struct BlockTailSector {
 };
 
 struct BlockHeader {
-    block_age_t age;
-    timestamp_t timestamp;
+    block_age_t age{ 0 };
+    timestamp_t timestamp{ 0 };
     BlockMagic magic;
 };
 

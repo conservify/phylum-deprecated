@@ -11,7 +11,7 @@ SuperBlockManager::SuperBlockManager(StorageBackend &storage, BlockAllocator &al
 }
 
 bool SuperBlockManager::walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where) {
-    link = { 0 };
+    link = { };
     where.invalid();
 
     // Find link in anchor block so we can follow the chain from there.
@@ -50,7 +50,7 @@ bool SuperBlockManager::walk(block_index_t desired, SuperBlockLink &link, Sector
 }
 
 bool SuperBlockManager::locate() {
-    SuperBlockLink link = { 0 };
+    SuperBlockLink link;
     SectorAddress where;
 
     location_.invalid();
@@ -70,7 +70,7 @@ bool SuperBlockManager::locate() {
 
 bool SuperBlockManager::find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where) {
     for (auto s = CONFS_SECTOR_HEAD; s < storage_->geometry().sectors_per_block(); ++s) {
-        SuperBlockLink link = { 0 };
+        SuperBlockLink link;
 
         if (!read({ block, s }, link)) {
             return false;
@@ -179,7 +179,7 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
     }
 
     // Find the chain link that references this now obsolete location.
-    SuperBlockLink link = { 0 };
+    SuperBlockLink link;
     SectorAddress previous;
     if (!walk(addr.block, link, previous)) {
         return false;

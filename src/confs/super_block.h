@@ -9,14 +9,14 @@ namespace confs {
 
 struct SuperBlockLink {
     BlockHeader header;
-    sector_index_t sector;
-    block_index_t chained_block;
+    sector_index_t sector{ 0 };
+    block_index_t chained_block{ 0 };
 };
 
 struct SuperBlock {
     SuperBlockLink link;
-    uint32_t number_of_files;
-    block_index_t tree;
+    uint32_t number_of_files{ 0 };
+    block_index_t tree{ 0 };
 };
 
 class SuperBlockManager {
