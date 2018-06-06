@@ -91,6 +91,10 @@ typedef struct confs_geometry_t {
 
 using Geometry = confs_geometry_t;
 
+inline std::ostream& operator<<(std::ostream& os, const Geometry &g) {
+    return os << "Geometry<" << g.number_of_blocks << " " << g.pages_per_block << " " << g.sectors_per_page << " " << g.sector_size << ">";
+}
+
 static const char confs_magic_key[] = "asdfasdf";
 
 typedef struct confs_block_alloc_sector_t {
@@ -177,6 +181,10 @@ struct BlockAddress {
     }
 };
 
+inline std::ostream& operator<<(std::ostream& os, const BlockAddress &addr) {
+    return os << addr.block << ":" << addr.position;
+}
+
 struct BlockIterator {
 public:
     block_index_t block;
@@ -247,6 +255,10 @@ public:
     }
 
 };
+
+inline std::ostream& operator<<(std::ostream& os, const BlockIterator &iter) {
+    return os << iter.block << ":" << iter.position;
+}
 
 }
 

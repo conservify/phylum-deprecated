@@ -89,7 +89,7 @@ public:
     };
 
 public:
-    bool initialize() {
+    bool initialize(bool wipe = false) {
         if (!storage_.initialize(geometry_)) {
             return false;
         }
@@ -98,7 +98,7 @@ public:
             return false;
         }
 
-        if (!sbm_.locate()) {
+        if (wipe || !sbm_.locate()) {
             if (!format()) {
                 return false;
             }
@@ -147,6 +147,8 @@ private:
         TreeContext tc{ *this };
 
         auto tree_block = sbm_.tree_block();
+        assert(tree_block != BLOCK_INDEX_INVALID);
+
         auto addr = confs_sector_addr_t{ tree_block, 0 };
         auto found = confs_sector_addr_t{ };
 
@@ -154,6 +156,7 @@ private:
         while (addr.sector < storage_.geometry().sectors_per_block()) {
             TreeHead head;
             NodeType node;
+
             if (tc.nodes.deserialize(addr, &node, &head)) {
                 found = addr;
             }

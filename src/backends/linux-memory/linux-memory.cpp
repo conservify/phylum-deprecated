@@ -59,6 +59,7 @@ bool LinuxMemoryBackend::erase(block_index_t block) {
 }
 
 bool LinuxMemoryBackend::read(confs_sector_addr_t addr, void *d, size_t n) {
+    assert(addr.valid());
     assert(geometry_.contains(addr));
     assert(n < geometry_.sector_size);
 

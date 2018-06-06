@@ -13,7 +13,7 @@ protected:
 
 protected:
     void SetUp() override {
-        ASSERT_TRUE(fs.initialize());
+        ASSERT_TRUE(fs.initialize(true));
     }
 
     void TearDown() override {
