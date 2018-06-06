@@ -30,6 +30,7 @@ using timestamp_t = uint32_t;
 constexpr sector_index_t CONFS_SECTOR_HEAD = 1;
 constexpr block_index_t BLOCK_INDEX_INVALID = ((block_index_t)-1);
 constexpr sector_index_t SECTOR_INDEX_INVALID = ((sector_index_t)-1);
+constexpr uint32_t POSITION_INDEX_INVALID = ((uint32_t)-1);
 
 /**
  *
@@ -153,12 +154,17 @@ struct BlockAddress {
     block_index_t block;
     uint32_t position;
 
-    bool valid() const {
-        return block != 0;
+    BlockAddress(block_index_t block = BLOCK_INDEX_INVALID, uint32_t position = POSITION_INDEX_INVALID) :
+        block(block), position(position) {
     }
 
     void invalid() {
-        block = 0;
+        block = BLOCK_INDEX_INVALID;
+        position = POSITION_INDEX_INVALID;
+    }
+
+    bool valid() const {
+        return block != BLOCK_INDEX_INVALID && position != POSITION_INDEX_INVALID;
     }
 };
 

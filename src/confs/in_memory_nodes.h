@@ -50,12 +50,12 @@ public:
     }
 
 private:
-    void *lookup(SectorAddress addr) {
-        return (uint8_t *)ptr_ + addr.block;
+    void *lookup(BlockAddress addr) {
+        return (uint8_t *)ptr_ + addr.position;
     }
 
-    SectorAddress allocate(size_t size) {
-        auto addr = SectorAddress{ (uint32_t)position_, 0 };
+    BlockAddress allocate(size_t size) {
+        auto addr = BlockAddress{ 0, (uint32_t)position_ };
         position_ += size;
         return addr;
     }

@@ -29,7 +29,7 @@ protected:
 };
 
 TEST_F(PersistedTreeSuite, BuildTree) {
-    using NodeType = Node<int32_t, int32_t, SectorAddress, 6, 6>;
+    using NodeType = Node<int32_t, int32_t, BlockAddress, 6, 6>;
     auto storage = InMemoryNodeStorage<NodeType>{ 2048 };
     auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
     auto tree = PersistedTree<NodeType>{ cache };
@@ -57,7 +57,7 @@ TEST_F(PersistedTreeSuite, BuildTree) {
 }
 
 TEST_F(PersistedTreeSuite, Remove) {
-    using NodeType = Node<int32_t, int32_t, SectorAddress, 6, 6>;
+    using NodeType = Node<int32_t, int32_t, BlockAddress, 6, 6>;
     auto storage = InMemoryNodeStorage<NodeType>{ 2048 };
     auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
     auto tree = PersistedTree<NodeType>{ cache };
@@ -82,7 +82,7 @@ TEST_F(PersistedTreeSuite, Remove) {
 }
 
 TEST_F(PersistedTreeSuite, MultipleLookupRandom) {
-    using NodeType = Node<int32_t, int32_t, SectorAddress, 6, 6>;
+    using NodeType = Node<int32_t, int32_t, BlockAddress, 6, 6>;
     auto storage = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
     auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
     auto tree = PersistedTree<NodeType>{ cache };
@@ -108,7 +108,7 @@ TEST_F(PersistedTreeSuite, MultipleLookupRandom) {
 TEST_F(PersistedTreeSuite, MultipleLookupCustomKeyType) {
     std::vector<uint32_t> inodes;
 
-    using NodeType = Node<btree_key_t, int32_t, SectorAddress, 6, 6>;
+    using NodeType = Node<btree_key_t, int32_t, BlockAddress, 6, 6>;
     auto storage = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
     auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
     auto tree = PersistedTree<NodeType>{ cache };

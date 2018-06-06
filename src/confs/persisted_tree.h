@@ -438,7 +438,7 @@ private:
 
     SplitOutcome leaf_insert(NodeRefType nref, KEY key, VALUE value) {
         auto node = nodes_->resolve(nref);
-
+ 
         assert(node->number_keys <= M);
 
         auto i = Keys::leaf_position_for(key, node->keys, node->number_keys);
