@@ -35,7 +35,7 @@ private:
     };
 
     struct serialized_head_t {
-        confs_block_magic_t magic;
+        BlockMagic magic;
         timestamp_t timestamp;
         serialized_node_t node;
     };

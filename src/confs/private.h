@@ -9,12 +9,7 @@
 
 namespace confs {
 
-enum class confs_status_t {
-    Failure,
-    Success
-};
-
-enum class block_type_t {
+enum class BlockType {
     Anchor,
     IndexInner,
     IndexLeaf,
@@ -93,41 +88,29 @@ inline std::ostream& operator<<(std::ostream& os, const Geometry &g) {
     return os << "Geometry<" << g.number_of_blocks << " " << g.pages_per_block << " " << g.sectors_per_page << " " << g.sector_size << ">";
 }
 
-static const char confs_magic_key[] = "asdfasdf";
+static const char MagicKey[] = "asdfasdf";
 
-typedef struct confs_block_alloc_sector_t {
-    block_type_t type;
-    block_index_t linked_block;
-} confs_block_alloc_sector_t;
-
-typedef struct confs_block_tail_sector_t {
-
-} confs_block_tail_sector_t;
-
-typedef struct confs_block_magic_t {
-    char key[sizeof(confs_magic_key)];
+struct BlockMagic {
+    char key[sizeof(MagicKey)];
 
     void fill();
     bool valid() const;
-} confs_block_magic_t;
+};
 
-typedef struct confs_block_header_t {
+struct BlockAllocSector {
+    BlockType type;
+    block_index_t linked_block;
+};
+
+struct BlockTailSector {
+
+};
+
+struct BlockHeader {
     block_age_t age;
     timestamp_t timestamp;
-    confs_block_magic_t magic;
-} confs_block_header_t;
-
-typedef struct confs_sb_link_t {
-    confs_block_header_t header;
-    sector_index_t sector;
-    block_index_t chained_block;
-} confs_sb_link_t;
-
-typedef struct confs_super_block_t {
-    confs_sb_link_t link;
-    uint32_t number_of_files;
-    block_index_t tree;
-} confs_super_block_t;
+    BlockMagic magic;
+};
 
 extern std::ostream &sdebug;
 

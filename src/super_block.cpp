@@ -10,7 +10,7 @@ SuperBlockManager::SuperBlockManager(StorageBackend &storage, BlockAllocator &al
     storage_(&storage), allocator_(&allocator) {
 }
 
-bool SuperBlockManager::walk(block_index_t desired, confs_sb_link_t &link, confs_sector_addr_t &where) {
+bool SuperBlockManager::walk(block_index_t desired, SuperBlockLink &link, confs_sector_addr_t &where) {
     link = { 0 };
     where.invalid();
 
@@ -50,7 +50,7 @@ bool SuperBlockManager::walk(block_index_t desired, confs_sb_link_t &link, confs
 }
 
 bool SuperBlockManager::locate() {
-    confs_sb_link_t link = { 0 };
+    SuperBlockLink link = { 0 };
     confs_sector_addr_t where;
 
     location_.invalid();
@@ -68,9 +68,9 @@ bool SuperBlockManager::locate() {
     return true;
 }
 
-bool SuperBlockManager::find_link(block_index_t block, confs_sb_link_t &found, confs_sector_addr_t &where) {
+bool SuperBlockManager::find_link(block_index_t block, SuperBlockLink &found, confs_sector_addr_t &where) {
     for (auto s = CONFS_SECTOR_HEAD; s < storage_->geometry().sectors_per_block(); ++s) {
-        confs_sb_link_t link = { 0 };
+        SuperBlockLink link = { 0 };
 
         if (!read({ block, s }, link)) {
             return false;
@@ -91,7 +91,7 @@ bool SuperBlockManager::find_link(block_index_t block, confs_sb_link_t &found, c
 }
 
 bool SuperBlockManager::create() {
-    confs_sb_link_t link;
+    SuperBlockLink link;
     link.chained_block = BLOCK_INDEX_INVALID;
     link.header.magic.fill();
     link.header.timestamp = chain_length() + 2 + 1;
@@ -179,7 +179,7 @@ bool SuperBlockManager::rollover(confs_sector_addr_t addr, confs_sector_addr_t &
     }
 
     // Find the chain link that references this now obsolete location.
-    confs_sb_link_t link = { 0 };
+    SuperBlockLink link = { 0 };
     confs_sector_addr_t previous;
     if (!walk(addr.block, link, previous)) {
         return false;
@@ -190,7 +190,7 @@ bool SuperBlockManager::rollover(confs_sector_addr_t addr, confs_sector_addr_t &
 
     auto link_write = PendingWrite {
         &link,
-        sizeof(confs_sb_link_t)
+        sizeof(SuperBlockLink)
     };
 
     confs_sector_addr_t actually_wrote;
@@ -209,7 +209,7 @@ bool SuperBlockManager::save(block_index_t new_tree_block) {
 
     auto sb_write = PendingWrite{
         &sb_,
-        sizeof(confs_super_block_t)
+        sizeof(SuperBlock)
     };
 
     confs_sector_addr_t actually_wrote;
@@ -226,20 +226,20 @@ int32_t SuperBlockManager::chain_length() {
     return 2;
 }
 
-bool SuperBlockManager::read(confs_sector_addr_t addr, confs_sb_link_t &link) {
-    return storage_->read(addr, &link, sizeof(confs_sb_link_t));
+bool SuperBlockManager::read(confs_sector_addr_t addr, SuperBlockLink &link) {
+    return storage_->read(addr, &link, sizeof(SuperBlockLink));
 }
 
-bool SuperBlockManager::write(confs_sector_addr_t addr, confs_sb_link_t &link) {
-    return storage_->write(addr, &link, sizeof(confs_sb_link_t));
+bool SuperBlockManager::write(confs_sector_addr_t addr, SuperBlockLink &link) {
+    return storage_->write(addr, &link, sizeof(SuperBlockLink));
 }
 
-bool SuperBlockManager::read(confs_sector_addr_t addr, confs_super_block_t &sb) {
-    return storage_->read(addr, &sb, sizeof(confs_super_block_t));
+bool SuperBlockManager::read(confs_sector_addr_t addr, SuperBlock &sb) {
+    return storage_->read(addr, &sb, sizeof(SuperBlock));
 }
 
-bool SuperBlockManager::write(confs_sector_addr_t addr, confs_super_block_t &sb) {
-    return storage_->write(addr, &sb, sizeof(confs_super_block_t));
+bool SuperBlockManager::write(confs_sector_addr_t addr, SuperBlock &sb) {
+    return storage_->write(addr, &sb, sizeof(SuperBlock));
 }
 
 bool SuperBlockManager::write(confs_sector_addr_t addr, PendingWrite write) {
