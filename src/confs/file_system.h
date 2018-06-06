@@ -16,14 +16,20 @@ class OpenFile {
 private:
     FileSystem *fs_;
     uint32_t id_;
+    BlockAddress head_;
     bool readonly_{ false };
+
     uint8_t buffer_[SectorSize];
+    size_t position_{ 0 };
+    size_t available_{ 0 };
 
 public:
-    OpenFile(FileSystem &fs, bool readonly);
+    OpenFile(FileSystem &fs, file_id_t id, BlockAddress head, bool readonly);
 
 public:
     size_t write(const void *ptr, size_t size);
+    size_t read(void *ptr, size_t size);
+    size_t flush();
     void close();
 
 };
@@ -44,6 +50,7 @@ public:
 
     template<typename NodeType>
     friend struct TreeContext;
+    friend class OpenFile;
 
 public:
     StorageBackend &storage() {
@@ -54,13 +61,14 @@ public:
     bool initialize(bool wipe = false);
     bool open(bool wipe = false);
     bool exists(const char *name);
-    OpenFile open(const char *name);
+    OpenFile open(const char *name, bool readonly = false);
     bool close();
 
 private:
     bool touch();
-    BlockAddress find_tree();
     bool format();
+    BlockAddress initialize_block(block_index_t block, file_id_t file_id);
+    BlockAddress find_tree();
 
 };
 

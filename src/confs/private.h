@@ -14,6 +14,7 @@ using block_index_t = uint32_t;
 using page_index_t = uint16_t;
 using sector_index_t = uint16_t;
 using timestamp_t = uint32_t;
+using file_id_t = uint32_t;
 
 constexpr int32_t SectorSize = 512;
 
@@ -23,6 +24,7 @@ constexpr block_index_t BLOCK_INDEX_INVALID = ((block_index_t)-1);
 constexpr sector_index_t SECTOR_INDEX_INVALID = ((sector_index_t)-1);
 constexpr block_age_t BLOCK_AGE_INVALID = ((block_age_t)-1);
 constexpr uint32_t POSITION_INDEX_INVALID = ((uint32_t)-1);
+constexpr file_id_t FILE_ID_INVALID = ((file_id_t)-1);
 
 struct BlockMagic {
     static constexpr char MagicKey[] = "cffssffc";
@@ -75,6 +77,14 @@ struct BlockTailSector {
 
     bool valid() const {
         return magic.valid();
+    }
+};
+
+struct SectorTail {
+    uint16_t reserved{ 0 };
+    uint16_t bytes;
+
+    SectorTail(uint16_t bytes) : bytes(bytes) {
     }
 };
 
@@ -201,6 +211,16 @@ public:
         position += sector_remaining;
 
         return true;
+    }
+
+    static BlockAddress from_uint64(uint64_t value) {
+        uint32_t block = value >> 32;
+        uint32_t position = value & ((uint32_t)-1);
+        return BlockAddress{ block, position };
+    }
+
+    uint64_t to_uint64() {
+        return (((uint64_t)block) << 32) | position;
     }
 
 };

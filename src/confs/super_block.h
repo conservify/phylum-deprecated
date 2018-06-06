@@ -20,6 +20,7 @@ struct SuperBlock {
     SuperBlockLink link;
     uint32_t number_of_files{ 0 };
     block_index_t tree{ 0 };
+    block_index_t alloc_head{ BLOCK_INDEX_INVALID };
 
     SuperBlock() : link(BlockType::SuperBlock) {
     }
@@ -63,8 +64,8 @@ private:
         void *ptr;
         size_t n;
     };
-    bool rollover(SectorAddress addr, SectorAddress &new_location, PendingWrite write);
 
+    bool rollover(SectorAddress addr, SectorAddress &new_location, PendingWrite write);
     bool read(SectorAddress addr, SuperBlockLink &link);
     bool write(SectorAddress addr, SuperBlockLink &link);
     bool read(SectorAddress addr, SuperBlock &sb);

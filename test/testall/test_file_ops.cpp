@@ -49,8 +49,19 @@ TEST_F(FileOpsSuite, WriteFile) {
     ASSERT_FALSE(fs_.exists("test.bin"));
 
     auto file = fs_.open("test.bin");
-    file.write("Jacob", 5);
+    ASSERT_EQ(file.write("Jacob", 5), 5);
     file.close();
+}
 
-    ASSERT_TRUE(fs_.exists("test.bin"));
+TEST_F(FileOpsSuite, WriteAndReadFile) {
+    ASSERT_FALSE(fs_.exists("test.bin"));
+
+    auto writing = fs_.open("test.bin");
+    ASSERT_EQ(writing.write("Jacob", 5), 5);
+    writing.close();
+
+    uint8_t buffer[512];
+    auto reading = fs_.open("test.bin", true);
+    ASSERT_EQ(reading.read(buffer, sizeof(buffer)), 5);
+    reading.close();
 }
