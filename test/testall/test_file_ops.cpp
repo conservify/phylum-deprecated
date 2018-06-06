@@ -37,7 +37,7 @@ TEST_F(FileOpsSuite, InitializeFindsPreviousTree) {
     auto file = fs.open("test.bin");
     file.close();
 
-    ASSERT_TRUE(fs.initialize());
+    ASSERT_TRUE(fs.open());
 
     ASSERT_TRUE(fs.exists("test.bin"));
 }

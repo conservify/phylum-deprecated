@@ -98,6 +98,10 @@ public:
             return false;
         }
 
+        return open(wipe);
+    }
+
+    bool open(bool wipe = false) {
         if (wipe || !sbm_.locate()) {
             if (!format()) {
                 return false;
