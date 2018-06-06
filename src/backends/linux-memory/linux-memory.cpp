@@ -61,7 +61,7 @@ bool LinuxMemoryBackend::erase(block_index_t block) {
 bool LinuxMemoryBackend::read(SectorAddress addr, void *d, size_t n) {
     assert(addr.valid());
     assert(geometry_.contains(addr));
-    assert(n < geometry_.sector_size);
+    assert(n <= geometry_.sector_size);
 
     auto o = addr.block * geometry_.block_size() + (addr.sector * geometry_.sector_size);
     assert(o + n < size_);
@@ -86,7 +86,7 @@ static void verify_erased(SectorAddress addr, uint8_t *p, size_t n) {
 
 bool LinuxMemoryBackend::write(SectorAddress addr, void *d, size_t n) {
     assert(geometry_.contains(addr));
-    assert(n < geometry_.sector_size);
+    assert(n <= geometry_.sector_size);
 
     auto o = addr.block * geometry_.block_size() + (addr.sector * geometry_.sector_size);
     assert(o + n < size_);
