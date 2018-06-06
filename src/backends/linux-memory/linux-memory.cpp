@@ -100,4 +100,12 @@ bool LinuxMemoryBackend::write(SectorAddress addr, size_t offset, void *d, size_
     return true;
 }
 
+bool LinuxMemoryBackend::read(BlockAddress addr, void *d, size_t n) {
+    return read(addr.sector(geometry_), addr.sector_offset(geometry_), d, n);
+}
+
+bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
+    return write(addr.sector(geometry_), addr.sector_offset(geometry_), d, n);
+}
+
 }
