@@ -41,6 +41,10 @@ private:
     };
 
 public:
+    static constexpr size_t HeadNodeSize = sizeof(serialized_head_t);
+    static constexpr size_t NodeSize = sizeof(serialized_node_t);
+
+public:
     bool deserialize(const void *ptr, NodeType *node, TreeHead *head) {
         if (head) {
             return deserialize(reinterpret_cast<const serialized_head_t*>(ptr), node);

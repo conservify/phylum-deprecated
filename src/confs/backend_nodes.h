@@ -31,7 +31,7 @@ public:
         auto offset = addr.sector_offset(geometry);
         auto required = serializer.size(head != nullptr);
 
-        uint8_t buffer[256];
+        uint8_t buffer[SerializerType::HeadNodeSize];
         if (!storage_->read(sector, offset, buffer, required)) {
             return false;
         }
@@ -71,7 +71,7 @@ public:
         auto sector = location_.sector(geometry);
         auto offset = location_.sector_offset(geometry);
 
-        uint8_t buffer[required];
+        uint8_t buffer[SerializerType::HeadNodeSize];
         if (!serializer.serialize(buffer, node, head)) {
             return { };
         }
