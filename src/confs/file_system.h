@@ -10,21 +10,23 @@
 
 namespace confs {
 
-template<typename StorageBackendType>
 class FileSystem {
 private:
     using NodeType = Node<INodeKey, uint64_t, BlockAddress, 6, 6>;
 
-    Geometry geometry_{ 1024, 4, 4, 512 };
-    StorageBackendType storage_;
-    BlockAllocator allocator_{ storage_ };
-    SuperBlockManager sbm_{ storage_, allocator_ };
-    StorageBackendNodeStorage<NodeType> nodes_{ storage_, allocator_ };
+    StorageBackend *storage_;
+    BlockAllocator allocator_;
+    SuperBlockManager sbm_;
+    StorageBackendNodeStorage<NodeType> nodes_;
     BlockAddress tree_addr_;
 
 public:
-    StorageBackendType &storage() {
-        return storage_;
+    FileSystem(StorageBackend &storage) : storage_(&storage), allocator_(storage), sbm_{ storage, allocator_ }, nodes_{ storage, allocator_ } {
+    }
+
+public:
+    StorageBackend &storage() {
+        return *storage_;
     }
 
 private:
@@ -85,17 +87,17 @@ public:
         }
 
     public:
+        size_t write(const void *ptr, size_t size) {
+            return 0;
+        }
+
         void close() {
         }
     };
 
 public:
     bool initialize(bool wipe = false) {
-        if (!storage_.initialize(geometry_)) {
-            return false;
-        }
-
-        if (!storage_.open()) {
+        if (!storage_->open()) {
             return false;
         }
 
@@ -138,7 +140,7 @@ public:
     }
 
     bool close() {
-        return storage_.close();
+        return storage_->close();
     }
 
 private:
@@ -154,7 +156,7 @@ private:
         auto tree_block = sbm_.tree_block();
         assert(tree_block != BLOCK_INDEX_INVALID);
 
-        auto &geometry = storage_.geometry();
+        auto &geometry = storage_->geometry();
         auto required = tc.serializer.size(true);
         auto iter = BlockAddress{ tree_block, 0 };
         auto found = BlockAddress{ };
@@ -166,7 +168,7 @@ private:
 
             if (iter.beginning_of_block()) {
                 TreeBlockHeader header;
-                if (!storage_.read(iter, &header, sizeof(TreeBlockHeader))) {
+                if (!storage_->read(iter, &header, sizeof(TreeBlockHeader))) {
                     return { };
                 }
 

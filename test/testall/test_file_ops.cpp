@@ -9,38 +9,48 @@ using namespace confs;
 
 class FileOpsSuite : public ::testing::Test {
 protected:
-    FileSystem<LinuxMemoryBackend> fs;
+    Geometry geometry_{ 1024, 4, 4, 512 };
+    LinuxMemoryBackend storage_;
+    FileSystem fs_{ storage_ };
 
 protected:
     void SetUp() override {
-        ASSERT_TRUE(fs.initialize(true));
+        ASSERT_TRUE(storage_.initialize(geometry_));
+        ASSERT_TRUE(fs_.initialize(true));
     }
 
     void TearDown() override {
-        ASSERT_TRUE(fs.close());
+        ASSERT_TRUE(fs_.close());
     }
 
 };
 
 TEST_F(FileOpsSuite, CreateFile) {
-    ASSERT_FALSE(fs.exists("test.bin"));
+    ASSERT_FALSE(fs_.exists("test.bin"));
 
-    auto file = fs.open("test.bin");
+    auto file = fs_.open("test.bin");
     file.close();
 
-    ASSERT_TRUE(fs.exists("test.bin"));
+    ASSERT_TRUE(fs_.exists("test.bin"));
 }
 
 TEST_F(FileOpsSuite, InitializeFindsPreviousTree) {
-    ASSERT_FALSE(fs.exists("test.bin"));
+    ASSERT_FALSE(fs_.exists("test.bin"));
 
-    auto file = fs.open("test.bin");
+    auto file = fs_.open("test.bin");
     file.close();
 
-    ASSERT_TRUE(fs.open());
+    ASSERT_TRUE(fs_.open());
 
-    ASSERT_TRUE(fs.exists("test.bin"));
+    ASSERT_TRUE(fs_.exists("test.bin"));
 }
 
 TEST_F(FileOpsSuite, WriteFile) {
+    ASSERT_FALSE(fs_.exists("test.bin"));
+
+    auto file = fs_.open("test.bin");
+    file.write("Jacob", 5);
+    file.close();
+
+    ASSERT_TRUE(fs_.exists("test.bin"));
 }
