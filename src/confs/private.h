@@ -59,7 +59,7 @@ typedef struct confs_sector_addr_t {
     }
 } confs_sector_addr_t;
 
-typedef struct confs_geometry_t {
+struct Geometry {
     block_index_t number_of_blocks;
     page_index_t pages_per_block;
     sector_index_t sectors_per_page;
@@ -87,9 +87,7 @@ typedef struct confs_geometry_t {
     bool contains(confs_sector_addr_t addr) const {
         return addr.block < number_of_blocks && addr.sector < sectors_per_block();
     }
-} confs_geometry_t;
-
-using Geometry = confs_geometry_t;
+};
 
 inline std::ostream& operator<<(std::ostream& os, const Geometry &g) {
     return os << "Geometry<" << g.number_of_blocks << " " << g.pages_per_block << " " << g.sectors_per_page << " " << g.sector_size << ">";
@@ -204,23 +202,23 @@ public:
     }
 
 public:
-    uint32_t remaining_in_sector(confs_geometry_t &g) {
+    uint32_t remaining_in_sector(Geometry &g) {
         return g.sector_size - (position % g.sector_size);
     }
 
-    uint32_t remaining_in_block(confs_geometry_t &g) {
+    uint32_t remaining_in_block(Geometry &g) {
         return g.block_size() - position;
     }
 
-    sector_index_t sector_offset(confs_geometry_t &g) {
+    sector_index_t sector_offset(Geometry &g) {
         return position % g.sector_size;
     }
 
-    sector_index_t sector_number(confs_geometry_t &g) {
+    sector_index_t sector_number(Geometry &g) {
         return position / g.sector_size;
     }
 
-    confs_sector_addr_t sector(confs_geometry_t &g) {
+    confs_sector_addr_t sector(Geometry &g) {
         return { block, sector_number(g) };
     }
 
@@ -232,7 +230,7 @@ public:
         position += n;
     }
 
-    bool find_room(confs_geometry_t &g, uint32_t n) {
+    bool find_room(Geometry &g, uint32_t n) {
         assert(n <= g.sector_size);
 
         auto sector_remaining = remaining_in_sector(g);

@@ -5,7 +5,7 @@ namespace confs {
 LinuxMemoryBackend::LinuxMemoryBackend() : size_(0), ptr_(nullptr) {
 }
 
-bool LinuxMemoryBackend::initialize(confs_geometry_t geometry) {
+bool LinuxMemoryBackend::initialize(Geometry geometry) {
     geometry_ = geometry;
 
     return true;
@@ -39,7 +39,7 @@ bool LinuxMemoryBackend::close() {
     return true;
 }
 
-confs_geometry_t &LinuxMemoryBackend::geometry() {
+Geometry &LinuxMemoryBackend::geometry() {
     return geometry_;
 }
 

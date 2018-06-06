@@ -11,7 +11,7 @@ protected:
     static constexpr int32_t anchor_overflow_iterations = 15 * 15 * 15 * 15 + 6;
 
 protected:
-    confs_geometry_t geometry_{ 1024, 4, 4, 512 };
+    Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend storage_;
     BlockAllocator allocator_{ storage_ };
     SuperBlockManager sbm_{ storage_, allocator_ };

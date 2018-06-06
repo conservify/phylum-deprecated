@@ -9,7 +9,7 @@ class StorageBackend {
 public:
     virtual bool open() = 0;
     virtual bool close() = 0;
-    virtual confs_geometry_t &geometry() = 0;
+    virtual Geometry &geometry() = 0;
     virtual size_t size() = 0;
     virtual bool erase(block_index_t block) = 0;
     virtual bool read(confs_sector_addr_t addr, void *d, size_t n) = 0;

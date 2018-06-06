@@ -12,7 +12,7 @@ namespace confs {
 class LinuxMemoryBackend : public StorageBackend {
 private:
     StorageLog log_;
-    confs_geometry_t geometry_;
+    Geometry geometry_;
     size_t size_;
     uint8_t *ptr_;
 
@@ -25,12 +25,12 @@ public:
     }
 
 public:
-    bool initialize(confs_geometry_t geometry);
+    bool initialize(Geometry geometry);
 
 public:
     bool open() override;
     bool close() override;
-    confs_geometry_t &geometry() override;
+    Geometry &geometry() override;
     size_t size() override;
     bool erase(block_index_t block) override;
     bool read(confs_sector_addr_t addr, void *d, size_t n) override;
