@@ -24,14 +24,14 @@ private:
     static constexpr block_index_t AnchorBlocks[] = { 1, 2 };
     StorageBackend *storage_;
     BlockAllocator *allocator_;
-    confs_sector_addr_t location_;
+    SectorAddress location_;
     SuperBlock sb_;
 
 public:
     SuperBlockManager(StorageBackend &storage, BlockAllocator &allocator);
 
 public:
-    confs_sector_addr_t location() {
+    SectorAddress location() {
         return location_;
     }
 
@@ -50,20 +50,20 @@ public:
 
 private:
     int32_t chain_length();
-    bool walk(block_index_t desired, SuperBlockLink &link, confs_sector_addr_t &where);
-    bool find_link(block_index_t block, SuperBlockLink &found, confs_sector_addr_t &where);
+    bool walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where);
+    bool find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where);
 
     struct PendingWrite {
         void *ptr;
         size_t n;
     };
-    bool rollover(confs_sector_addr_t addr, confs_sector_addr_t &new_location, PendingWrite write);
+    bool rollover(SectorAddress addr, SectorAddress &new_location, PendingWrite write);
 
-    bool read(confs_sector_addr_t addr, SuperBlockLink &link);
-    bool write(confs_sector_addr_t addr, SuperBlockLink &link);
-    bool read(confs_sector_addr_t addr, SuperBlock &sb);
-    bool write(confs_sector_addr_t addr, SuperBlock &sb);
-    bool write(confs_sector_addr_t addr, PendingWrite write);
+    bool read(SectorAddress addr, SuperBlockLink &link);
+    bool write(SectorAddress addr, SuperBlockLink &link);
+    bool read(SectorAddress addr, SuperBlock &sb);
+    bool write(SectorAddress addr, SuperBlock &sb);
+    bool write(SectorAddress addr, PendingWrite write);
 
 };
 

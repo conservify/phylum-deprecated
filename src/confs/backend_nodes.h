@@ -6,8 +6,8 @@
 
 namespace confs {
 
-template<typename NODE, typename ADDRESS = typename NODE::AddressType>
-class StorageBackendNodeStorage : public NodeStorage<NODE, ADDRESS> {
+template<typename NODE>
+class StorageBackendNodeStorage : public NodeStorage<NODE, SectorAddress> {
 public:
     using NodeType = NODE;
     using SerializerType = NodeSerializer<NodeType>;
@@ -15,14 +15,14 @@ public:
 private:
     StorageBackend *storage_;
     BlockAllocator *allocator_;
-    confs_sector_addr_t location_;
+    SectorAddress location_;
 
 public:
     StorageBackendNodeStorage(StorageBackend &storage, BlockAllocator &allocator) : storage_(&storage), allocator_(&allocator) {
     }
 
 public:
-    bool deserialize(ADDRESS addr, NodeType *node, TreeHead *head) {
+    bool deserialize(SectorAddress addr, NodeType *node, TreeHead *head) {
         SerializerType serializer;
 
         uint8_t buffer[512];
@@ -33,7 +33,7 @@ public:
         return serializer.deserialize(buffer, node, head);
     }
 
-    ADDRESS serialize(ADDRESS addr, const NodeType *node, const TreeHead *head) {
+    SectorAddress serialize(SectorAddress addr, const NodeType *node, const TreeHead *head) {
         SerializerType serializer;
 
         // We always dicsard the incoming address. Our memory backend refuses

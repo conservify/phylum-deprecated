@@ -36,11 +36,11 @@ constexpr sector_index_t SECTOR_INDEX_INVALID = ((sector_index_t)-1);
  */
 constexpr int32_t SectorSize = 512;
 
-typedef struct confs_sector_addr_t {
+struct SectorAddress {
     block_index_t block;
     sector_index_t sector;
 
-    confs_sector_addr_t(block_index_t block = BLOCK_INDEX_INVALID, sector_index_t sector = SECTOR_INDEX_INVALID) :
+    SectorAddress(block_index_t block = BLOCK_INDEX_INVALID, sector_index_t sector = SECTOR_INDEX_INVALID) :
         block(block), sector(sector) {
     }
 
@@ -52,7 +52,7 @@ typedef struct confs_sector_addr_t {
     bool valid() const {
         return block != BLOCK_INDEX_INVALID && sector != SECTOR_INDEX_INVALID;
     }
-} confs_sector_addr_t;
+};
 
 struct Geometry {
     block_index_t number_of_blocks;
@@ -79,7 +79,7 @@ struct Geometry {
         return number_of_blocks > 0 && pages_per_block > 0 && sectors_per_page > 0 && sector_size > 0;
     }
 
-    bool contains(confs_sector_addr_t addr) const {
+    bool contains(SectorAddress addr) const {
         return addr.block < number_of_blocks && addr.sector < sectors_per_block();
     }
 };
@@ -114,7 +114,7 @@ struct BlockHeader {
 
 extern std::ostream &sdebug;
 
-inline std::ostream& operator<<(std::ostream& os, const confs_sector_addr_t &addr) {
+inline std::ostream& operator<<(std::ostream& os, const SectorAddress &addr) {
     if (!addr.valid()) {
         return os << "<invalid>";
     }
@@ -181,7 +181,7 @@ public:
     BlockIterator(block_index_t block, uint32_t position = 0) : block(block), position(position) {
     }
 
-    BlockIterator(confs_sector_addr_t addr) : block(addr.block), position(addr.sector * SectorSize) {
+    BlockIterator(SectorAddress addr) : block(addr.block), position(addr.sector * SectorSize) {
     }
 
 public:
@@ -201,7 +201,7 @@ public:
         return position / g.sector_size;
     }
 
-    confs_sector_addr_t sector(Geometry &g) {
+    SectorAddress sector(Geometry &g) {
         return { block, sector_number(g) };
     }
 

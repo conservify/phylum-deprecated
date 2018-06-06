@@ -58,7 +58,7 @@ bool LinuxMemoryBackend::erase(block_index_t block) {
     return true;
 }
 
-bool LinuxMemoryBackend::read(confs_sector_addr_t addr, void *d, size_t n) {
+bool LinuxMemoryBackend::read(SectorAddress addr, void *d, size_t n) {
     assert(addr.valid());
     assert(geometry_.contains(addr));
     assert(n < geometry_.sector_size);
@@ -74,7 +74,7 @@ bool LinuxMemoryBackend::read(confs_sector_addr_t addr, void *d, size_t n) {
     return true;
 }
 
-static void verify_erased(confs_sector_addr_t addr, uint8_t *p, size_t n) {
+static void verify_erased(SectorAddress addr, uint8_t *p, size_t n) {
     for (size_t i = 0; i < n; ++i) {
         if (*p != 0xff) {
             sdebug << "Corruption: " << addr << std::endl;
@@ -84,7 +84,7 @@ static void verify_erased(confs_sector_addr_t addr, uint8_t *p, size_t n) {
     }
 }
 
-bool LinuxMemoryBackend::write(confs_sector_addr_t addr, void *d, size_t n) {
+bool LinuxMemoryBackend::write(SectorAddress addr, void *d, size_t n) {
     assert(geometry_.contains(addr));
     assert(n < geometry_.sector_size);
 

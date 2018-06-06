@@ -13,13 +13,13 @@ namespace confs {
 template<typename StorageBackendType>
 class FileSystem {
 private:
-    using NodeType = Node<INodeKey, uint64_t, confs_sector_addr_t, 6, 6>;
+    using NodeType = Node<INodeKey, uint64_t, SectorAddress, 6, 6>;
 
     Geometry geometry_{ 1024, 4, 4, 512 };
     StorageBackendType storage_;
     BlockAllocator allocator_{ storage_ };
     SuperBlockManager sbm_{ storage_, allocator_ };
-    confs_sector_addr_t tree_addr_;
+    SectorAddress tree_addr_;
 
 public:
     StorageBackendType &storage() {
@@ -33,7 +33,7 @@ private:
         StorageBackendNodeStorage<NodeType> nodes;
         MemoryConstrainedNodeCache<NodeType, 8> cache;
         PersistedTree<NodeType> tree;
-        confs_sector_addr_t new_head;
+        SectorAddress new_head;
 
     public:
         TreeContext(FileSystem &fs) :
@@ -143,14 +143,14 @@ private:
         return true;
     }
 
-    confs_sector_addr_t find_tree() {
+    SectorAddress find_tree() {
         TreeContext tc{ *this };
 
         auto tree_block = sbm_.tree_block();
         assert(tree_block != BLOCK_INDEX_INVALID);
 
-        auto addr = confs_sector_addr_t{ tree_block, 0 };
-        auto found = confs_sector_addr_t{ };
+        auto addr = SectorAddress{ tree_block, 0 };
+        auto found = SectorAddress{ };
 
         // We could compare TreeHead timestamps, though we always append.
         while (addr.sector < storage_.geometry().sectors_per_block()) {

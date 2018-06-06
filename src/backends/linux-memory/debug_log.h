@@ -40,7 +40,7 @@ public:
         type_(type), block_(block), sector_(SECTOR_INDEX_INVALID), ptr_(ptr), size_(0), copy_(nullptr) {
     }
 
-    LogEntry(OperationType type, confs_sector_addr_t addr, uint8_t *ptr, size_t size) :
+    LogEntry(OperationType type, SectorAddress addr, uint8_t *ptr, size_t size) :
         type_(type), block_(addr.block), sector_(addr.sector), ptr_(ptr), size_(size), copy_(nullptr) {
     }
 
