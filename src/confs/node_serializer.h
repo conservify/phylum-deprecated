@@ -55,7 +55,7 @@ public:
         return serialize(node, reinterpret_cast<serialized_node_t*>(ptr));
     }
 
-    size_t size(const NodeType *node, bool head) {
+    size_t size(bool head) {
         if (head) {
             return sizeof(serialized_head_t);
         }
@@ -65,6 +65,7 @@ public:
 private:
     bool serialize(const NodeType *node, serialized_head_t *s) {
         s->magic.fill();
+
         return serialize(node, &s->node);
     }
 

@@ -39,7 +39,7 @@ public:
         SerializerType serializer;
 
         if (!addr.valid()) {
-            addr = allocate(serializer.size(node, head));
+            addr = allocate(serializer.size(head));
         }
 
         if (!serializer.serialize(lookup(addr), node, head)) {

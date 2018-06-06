@@ -151,13 +151,19 @@ inline bool operator>=(const btree_key_t &lhs, const btree_key_t &rhs) {
 }
 
 struct BlockAddress {
+public:
     block_index_t block;
     uint32_t position;
 
+public:
     BlockAddress(block_index_t block = BLOCK_INDEX_INVALID, uint32_t position = POSITION_INDEX_INVALID) :
         block(block), position(position) {
     }
 
+    BlockAddress(SectorAddress addr) : block(addr.block), position(addr.sector * SectorSize) {
+    }
+
+public:
     void invalid() {
         block = BLOCK_INDEX_INVALID;
         position = POSITION_INDEX_INVALID;
@@ -166,31 +172,7 @@ struct BlockAddress {
     bool valid() const {
         return block != BLOCK_INDEX_INVALID && position != POSITION_INDEX_INVALID;
     }
-};
 
-inline std::ostream& operator<<(std::ostream& os, const BlockAddress &addr) {
-    return os << addr.block << ":" << addr.position;
-}
-
-struct BlockIterator {
-public:
-    block_index_t block;
-    uint32_t position;
-
-public:
-    BlockIterator() {
-    }
-
-    BlockIterator(BlockAddress addr) : block(addr.block), position(addr.position) {
-    }
-
-    BlockIterator(block_index_t block, uint32_t position = 0) : block(block), position(position) {
-    }
-
-    BlockIterator(SectorAddress addr) : block(addr.block), position(addr.sector * SectorSize) {
-    }
-
-public:
     uint32_t remaining_in_sector(Geometry &g) {
         return g.sector_size - (position % g.sector_size);
     }
@@ -243,8 +225,8 @@ public:
 
 };
 
-inline std::ostream& operator<<(std::ostream& os, const BlockIterator &iter) {
-    return os << iter.block << ":" << iter.position;
+inline std::ostream& operator<<(std::ostream& os, const BlockAddress &addr) {
+    return os << addr.block << ":" << addr.position;
 }
 
 }

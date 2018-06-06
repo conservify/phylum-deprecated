@@ -7,7 +7,7 @@
 namespace confs {
 
 template<typename NODE>
-class StorageBackendNodeStorage : public NodeStorage<NODE, SectorAddress> {
+class StorageBackendNodeStorage : public NodeStorage<NODE, BlockAddress> {
 public:
     using NodeType = NODE;
     using SerializerType = NodeSerializer<NodeType>;
@@ -15,26 +15,40 @@ public:
 private:
     StorageBackend *storage_;
     BlockAllocator *allocator_;
-    SectorAddress location_;
+    BlockAddress location_;
 
 public:
     StorageBackendNodeStorage(StorageBackend &storage, BlockAllocator &allocator) : storage_(&storage), allocator_(&allocator) {
     }
 
 public:
-    bool deserialize(SectorAddress addr, NodeType *node, TreeHead *head) {
+    bool deserialize(BlockAddress addr, NodeType *node, TreeHead *head) {
         SerializerType serializer;
 
-        uint8_t buffer[512];
-        if (!storage_->read(addr, buffer, serializer.size(node, head))) {
+        auto &geometry = storage_->geometry();
+
+        auto sector = addr.sector(geometry);
+        auto offset = addr.sector_offset(geometry);
+        auto required = serializer.size(head != nullptr);
+
+        uint8_t buffer[256];
+        if (!storage_->read(sector, offset, buffer, required)) {
             return false;
         }
 
-        return serializer.deserialize(buffer, node, head);
+        if (!serializer.deserialize(buffer, node, head)) {
+            return false;
+        }
+
+        return true;
     }
 
-    SectorAddress serialize(SectorAddress addr, const NodeType *node, const TreeHead *head) {
+    BlockAddress serialize(BlockAddress addr, const NodeType *node, const TreeHead *head) {
         SerializerType serializer;
+
+        auto &geometry = storage_->geometry();
+
+        auto required = serializer.size(head != nullptr);
 
         // We always dicsard the incoming address. Our memory backend refuses
         // writes to unerased areas.
@@ -47,18 +61,22 @@ public:
             location_ = { block, 0 };
         }
         else {
-            location_.sector++;
-            if (location_.sector == storage_->geometry().sectors_per_block()) {
-                location_ = allocator_->allocate();
+            location_.add(required);
+
+            if (!location_.find_room(geometry, required)) {
+                location_ = BlockAddress{ allocator_->allocate(), 0 };
             }
         }
 
-        uint8_t buffer[512];
+        auto sector = location_.sector(geometry);
+        auto offset = location_.sector_offset(geometry);
+
+        uint8_t buffer[required];
         if (!serializer.serialize(buffer, node, head)) {
             return { };
         }
 
-        if (!storage_->write(location_, buffer, serializer.size(node, head))) {
+        if (!storage_->write(sector, offset, buffer, required)) {
             return { };
         }
 

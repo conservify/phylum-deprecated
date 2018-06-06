@@ -5,9 +5,9 @@
 class AddressingSuite : public ::testing::Test {
 };
 
-TEST_F(AddressingSuite, Iterator) {
+TEST_F(AddressingSuite, AddressIterating) {
     Geometry g{ 1024, 4, 4, 512 };
-    BlockIterator iter{ 0 };
+    BlockAddress iter{ 0, 0 };
 
     ASSERT_EQ(iter.remaining_in_sector(g), g.sector_size);
     ASSERT_EQ(iter.remaining_in_block(g), g.block_size());

@@ -13,13 +13,14 @@ namespace confs {
 template<typename StorageBackendType>
 class FileSystem {
 private:
-    using NodeType = Node<INodeKey, uint64_t, SectorAddress, 6, 6>;
+    using NodeType = Node<INodeKey, uint64_t, BlockAddress, 6, 6>;
 
     Geometry geometry_{ 1024, 4, 4, 512 };
     StorageBackendType storage_;
     BlockAllocator allocator_{ storage_ };
     SuperBlockManager sbm_{ storage_, allocator_ };
-    SectorAddress tree_addr_;
+    StorageBackendNodeStorage<NodeType> nodes_{ storage_, allocator_ };
+    BlockAddress tree_addr_;
 
 public:
     StorageBackendType &storage() {
@@ -30,14 +31,14 @@ private:
     struct TreeContext {
     public:
         FileSystem &fs;
-        StorageBackendNodeStorage<NodeType> nodes;
+        NodeSerializer<NodeType> serializer;
         MemoryConstrainedNodeCache<NodeType, 8> cache;
         PersistedTree<NodeType> tree;
-        SectorAddress new_head;
+        BlockAddress new_head;
 
     public:
         TreeContext(FileSystem &fs) :
-            fs(fs), nodes(fs.storage_, fs.allocator_), cache(nodes), tree(cache) {
+            fs(fs), cache(fs.nodes_), tree(cache) {
 
             if (fs.tree_addr_.valid()) {
                 tree.head(fs.tree_addr_);
@@ -147,28 +148,29 @@ private:
         return true;
     }
 
-    SectorAddress find_tree() {
+    BlockAddress find_tree() {
         TreeContext tc{ *this };
 
         auto tree_block = sbm_.tree_block();
         assert(tree_block != BLOCK_INDEX_INVALID);
 
-        auto addr = SectorAddress{ tree_block, 0 };
-        auto found = SectorAddress{ };
+        auto &geometry = storage_.geometry();
+        auto required = tc.serializer.size(true);
+        auto iter = BlockAddress{ tree_block, 0 };
+        auto found = BlockAddress{ };
 
         // We could compare TreeHead timestamps, though we always append.
-        while (addr.sector < storage_.geometry().sectors_per_block()) {
+        while (iter.remaining_in_block(geometry) > required) {
             TreeHead head;
             NodeType node;
 
-            if (tc.nodes.deserialize(addr, &node, &head)) {
-                found = addr;
+            if (nodes_.deserialize(iter, &node, &head)) {
+                found = iter;
+                iter.add(required);
             }
             else {
                 break;
             }
-
-            addr.sector++;
         }
 
         return found;
