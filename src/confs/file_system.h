@@ -27,9 +27,9 @@ public:
     OpenFile(FileSystem &fs, file_id_t id, BlockAddress head, bool readonly);
 
 public:
-    size_t write(const void *ptr, size_t size);
-    size_t read(void *ptr, size_t size);
-    size_t flush(block_index_t linked);
+    int32_t write(const void *ptr, size_t size);
+    int32_t read(void *ptr, size_t size);
+    int32_t flush(block_index_t linked);
     void close();
 
 private:

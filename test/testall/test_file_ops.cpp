@@ -67,7 +67,7 @@ TEST_F(FileOpsSuite, WriteAndReadLessThanASector) {
     reading.close();
 }
 
-static void write_pattern(OpenFile &file, uint8_t *pattern, size_t pattern_length, size_t total_to_write, int32_t &wrote) {
+static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t total_to_write, int32_t &wrote) {
     wrote = 0;
 
     while (wrote < total_to_write) {
@@ -79,12 +79,12 @@ static void write_pattern(OpenFile &file, uint8_t *pattern, size_t pattern_lengt
     }
 }
 
-static void read_and_verify_pattern(OpenFile &file, uint8_t *pattern, size_t pattern_length, int32_t &read) {
+static void read_and_verify_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t &read) {
     uint8_t buffer[8];
 
     read = 0;
 
-    ASSERT_EQ(sizeof(buffer) % pattern_length, 0);
+    ASSERT_EQ(sizeof(buffer) % pattern_length, (size_t) 0);
 
     while (true) {
         auto bytes = file.read(buffer, sizeof(buffer));
@@ -112,7 +112,7 @@ TEST_F(FileOpsSuite, WriteAndReadTwoSectors) {
     auto total_writing = SectorSize + SectorSize / 2;
 
     // This makes testing easier.
-    ASSERT_EQ(total_writing % sizeof(pattern), 0);
+    ASSERT_EQ(total_writing % sizeof(pattern), (size_t)0);
 
     auto read = 0, wrote = 0;
     auto writing = fs_.open("test.bin");
@@ -130,10 +130,10 @@ TEST_F(FileOpsSuite, WriteAndReadTwoSectors) {
 TEST_F(FileOpsSuite, WriteAndReadIntoSecondBlock) {
     uint8_t pattern[] = { 'a', 's', 'd', 'f' };
 
-    auto total_writing = geometry_.block_size() + SectorSize + SectorSize / 2;
+    auto total_writing = (int32_t)(geometry_.block_size() + SectorSize + SectorSize / 2);
 
     // This makes testing easier.
-    ASSERT_EQ(total_writing % sizeof(pattern), 0);
+    ASSERT_EQ(total_writing % sizeof(pattern), (size_t)0);
 
     auto read = 0, wrote = 0;
     auto writing = fs_.open("test.bin");

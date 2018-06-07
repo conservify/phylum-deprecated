@@ -65,12 +65,11 @@ struct BlockAllocSector {
 };
 
 struct SectorTail {
-    uint16_t reserved{ 0 };
     uint16_t bytes;
 };
 
 struct BlockTail {
-    uint16_t bytes;
+    SectorTail sector;
     block_index_t linked_block{ BLOCK_INDEX_INVALID };
 
     BlockTail() {
