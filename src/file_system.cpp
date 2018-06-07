@@ -230,6 +230,11 @@ int32_t OpenFile::seek(Seek seek) {
         }
         break;
     }
+    case Seek::Beginning: {
+        auto key = make_key(2, id_);
+        head_ = BlockAddress::from_uint64(tc.find(key));
+        return 0;
+    }
     }
 
     blocks_since_save_ = 0;

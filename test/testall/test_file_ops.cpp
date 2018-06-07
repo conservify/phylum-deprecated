@@ -208,6 +208,28 @@ TEST_F(FileOpsSuite, WriteToTailSectorAndAppend) {
     ASSERT_EQ(read, wrote);
 }
 
+TEST_F(FileOpsSuite, Write3BlocksAndReadAndSeekBeginning) {
+    uint8_t pattern[] = { 'a', 's', 'd', 'f' };
+
+    auto total_writing = (int32_t)(geometry_.block_size() * 3 + SectorSize);
+
+    ASSERT_EQ(total_writing % sizeof(pattern), (size_t)0);
+
+    auto wrote = 0;
+    auto writing = fs_.open("test.bin");
+    write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
+    writing.close();
+
+    auto read = 0;
+    auto reading = fs_.open("test.bin", true);
+    read_and_verify_pattern(reading, pattern, sizeof(pattern), read);
+    reading.seek(Seek::Beginning);
+    read_and_verify_pattern(reading, pattern, sizeof(pattern), read);
+    reading.close();
+
+    ASSERT_EQ(read, wrote * 2);
+}
+
 TEST_F(FileOpsSuite, Write128Blocks) {
     uint8_t pattern[] = { 'a', 's', 'd', 'f' };
 

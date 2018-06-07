@@ -15,13 +15,13 @@ TEST_F(AddressingSuite, AddressIterating) {
 
     iter.add(128);
 
-    ASSERT_EQ(iter.remaining_in_sector(g), g.sector_size - 128);
+    ASSERT_EQ(iter.remaining_in_sector(g), (uint32_t)g.sector_size - 128);
     ASSERT_EQ(iter.remaining_in_block(g), g.block_size() - 128);
     ASSERT_EQ(iter.sector_offset(g), 128);
 
     iter.add(512);
 
-    ASSERT_EQ(iter.remaining_in_sector(g), g.sector_size - 128);
+    ASSERT_EQ(iter.remaining_in_sector(g), (uint32_t)g.sector_size - 128);
     ASSERT_EQ(iter.remaining_in_block(g), g.block_size() - 128 - 512);
     ASSERT_EQ(iter.sector_offset(g), 128);
 
@@ -29,12 +29,12 @@ TEST_F(AddressingSuite, AddressIterating) {
     iter.seek(pos);
 
     ASSERT_EQ(iter.remaining_in_block(g), g.block_size() - pos);
-    ASSERT_EQ(iter.remaining_in_sector(g), g.sector_size - 36);
+    ASSERT_EQ(iter.remaining_in_sector(g), (uint32_t)g.sector_size - 36);
     ASSERT_EQ(iter.sector_offset(g), 36);
 
     iter.seek(500);
 
-    ASSERT_EQ(iter.remaining_in_sector(g), g.sector_size - 500);
+    ASSERT_EQ(iter.remaining_in_sector(g), (uint32_t)g.sector_size - 500);
 
     ASSERT_TRUE(iter.find_room(g, 36));
 

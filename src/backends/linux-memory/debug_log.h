@@ -94,7 +94,7 @@ public:
         // sdebug << entry << std::endl;
     }
 
-    uint32_t size() const {
+    int32_t size() const {
         return entries_.size();
     }
 

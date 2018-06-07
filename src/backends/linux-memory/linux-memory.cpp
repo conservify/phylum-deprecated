@@ -92,7 +92,7 @@ bool LinuxMemoryBackend::write(SectorAddress addr, size_t offset, void *d, size_
     assert(o + n < size_);
 
     auto p = ptr_ + o;
-    verify_erased(BlockAddress{ addr.block, addr.sector * geometry_.sector_size + offset }, p, n);
+    verify_erased(BlockAddress{ addr.block, addr.sector * geometry_.sector_size + (uint32_t)offset }, p, n);
     memcpy(p, d, n);
 
     log_.append(LogEntry{ OperationType::Write, addr, p, offset, n });
