@@ -19,9 +19,11 @@ private:
     BlockAddress head_;
     bool readonly_{ false };
 
+    uint32_t position_{ 0 };
+    uint32_t available_{ 0 };
+    uint32_t length_{ 0 };
+    uint8_t blocks_since_save_{ 0 };
     uint8_t buffer_[SectorSize];
-    size_t position_{ 0 };
-    size_t available_{ 0 };
 
 public:
     OpenFile(FileSystem &fs, file_id_t id, BlockAddress head, bool readonly);

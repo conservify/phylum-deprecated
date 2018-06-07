@@ -41,10 +41,10 @@ public:
         return !operator==(rhs);
     }
     inline bool operator<(const INodeKey &rhs) const {
-        return memcmp(&value_, &rhs.value_, sizeof(uint64_t)) < 0;
+        return value_ < rhs.value_;
     }
     inline bool operator>(const INodeKey &rhs) const {
-        return memcmp(&value_, &rhs.value_, sizeof(uint64_t)) > 0;
+        return value_ > rhs.value_;
     }
     inline bool operator<=(const INodeKey &rhs) const {
         return !operator>(rhs);
