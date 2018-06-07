@@ -92,11 +92,17 @@ static void read_and_verify_pattern(OpenFile &file, uint8_t *pattern, size_t pat
             break;
         }
 
-        for (auto i = 0; i < bytes / pattern_length; ++i) {
-            ASSERT_EQ(memcmp(buffer + i * pattern_length, pattern, pattern_length), 0);
-        }
+        auto i = 0;
+        while (i < bytes) {
+            auto left = bytes - i;
+            auto pattern_position = read % pattern_length;
+            auto comparing = left > (pattern_length - pattern_position) ? (pattern_length - pattern_position) : left;
 
-        read += bytes;
+            ASSERT_EQ(memcmp(buffer + i, pattern + pattern_position, comparing), 0);
+
+            i += comparing;
+            read += comparing;
+        }
     }
 }
 
