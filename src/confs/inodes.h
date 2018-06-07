@@ -8,7 +8,7 @@
 namespace confs {
 
 inline uint64_t make_key(uint32_t inode, uint32_t offset) {
-    return ((uint64_t)offset << 32) | (uint64_t)inode;
+    return ((uint64_t)inode << 32) | (uint64_t)offset;
 }
 
 class INodeKey {

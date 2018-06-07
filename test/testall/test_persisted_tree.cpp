@@ -132,3 +132,43 @@ TEST_F(PersistedTreeSuite, MultipleLookupCustomKeyType) {
         ASSERT_EQ(tree.find(pair.first), pair.second);
     }
 }
+
+TEST_F(PersistedTreeSuite, FindLastLessThanLookup) {
+    std::vector<uint32_t> inodes;
+    std::map<uint32_t, uint32_t> last_offsets;
+
+    using NodeType = Node<uint64_t, int32_t, BlockAddress, 6, 6>;
+    auto storage = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
+    auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
+    auto tree = PersistedTree<NodeType>{ cache };
+    auto map = std::map<NodeType::KeyType, NodeType::ValueType>{};
+
+    for (auto i = 0; i < 8; ++i) {
+        auto inode = (uint32_t)(random() % 2048 + 1024);
+        inodes.push_back(inode);
+
+        auto offset = 512;
+
+        for (auto j = 0; j < 128; ++j) {
+            auto key = make_key(inode, offset);
+            tree.add(key, inode);
+            last_offsets[inode] = offset;
+            map[key] = inode;
+            offset += random() % 4096;
+        }
+    }
+
+    for (auto inode : inodes) {
+        NodeType::KeyType found;
+        NodeType::ValueType value;
+
+        auto key = make_key(inode, UINT32_MAX);
+
+        ASSERT_TRUE(tree.find_last_less_then(key, &value, &found));
+
+        auto key_inode = (found >> 32) & ((uint32_t)-1);
+        auto key_offset = (found) & ((uint32_t)-1);
+
+        EXPECT_EQ(last_offsets[inode], key_offset);
+    }
+}

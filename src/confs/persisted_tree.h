@@ -344,6 +344,68 @@ public:
         return value;
     }
 
+    // Finds the LAST item that is < key. That is, the next item in the tree is not < key, but this
+    // item is. If we were to insert key into the tree, it would go after this item. This is weird,
+    // but is easier than implementing iterators. In STL terms, this would be "lower_bound(key)--"
+    // WARNING: This does *not* work when values are deleted. Thankfully, TPC-C does not use deletes.
+    bool find_last_less_then(const KEY &key, VALUE *value = 0, KEY *found = 0) {
+        create_if_necessary();
+
+        assert(ref_.valid());
+
+        auto nref = nodes_->load(ref_, true);
+        auto node = nodes_->resolve(nref);
+        auto d = node->depth;
+
+        while (d-- != 0) {
+            auto index = Keys::inner_position_for(key, node->keys, node->number_keys);
+            // We need to rewind in the case where they are equal
+            if (index > 0 && key == node->keys[index - 1]) {
+                index -= 1;
+            }
+            assert(index == 0 || node->keys[index - 1] < key);
+
+            nref = load_child(node, index);
+            node = nodes_->resolve(nref);
+        }
+
+        auto index = Keys::leaf_position_for(key, node->keys, node->number_keys);
+        if (index <= node->number_keys) {
+            index -= 1;
+            if (index < node->number_keys && key == node->keys[index]) {
+                index -= 1;
+            }
+
+            if (index < node->number_keys) {
+                assert(node->keys[index] < key);
+                if (node->values[index]) {
+                    if (value != nullptr) {
+                        *value = node->values[index];
+                    }
+                    if (found != nullptr) {
+                        *found = node->keys[index];
+                    }
+                    nodes_->clear();
+                    return true;
+                }
+                else {
+                    assert(false);
+                    /*
+                    // This is a deleted key! Try again with the new key value
+                    // HACK: This is because this implementation doesn't do deletes correctly. However,
+                    // this makes it work. We need this for TPC-C undo. The solution is to use a
+                    // more complete b-tree implementation.
+                    nodes_->clear();
+                    return find_last_less_then(node->keys[index], value, found);
+                    */
+                }
+            }
+        }
+
+        nodes_->clear();
+        return false;
+    }
+
     ADDRESS add(KEY key, VALUE value) {
         create_if_necessary();
 
