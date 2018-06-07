@@ -5,6 +5,10 @@ namespace confs {
 BlockAllocator::BlockAllocator(StorageBackend &storage) : storage_(&storage) {
 }
 
+bool BlockAllocator::initialize(Geometry &geometry) {
+    return true;
+}
+
 block_index_t BlockAllocator::allocate() {
     if (!initialized_) {
         for (auto i = 3; i < (int32_t)storage_->geometry().number_of_blocks; ++i) {

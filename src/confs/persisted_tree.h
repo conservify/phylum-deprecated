@@ -348,7 +348,7 @@ public:
     // item is. If we were to insert key into the tree, it would go after this item. This is weird,
     // but is easier than implementing iterators. In STL terms, this would be "lower_bound(key)--"
     // WARNING: This does *not* work when values are deleted. Thankfully, TPC-C does not use deletes.
-    bool find_last_less_then(const KEY &key, VALUE *value = 0, KEY *found = 0) {
+    bool find_less_then(const KEY &key, VALUE *value = 0, KEY *found = 0) {
         create_if_necessary();
 
         assert(ref_.valid());

@@ -46,6 +46,10 @@ public:
         return sb_.tree;
     }
 
+    SuperBlock &block() {
+        return sb_;
+    }
+
     timestamp_t timestamp() {
         return sb_.link.header.timestamp;
     }

@@ -19,6 +19,7 @@ public:
     BlockAllocator(StorageBackend &storage);
 
 public:
+    bool initialize(Geometry &geometry);
     block_index_t allocate();
     void free(block_index_t block);
 

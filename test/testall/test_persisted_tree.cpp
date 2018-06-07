@@ -164,7 +164,7 @@ TEST_F(PersistedTreeSuite, FindLastLessThanLookup) {
 
         auto key = INodeKey(inode, UINT32_MAX);
 
-        ASSERT_TRUE(tree.find_last_less_then(key, &value, &found));
+        ASSERT_TRUE(tree.find_less_then(key, &value, &found));
 
         auto key_offset = (found) & ((uint32_t)-1);
 

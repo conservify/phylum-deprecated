@@ -210,13 +210,13 @@ public:
         return { block, g.block_size() - g.sector_size };
     }
 
-    static BlockAddress from_uint64(uint64_t value) {
+    static BlockAddress from(uint64_t value) {
         uint32_t block = value >> 32;
         uint32_t position = value & ((uint32_t)-1);
         return BlockAddress{ block, position };
     }
 
-    uint64_t to_uint64() {
+    operator uint64_t() const {
         return (((uint64_t)block) << 32) | position;
     }
 

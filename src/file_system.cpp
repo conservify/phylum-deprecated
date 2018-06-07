@@ -48,8 +48,8 @@ public:
         return tree.find(key);
     }
 
-    bool find_last_less_then(uint64_t key, uint64_t *value, uint64_t *found) {
-        return tree.find_last_less_then(key, value, found);
+    bool find_less_then(uint64_t key, uint64_t *value, uint64_t *found) {
+        return tree.find_less_then(key, value, found);
     }
 
     void touch() {
@@ -58,6 +58,7 @@ public:
 
     bool flush() {
         if (new_head.valid()) {
+            fs.prepare(fs.sbm_.block());
             fs.sbm_.save(new_head.block);
             fs.tree_addr_ = new_head;
             new_head.invalid();
@@ -66,6 +67,9 @@ public:
         return true;
     }
 };
+
+void FileSystem::prepare(SuperBlock &sb) {
+}
 
 bool FileSystem::initialize(bool wipe) {
     if (!storage_->open()) {
@@ -104,12 +108,12 @@ OpenFile FileSystem::open(const char *name, bool readonly) {
     auto existing = tc.find(key);
     if (existing == 0) {
         auto head = initialize_block(allocator_.allocate(), id, BLOCK_INDEX_INVALID);
-        tc.add(key, head.to_uint64());
+        tc.add(key, head);
         return { *this, id, head, readonly };
     }
 
     // TODO: Find a better starting address for the seek.
-    auto head = BlockAddress::from_uint64(existing);
+    auto head = BlockAddress::from(existing);
     auto file = OpenFile { *this, id, head, readonly };
     if (!readonly) {
         file.seek(Seek::End);
@@ -127,6 +131,7 @@ bool FileSystem::format() {
     if (!sbm_.create()) {
         return false;
     }
+
     if (!sbm_.locate()) {
         return false;
     }
@@ -232,7 +237,7 @@ int32_t OpenFile::seek(Seek where, uint32_t position) {
     TreeContext<FileSystem::NodeType> tc{ *fs_ };
 
     if (where == Seek::Beginning && position == 0) {
-        head_ = BlockAddress::from_uint64(tc.find(INodeKey::file_beginning(id_)));
+        head_ = BlockAddress::from(tc.find(INodeKey::file_beginning(id_)));
         position_ = 0;
         return 0;
     }
@@ -240,10 +245,10 @@ int32_t OpenFile::seek(Seek where, uint32_t position) {
     uint64_t value;
     uint64_t saved;
     auto relative = where == Seek::End ? UINT32_MAX : position;
-    assert(tc.find_last_less_then(INodeKey::file_position(id_, relative), &value, &saved));
+    assert(tc.find_less_then(INodeKey::file_position(id_, relative), &value, &saved));
 
     auto starting = INodeKey(saved).lower();
-    auto ss = seek(BlockAddress::from_uint64(value), relative - starting);
+    auto ss = seek(BlockAddress::from(value), relative - starting);
     blocks_since_save_ = ss.blocks;
     head_ = ss.address;
     position_ = starting + ss.bytes;
@@ -335,7 +340,7 @@ int32_t OpenFile::flush() {
         if (blocks_since_save_ == POSITION_SAVE_FREQUENCY) {
             TreeContext<FileSystem::NodeType> tc{ *fs_ };
             auto key = INodeKey::file_position(id_, length_);
-            tc.add(key, head_.to_uint64());
+            tc.add(key, head_);
             blocks_since_save_ = 0;
         }
 
