@@ -74,7 +74,7 @@ bool LinuxMemoryBackend::read(SectorAddress addr, size_t offset, void *d, size_t
     return true;
 }
 
-static void verify_erased(SectorAddress addr, uint8_t *p, size_t n) {
+static void verify_erased(BlockAddress addr, uint8_t *p, size_t n) {
     for (size_t i = 0; i < n; ++i) {
         if (*p != 0xff) {
             sdebug << "Corruption: " << addr << std::endl;
@@ -92,7 +92,7 @@ bool LinuxMemoryBackend::write(SectorAddress addr, size_t offset, void *d, size_
     assert(o + n < size_);
 
     auto p = ptr_ + o;
-    verify_erased(addr, p, n);
+    verify_erased(BlockAddress{ addr.block, addr.sector * geometry_.sector_size + offset }, p, n);
     memcpy(p, d, n);
 
     log_.append(LogEntry{ OperationType::Write, addr, p, offset, n });
