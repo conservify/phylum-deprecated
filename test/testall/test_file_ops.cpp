@@ -122,4 +122,22 @@ TEST_F(FileOpsSuite, WriteAndReadTwoSectors) {
 }
 
 TEST_F(FileOpsSuite, WriteAndReadIntoSecondBlock) {
-}
+    uint8_t pattern[] = { 'a', 's', 'd', 'f' };
+
+    auto total_writing = geometry_.block_size() + SectorSize + SectorSize / 2;
+
+    // This makes testing easier.
+    ASSERT_EQ(total_writing % sizeof(pattern), 0);
+
+    auto read = 0, wrote = 0;
+    auto writing = fs_.open("test.bin");
+    write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
+    ASSERT_EQ(wrote, total_writing);
+    writing.close();
+
+    auto reading = fs_.open("test.bin", true);
+    read_and_verify_pattern(reading, pattern, sizeof(pattern), read);
+    reading.close();
+
+    ASSERT_EQ(read, wrote);
+ }

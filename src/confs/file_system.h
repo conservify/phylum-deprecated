@@ -29,7 +29,7 @@ public:
 public:
     size_t write(const void *ptr, size_t size);
     size_t read(void *ptr, size_t size);
-    size_t flush();
+    size_t flush(block_index_t linked);
     void close();
 
 };

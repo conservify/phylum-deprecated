@@ -64,27 +64,16 @@ struct BlockAllocSector {
     }
 };
 
-struct BlockTailSector {
-    BlockMagic magic;
-    block_index_t linked_block{ BLOCK_INDEX_INVALID };
-
-    BlockTailSector() {
-    }
-
-    void fill() {
-        magic.fill();
-    }
-
-    bool valid() const {
-        return magic.valid();
-    }
-};
-
 struct SectorTail {
     uint16_t reserved{ 0 };
     uint16_t bytes;
+};
 
-    SectorTail(uint16_t bytes) : bytes(bytes) {
+struct BlockTail {
+    uint16_t bytes;
+    block_index_t linked_block{ BLOCK_INDEX_INVALID };
+
+    BlockTail() {
     }
 };
 
@@ -159,23 +148,23 @@ public:
         return block != BLOCK_INDEX_INVALID && position != POSITION_INDEX_INVALID;
     }
 
-    uint32_t remaining_in_sector(Geometry &g) {
+    uint32_t remaining_in_sector(const Geometry &g) {
         return g.sector_size - (position % g.sector_size);
     }
 
-    uint32_t remaining_in_block(Geometry &g) {
+    uint32_t remaining_in_block(const Geometry &g) {
         return g.block_size() - position;
     }
 
-    sector_index_t sector_offset(Geometry &g) {
+    sector_index_t sector_offset(const Geometry &g) {
         return position % g.sector_size;
     }
 
-    sector_index_t sector_number(Geometry &g) {
+    sector_index_t sector_number(const Geometry &g) {
         return position / g.sector_size;
     }
 
-    SectorAddress sector(Geometry &g) {
+    SectorAddress sector(const Geometry &g) {
         return { block, sector_number(g) };
     }
 
@@ -195,7 +184,7 @@ public:
         return position == 0;
     }
 
-    bool find_room(Geometry &g, uint32_t n) {
+    bool find_room(const Geometry &g, uint32_t n) {
         assert(n <= g.sector_size);
 
         auto sector_remaining = remaining_in_sector(g);
@@ -211,6 +200,10 @@ public:
         position += sector_remaining;
 
         return true;
+    }
+
+    bool tail_sector(const Geometry &g) const {
+        return position >= g.block_size() - g.sector_size;
     }
 
     static BlockAddress from_uint64(uint64_t value) {
@@ -260,8 +253,8 @@ inline std::ostream& operator<<(std::ostream& os, const BlockAllocSector &h) {
     return os << "BAS<type=" << h.type << " age=" << h.age << " ts=" << h.timestamp << " link=" << h.linked_block << ">";
 }
 
-inline std::ostream& operator<<(std::ostream& os, const BlockTailSector &h) {
-    return os << "BTS<>";
+inline std::ostream& operator<<(std::ostream& os, const BlockTail &h) {
+    return os << "BlockTail<>";
 }
 
 }
