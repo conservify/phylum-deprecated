@@ -18,7 +18,6 @@ struct SuperBlockLink {
 
 struct SuperBlock {
     SuperBlockLink link;
-    uint32_t number_of_files{ 0 };
     block_index_t tree{ 0 };
     block_index_t alloc_head{ BLOCK_INDEX_INVALID };
 
@@ -31,6 +30,7 @@ private:
     static constexpr block_index_t AnchorBlocks[] = { 1, 2 };
     StorageBackend *storage_;
     BlockAllocator *allocator_;
+    // TODO: Store more than one super block in a sector?
     SectorAddress location_;
     SuperBlock sb_;
 
@@ -57,7 +57,7 @@ public:
 public:
     bool locate();
     bool create();
-    bool save(block_index_t new_tree_block);
+    bool save();
 
 private:
     int32_t chain_length();

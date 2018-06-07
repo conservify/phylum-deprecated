@@ -43,7 +43,7 @@ TEST_F(SuperBlockSuite, SavingAFewRevisions) {
     ASSERT_TRUE(sbm_.create());
 
     for (auto i = 0; i < 5; ++i) {
-        ASSERT_TRUE(sbm_.save(BLOCK_INDEX_INVALID));
+        ASSERT_TRUE(sbm_.save());
     }
 
     ASSERT_EQ(sbm_.location().sector, 6);
@@ -59,7 +59,7 @@ TEST_F(SuperBlockSuite, BlockRollover) {
     auto old = sbm_.location();
 
     for (auto i = 0; i < 18; ++i) {
-        ASSERT_TRUE(sbm_.save(BLOCK_INDEX_INVALID));
+        ASSERT_TRUE(sbm_.save());
     }
 
     ASSERT_TRUE(sbm_.locate());
@@ -74,7 +74,7 @@ TEST_F(SuperBlockSuite, AnchorAreaRollover) {
     auto old = sbm_.location();
 
     for (auto i = 0; i < anchor_overflow_iterations; ++i) {
-        ASSERT_TRUE(sbm_.save(BLOCK_INDEX_INVALID));
+        ASSERT_TRUE(sbm_.save());
     }
 
     ASSERT_TRUE(sbm_.locate());
@@ -89,7 +89,7 @@ TEST_F(SuperBlockSuite, AnchorAreaRolloverTwice) {
     auto old = sbm_.location();
 
     for (auto i = 0; i < anchor_overflow_iterations * 2; ++i) {
-        ASSERT_TRUE(sbm_.save(BLOCK_INDEX_INVALID));
+        ASSERT_TRUE(sbm_.save());
     }
 
     ASSERT_TRUE(sbm_.locate());

@@ -203,8 +203,7 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
     return true;
 }
 
-bool SuperBlockManager::save(block_index_t new_tree_block) {
-    sb_.tree = new_tree_block;
+bool SuperBlockManager::save() {
     sb_.link.header.timestamp++;
 
     auto sb_write = PendingWrite{

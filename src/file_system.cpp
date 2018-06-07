@@ -58,9 +58,11 @@ public:
 
     bool flush() {
         if (new_head.valid()) {
-            fs.prepare(fs.sbm_.block());
-            fs.sbm_.save(new_head.block);
+            // Fill SuperBlock with useful details, save and then kill our
+            // new_head so we don't try and save again until a new modification occurs.
             fs.tree_addr_ = new_head;
+            fs.prepare(fs.sbm_.block());
+            fs.sbm_.save();
             new_head.invalid();
             return true;
         }
@@ -69,6 +71,7 @@ public:
 };
 
 void FileSystem::prepare(SuperBlock &sb) {
+    sb.tree = tree_addr_.block;
 }
 
 bool FileSystem::initialize(bool wipe) {
@@ -193,6 +196,8 @@ OpenFile::SeekStatistics OpenFile::seek(BlockAddress starting, uint32_t max) {
     auto bytes = 0;
     auto blocks = 0;
 
+    // Start walking the file from the given starting block until we reach the
+    // end of the file or we've passed `max` bytes.
     auto &g = fs_->storage().geometry();
     auto addr = BlockAddress::tail_sector_of(starting.block, g);
     while (true) {
@@ -200,6 +205,8 @@ OpenFile::SeekStatistics OpenFile::seek(BlockAddress starting, uint32_t max) {
             return { };
         }
 
+        // Check to see if our desired location is in this block, otherwise we
+        // can just skip this one entirely.
         if (addr.tail_sector(g)) {
             auto tail = tail_info<BlockTail>(buffer_);
             if (tail->linked_block != BLOCK_INDEX_INVALID && max > tail->bytes_in_block) {
@@ -236,23 +243,33 @@ OpenFile::SeekStatistics OpenFile::seek(BlockAddress starting, uint32_t max) {
 int32_t OpenFile::seek(Seek where, uint32_t position) {
     TreeContext<FileSystem::NodeType> tc{ *fs_ };
 
+    // Easy seek, we can do this directly.
     if (where == Seek::Beginning && position == 0) {
         head_ = BlockAddress::from(tc.find(INodeKey::file_beginning(id_)));
         position_ = 0;
         return 0;
     }
 
+    // This is a little trickier. What we do is look for the first saved INode
+    // less than the desired position in the file. If we're seeking to the end
+    // then we use UINT32_MAX for the desired position.
+    // Technically we could do this faster if we also looked for the following
+    // entry and determined if seeking in reverse is a better way. Doesn't seem
+    // worth the effort though.
     uint64_t value;
     uint64_t saved;
     auto relative = where == Seek::End ? UINT32_MAX : position;
     assert(tc.find_less_then(INodeKey::file_position(id_, relative), &value, &saved));
 
+    // This gets us pretty close (within POSITION_SAVE_FREQUENCY blocks) so we
+    // walk the blocks and sectors to find the actual location.
     auto starting = INodeKey(saved).lower();
     auto ss = seek(BlockAddress::from(value), relative - starting);
     blocks_since_save_ = ss.blocks;
     head_ = ss.address;
     position_ = starting + ss.bytes;
 
+    // If we found the end then remember the length.
     if (where == Seek::End) {
         length_ = position_;
     }
