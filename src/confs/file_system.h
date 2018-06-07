@@ -49,7 +49,7 @@ private:
 
 class FileSystem {
 private:
-    using NodeType = Node<INodeKey, uint64_t, BlockAddress, 6, 6>;
+    using NodeType = Node<uint64_t, uint64_t, BlockAddress, 6, 6>;
 
     StorageBackend *storage_;
     BlockAllocator allocator_;

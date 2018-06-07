@@ -7,10 +7,6 @@
 
 namespace confs {
 
-inline uint64_t make_key(uint32_t upper, uint32_t lower) {
-    return ((uint64_t)upper << 32) | (uint64_t)lower;
-}
-
 class INodeKey {
 private:
     uint64_t value_;
@@ -19,7 +15,7 @@ public:
     INodeKey(uint64_t value = 0) : value_(value) {
     }
 
-    INodeKey(uint32_t upper, uint32_t lower) : value_(make_key(upper, lower)) {
+    INodeKey(uint32_t upper, uint32_t lower) : value_(make(upper, lower)) {
     }
 
 public:
@@ -31,52 +27,19 @@ public:
         return (value_) & ((uint32_t)-1);
     }
 
-public:
-    friend std::ostream &operator<<(std::ostream &os, const INodeKey &e);
+    operator uint64_t() const {
+        return value_;
+    }
 
-    inline bool operator==(const INodeKey &rhs) const {
-        return value_ == rhs.value_;
+    static uint64_t make(uint32_t upper, uint32_t lower) {
+        return ((uint64_t)upper << 32) | (uint64_t)lower;
     }
-    inline bool operator!=(const INodeKey &rhs) const {
-        return !operator==(rhs);
-    }
-    inline bool operator<(const INodeKey &rhs) const {
-        return value_ < rhs.value_;
-    }
-    inline bool operator>(const INodeKey &rhs) const {
-        return value_ > rhs.value_;
-    }
-    inline bool operator<=(const INodeKey &rhs) const {
-        return !operator>(rhs);
-    }
-    inline bool operator>=(const INodeKey &rhs) const {
-        return !operator<(rhs);
-    }
+
 };
 
 inline std::ostream &operator<<(std::ostream &os, const INodeKey &e) {
     return os << "INodeKey<" << e.upper() << " " << e.lower() << ">";
 }
-/*
-  inline bool operator==(const INodeKey &lhs, const INodeKey &rhs) {
-  return lhs.value_ == rhs.value_;
-  }
-  inline bool operator!=(const INodeKey &lhs, const INodeKey &rhs) {
-  return !operator==(lhs, rhs);
-  }
-  inline bool operator<(const INodeKey &lhs, const INodeKey &rhs) {
-  return memcmp(&lhs.value_, &rhs.value_, sizeof(uint64_t)) < 0;
-  }
-  inline bool operator>(const INodeKey &lhs, const INodeKey &rhs) {
-  return operator<(rhs, lhs);
-  }
-  inline bool operator<=(const INodeKey &lhs, const INodeKey &rhs) {
-  return !operator>(lhs, rhs);
-  }
-  inline bool operator>=(const INodeKey &lhs, const INodeKey &rhs) {
-  return !operator<(lhs, rhs);
-  }
-*/
 
 }
 

@@ -121,7 +121,7 @@ TEST_F(PersistedTreeSuite, MultipleLookupCustomKeyType) {
         auto offset = 512;
 
         for (auto j = 0; j < 128; ++j) {
-            auto key = make_key(inode, offset);
+            auto key = INodeKey(inode, offset);
             tree.add(key, inode);
             map[key] = inode;
             offset += random() % 4096;
@@ -150,7 +150,7 @@ TEST_F(PersistedTreeSuite, FindLastLessThanLookup) {
         auto offset = 512;
 
         for (auto j = 0; j < 128; ++j) {
-            auto key = make_key(inode, offset);
+            auto key = INodeKey(inode, offset);
             tree.add(key, inode);
             last_offsets[inode] = offset;
             map[key] = inode;
@@ -162,7 +162,7 @@ TEST_F(PersistedTreeSuite, FindLastLessThanLookup) {
         NodeType::KeyType found;
         NodeType::ValueType value;
 
-        auto key = make_key(inode, UINT32_MAX);
+        auto key = INodeKey(inode, UINT32_MAX);
 
         ASSERT_TRUE(tree.find_last_less_then(key, &value, &found));
 

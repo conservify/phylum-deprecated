@@ -43,15 +43,15 @@ public:
     }
 
 public:
-    void add(INodeKey key, uint64_t value) {
+    void add(uint64_t key, uint64_t value) {
         new_head = tree.add(key, value);
     }
 
-    uint64_t find(INodeKey key) {
+    uint64_t find(uint64_t key) {
         return tree.find(key);
     }
 
-    bool find_last_less_then(INodeKey key, uint64_t *value, INodeKey *found) {
+    bool find_last_less_then(uint64_t key, uint64_t *value, uint64_t *found) {
         return tree.find_last_less_then(key, value, found);
     }
 
@@ -94,7 +94,7 @@ bool FileSystem::exists(const char *name) {
     TreeContext<NodeType> tc{ *this };
 
     auto id = crc32_checksum((uint8_t *)name, strlen(name));
-    auto key = make_key(2, id);
+    auto key = INodeKey(2, id);
 
     return tc.find(key) != 0;
 }
@@ -103,7 +103,7 @@ OpenFile FileSystem::open(const char *name, bool readonly) {
     TreeContext<NodeType> tc{ *this };
 
     auto id = crc32_checksum((uint8_t *)name, strlen(name));
-    auto key = make_key(2, id);
+    auto key = INodeKey(2, id);
 
     auto existing = tc.find(key);
     if (existing == 0) {
@@ -121,10 +121,6 @@ OpenFile FileSystem::open(const char *name, bool readonly) {
     return file;
 }
 
-bool FileSystem::close() {
-    return storage_->close();
-}
-
 bool FileSystem::touch() {
     TreeContext<NodeType> tc{ *this };
     tc.touch();
@@ -140,6 +136,10 @@ bool FileSystem::format() {
     }
 
     return touch();
+}
+
+bool FileSystem::close() {
+    return storage_->close();
 }
 
 BlockAddress FileSystem::initialize_block(block_index_t block, file_id_t file_id) {
@@ -180,16 +180,15 @@ int32_t OpenFile::seek(Seek seek) {
     switch (seek) {
     case Seek::End: {
         uint64_t value;
-        INodeKey found;
-        if (tc.find_last_less_then(INodeKey{ id_, UINT32_MAX }, &value, &found)) {
-            auto addr = BlockAddress::from_uint64(value);
-            head_ = addr;
+        uint64_t saved;
+        if (tc.find_last_less_then(INodeKey{ id_, UINT32_MAX }, &value, &saved)) {
+            head_ = BlockAddress::from_uint64(value);
+            length_ = INodeKey(saved).lower();
         }
         break;
     }
     case Seek::Beginning: {
-        auto key = make_key(2, id_);
-        head_ = BlockAddress::from_uint64(tc.find(key));
+        head_ = BlockAddress::from_uint64(tc.find(INodeKey(2, id_)));
         return 0;
     }
     }

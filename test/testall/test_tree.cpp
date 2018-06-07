@@ -124,13 +124,13 @@ TEST_F(TreeSuite, MultipleLookup) {
         auto offset = 512;
 
         for (auto j = 0; j < 128; ++j) {
-            tree.add(make_key(inode, offset), inode);
+            tree.add(INodeKey(inode, offset), inode);
             offset += random() % 4096;
         }
     }
 
-    auto first_key = make_key(inodes[3], 0);
-    auto last_key = make_key(inodes[3], ((uint32_t)-1));
+    auto first_key = INodeKey(inodes[3], 0);
+    auto last_key = INodeKey(inodes[3], ((uint32_t)-1));
 
     tree.find_all(first_key, last_key);
 }
