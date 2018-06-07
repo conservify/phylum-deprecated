@@ -12,6 +12,11 @@ namespace confs {
 
 class FileSystem;
 
+enum class Seek {
+    Beginning,
+    End,
+};
+
 class OpenFile {
 private:
     FileSystem *fs_;
@@ -31,6 +36,7 @@ public:
     friend class FileSystem;
 
 public:
+    int32_t seek(Seek seek);
     int32_t write(const void *ptr, size_t size);
     int32_t read(void *ptr, size_t size);
     int32_t flush(block_index_t linked);
@@ -38,7 +44,6 @@ public:
 
 private:
     bool tail_sector();
-    BlockAddress seek_eof();
 
 };
 

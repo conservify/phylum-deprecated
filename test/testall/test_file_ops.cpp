@@ -208,6 +208,47 @@ TEST_F(FileOpsSuite, WriteToTailSectorAndAppend) {
     ASSERT_EQ(read, wrote);
 }
 
+TEST_F(FileOpsSuite, Write128Blocks) {
+    uint8_t pattern[] = { 'a', 's', 'd', 'f' };
+
+    auto total_writing = (int32_t)(geometry_.block_size() * 128);
+
+    ASSERT_EQ(total_writing % sizeof(pattern), (size_t)0);
+
+    auto wrote = 0;
+    auto writing = fs_.open("test.bin");
+    write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
+    writing.close();
+
+    auto read = 0;
+    auto reading = fs_.open("test.bin", true);
+    read_and_verify_pattern(reading, pattern, sizeof(pattern), read);
+    reading.close();
+
+    ASSERT_EQ(read, wrote);
+}
+
+TEST_F(FileOpsSuite, Write128BlocksAndSeekToEoF) {
+    uint8_t pattern[] = { 'a', 's', 'd', 'f' };
+
+    auto total_writing = (int32_t)(geometry_.block_size() * 128);
+
+    ASSERT_EQ(total_writing % sizeof(pattern), (size_t)0);
+
+    auto wrote = 0;
+    auto writing = fs_.open("test.bin");
+    write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
+    writing.close();
+
+    storage_.log().clear();
+
+    auto reading = fs_.open("test.bin", true);
+    ASSERT_EQ(reading.seek(Seek::End), 0);
+    reading.close();
+
+    ASSERT_EQ(storage_.log().size(), 10);
+}
+
 static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t total_to_write, int32_t &wrote) {
     auto written = 0;
 

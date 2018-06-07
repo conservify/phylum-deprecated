@@ -51,6 +51,10 @@ public:
         return tree.find(key);
     }
 
+    bool find_last_less_then(INodeKey key, uint64_t *value, INodeKey *found) {
+        return tree.find_last_less_then(key, value, found);
+    }
+
     void touch() {
         new_head = tree.create_if_necessary();
     }
@@ -112,7 +116,7 @@ OpenFile FileSystem::open(const char *name, bool readonly) {
     auto head = BlockAddress::from_uint64(existing);
     auto file = OpenFile { *this, id, head, readonly };
     if (!readonly) {
-        file.seek_eof();
+        file.seek(Seek::End);
     }
     return file;
 }
@@ -213,10 +217,26 @@ bool OpenFile::tail_sector() {
     return head_.tail_sector(fs_->storage().geometry());
 }
 
-BlockAddress OpenFile::seek_eof() {
-    auto &g = fs_->storage().geometry();
+int32_t OpenFile::seek(Seek seek) {
+    TreeContext<FileSystem::NodeType> tc{ *fs_ };
 
-    auto addr = BlockAddress::tail_sector_of(head_.block, g);
+    switch (seek) {
+    case Seek::End: {
+        uint64_t value;
+        INodeKey found;
+        if (tc.find_last_less_then(INodeKey{ id_, UINT32_MAX }, &value, &found)) {
+            auto addr = BlockAddress::from_uint64(value);
+            head_ = addr;
+        }
+        break;
+    }
+    }
+
+    blocks_since_save_ = 0;
+
+    auto &g = fs_->storage().geometry();
+    auto starting = head_;
+    auto addr = BlockAddress::tail_sector_of(starting.block, g);
     while (true) {
         if (!fs_->storage_->read(addr, buffer_, sizeof(buffer_))) {
             return { };
@@ -225,6 +245,7 @@ BlockAddress OpenFile::seek_eof() {
         if (addr.tail_sector(g)) {
             auto tail = tail_info<BlockTail>(buffer_);
             if (tail->linked_block != BLOCK_INDEX_INVALID) {
+                blocks_since_save_++;
                 addr = BlockAddress::tail_sector_of(tail->linked_block, g);
             }
             else {
@@ -234,12 +255,14 @@ BlockAddress OpenFile::seek_eof() {
         else {
             auto tail = tail_info<SectorTail>(buffer_);
             if (tail->bytes == 0 || tail->bytes == SECTOR_INDEX_INVALID) {
+                head_ = addr;
                 break;
             }
             addr.add(SectorSize);
         }
     }
-    return head_ = addr;
+
+    return 0;
 }
 
 int32_t OpenFile::write(const void *ptr, size_t size) {
@@ -289,6 +312,14 @@ int32_t OpenFile::flush(block_index_t linked) {
             // TODO: Yikes.
             return 0;
         }
+
+        blocks_since_save_++;
+        if (blocks_since_save_ == 8) {
+            TreeContext<FileSystem::NodeType> tc{ *fs_ };
+            auto key = INodeKey{ id_, length_ + position_ };
+            tc.add(key, head_.to_uint64());
+            blocks_since_save_ = 0;
+        }
     }
     else {
         auto tail = tail_info<SectorTail>(buffer_);
@@ -301,6 +332,7 @@ int32_t OpenFile::flush(block_index_t linked) {
     }
 
     auto flushed = position_;
+    length_ += position_;
     position_ = 0;
     return flushed;
 }
