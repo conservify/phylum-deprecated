@@ -44,8 +44,8 @@ public:
 public:
     uint32_t size();
     uint32_t tell();
-    int32_t seek(Seek seek);
-    int32_t seek(int32_t position);
+    int32_t seek(Seek seek, uint32_t position = 0);
+    int32_t seek(uint32_t position);
     int32_t write(const void *ptr, size_t size);
     int32_t read(void *ptr, size_t size);
     int32_t flush(block_index_t linked);
@@ -60,7 +60,7 @@ private:
         int32_t bytes;
     };
 
-    SeekStatistics seek(BlockAddress starting);
+    SeekStatistics seek(BlockAddress starting, uint32_t max);
 
 };
 

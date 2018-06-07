@@ -184,10 +184,10 @@ uint32_t OpenFile::size() {
 }
 
 uint32_t OpenFile::tell() {
-    return length_;
+    return position_;
 }
 
-OpenFile::SeekStatistics OpenFile::seek(BlockAddress starting) {
+OpenFile::SeekStatistics OpenFile::seek(BlockAddress starting, uint32_t max) {
     auto bytes = 0;
     auto blocks = 0;
 
@@ -200,9 +200,10 @@ OpenFile::SeekStatistics OpenFile::seek(BlockAddress starting) {
 
         if (addr.tail_sector(g)) {
             auto tail = tail_info<BlockTail>(buffer_);
-            if (tail->linked_block != BLOCK_INDEX_INVALID) {
+            if (tail->linked_block != BLOCK_INDEX_INVALID && max > tail->bytes_in_block) {
                 addr = BlockAddress::tail_sector_of(tail->linked_block, g);
                 bytes += tail->bytes_in_block;
+                max -= tail->bytes_in_block;
                 blocks++;
             }
             else {
@@ -214,45 +215,51 @@ OpenFile::SeekStatistics OpenFile::seek(BlockAddress starting) {
             if (tail->bytes == 0 || tail->bytes == SECTOR_INDEX_INVALID) {
                 break;
             }
-            bytes += tail->bytes;
-            addr.add(SectorSize);
+            if (max > tail->bytes) {
+                bytes += tail->bytes;
+                max -= tail->bytes;
+                addr.add(SectorSize);
+            }
+            else {
+                bytes += max;
+                addr.add(max);
+                break;
+            }
         }
     }
 
     return { addr, blocks, bytes };
 }
 
-int32_t OpenFile::seek(Seek where) {
+int32_t OpenFile::seek(Seek where, uint32_t position) {
     TreeContext<FileSystem::NodeType> tc{ *fs_ };
 
-    if (where == Seek::End) {
-        uint64_t value;
-        uint64_t saved;
-        assert(tc.find_last_less_then(INodeKey::file_maximum(id_), &value, &saved));
-
-        auto ss = seek(BlockAddress::from_uint64(value));
-        length_ = INodeKey(saved).lower() + ss.bytes;
-        blocks_since_save_ = ss.blocks;
-        head_ = ss.address;
-        position_ = length_;
-
-        return position_;
-    }
-
-    if (where == Seek::Beginning) {
+    if (where == Seek::Beginning && position == 0) {
         head_ = BlockAddress::from_uint64(tc.find(INodeKey::file_beginning(id_)));
+        position_ = 0;
         return 0;
     }
 
-    return 0;
-}
+    uint64_t value;
+    uint64_t saved;
+    auto relative = where == Seek::End ? UINT32_MAX : position;
+    assert(tc.find_last_less_then(INodeKey::file_position(id_, relative), &value, &saved));
 
-int32_t OpenFile::seek(int32_t position) {
-    if (position == 0) {
-        return seek(Seek::Beginning);
+    auto starting = INodeKey(saved).lower();
+    auto ss = seek(BlockAddress::from_uint64(value), relative - starting);
+    blocks_since_save_ = ss.blocks;
+    head_ = ss.address;
+    position_ = starting + ss.bytes;
+
+    if (where == Seek::End) {
+        length_ = position_;
     }
 
-    return 0;
+    return position_;
+}
+
+int32_t OpenFile::seek(uint32_t position) {
+    return seek(Seek::Beginning, position);
 }
 
 int32_t OpenFile::write(const void *ptr, size_t size) {
