@@ -60,10 +60,11 @@ public:
     }
 
     size_t size(bool head) {
-        if (head) {
-            return sizeof(serialized_head_t);
-        }
-        return sizeof(serialized_node_t);
+        // Pretend all nodes are the same size, in this case the size of the
+        // head node. This makes some things easier and with how big things are
+        // now it doesn't really make a difference. 128 vs 112 doesn't give us
+        // any extra room unless we split nodes across sectors.
+        return sizeof(serialized_head_t);
     }
 
 private:
