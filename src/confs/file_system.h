@@ -32,6 +32,9 @@ public:
     size_t flush(block_index_t linked);
     void close();
 
+private:
+    bool tail_sector();
+
 };
 
 class FileSystem {

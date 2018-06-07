@@ -202,6 +202,10 @@ OpenFile::OpenFile(FileSystem &fs, file_id_t id, BlockAddress head, bool readonl
     assert(sizeof(buffer_) == SectorSize);
 }
 
+bool OpenFile::tail_sector() {
+    return head_.tail_sector(fs_->storage().geometry());
+}
+
 size_t OpenFile::write(const void *ptr, size_t size) {
     auto &g = fs_->storage().geometry();
     auto to_write = size;
@@ -244,6 +248,42 @@ size_t OpenFile::write(const void *ptr, size_t size) {
     }
 
     return wrote;
+}
+
+size_t OpenFile::flush(block_index_t linked) {
+    auto &g = fs_->storage().geometry();
+
+    if (readonly_) {
+        return 0;
+    }
+
+    if (position_ == 0) {
+        return 0;
+    }
+
+    sdebug << "Write: " << head_ << " " << position_ << std::endl;
+    auto tail_sector = head_.tail_sector(g);
+    auto overhead = tail_sector ? sizeof(BlockTail) : sizeof(SectorTail);
+    auto tail_offset = sizeof(buffer_) - overhead;
+    if (tail_sector) {
+        auto tail = reinterpret_cast<BlockTail*>(buffer_ + tail_offset);
+        tail->linked_block = linked;
+        tail->bytes = position_;
+    }
+    else {
+        auto tail = reinterpret_cast<SectorTail*>(buffer_ + tail_offset);
+        tail->bytes = position_;
+    }
+
+    if (!fs_->storage_->write(head_, buffer_, sizeof(buffer_))) {
+        return 0;
+    }
+
+    head_.add(SectorSize);
+
+    auto flushed = position_;
+    position_ = 0;
+    return flushed;
 }
 
 size_t OpenFile::read(void *ptr, size_t size) {
@@ -299,42 +339,6 @@ size_t OpenFile::read(void *ptr, size_t size) {
     position_ += copying;
 
     return copying;
-}
-
-size_t OpenFile::flush(block_index_t linked) {
-    auto &g = fs_->storage().geometry();
-
-    if (readonly_) {
-        return 0;
-    }
-
-    if (position_ == 0) {
-        return 0;
-    }
-
-    sdebug << "Write: " << head_ << " " << position_ << std::endl;
-    auto tail_sector = head_.tail_sector(g);
-    auto overhead = tail_sector ? sizeof(BlockTail) : sizeof(SectorTail);
-    auto tail_offset = sizeof(buffer_) - overhead;
-    if (tail_sector) {
-        auto tail = reinterpret_cast<BlockTail*>(buffer_ + tail_offset);
-        tail->linked_block = linked;
-        tail->bytes = position_;
-    }
-    else {
-        auto tail = reinterpret_cast<SectorTail*>(buffer_ + tail_offset);
-        tail->bytes = position_;
-    }
-
-    if (!fs_->storage_->write(head_, buffer_, sizeof(buffer_))) {
-        return 0;
-    }
-
-    head_.add(SectorSize);
-
-    auto flushed = position_;
-    position_ = 0;
-    return flushed;
 }
 
 void OpenFile::close() {
