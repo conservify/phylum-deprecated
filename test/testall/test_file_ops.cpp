@@ -70,31 +70,11 @@ TEST_F(FileOpsSuite, WriteLessThanASectorAndRead) {
     reading.close();
 }
 
-TEST_F(FileOpsSuite, WriteLessThanASectorAndAppendAndRead) {
-    uint8_t pattern[] = { 'a', 's', 'd', 'f' };
-
-    auto writing = fs_.open("test.bin");
-    ASSERT_EQ(writing.write(pattern, sizeof(pattern)), (int32_t)sizeof(pattern));
-    writing.close();
-
-    writing = fs_.open("test.bin");
-    ASSERT_EQ(writing.write(pattern, sizeof(pattern)), (int32_t)sizeof(pattern));
-    writing.close();
-
-    auto read = 0;
-    auto reading = fs_.open("test.bin", true);
-    read_and_verify_pattern(reading, pattern, sizeof(pattern), read);
-    reading.close();
-
-    ASSERT_EQ(read, (int32_t)sizeof(pattern) * 2);
-}
-
-TEST_F(FileOpsSuite, WriteAndReadTwoSectors) {
+TEST_F(FileOpsSuite, WriteTwoSectorsAndRead) {
     uint8_t pattern[] = { 'a', 's', 'd', 'f' };
 
     auto total_writing = SectorSize + SectorSize / 2;
 
-    // This makes testing easier.
     ASSERT_EQ(total_writing % sizeof(pattern), (size_t)0);
 
     auto read = 0, wrote = 0;
@@ -110,7 +90,7 @@ TEST_F(FileOpsSuite, WriteAndReadTwoSectors) {
     ASSERT_EQ(read, wrote);
 }
 
-TEST_F(FileOpsSuite, WriteAndReadIntoSecondBlock) {
+TEST_F(FileOpsSuite, WriteTwoBlocksAndRead) {
     uint8_t pattern[] = { 'a', 's', 'd', 'f' };
 
     auto total_writing = (int32_t)(geometry_.block_size() + SectorSize + SectorSize / 2);
@@ -131,22 +111,118 @@ TEST_F(FileOpsSuite, WriteAndReadIntoSecondBlock) {
     ASSERT_EQ(read, wrote);
 }
 
-static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t total_to_write, int32_t &wrote) {
-    wrote = 0;
+TEST_F(FileOpsSuite, WriteLessThanASectorAndAppendAndRead) {
+    uint8_t pattern[] = { 'a', 's', 'd', 'f' };
 
-    while (wrote < total_to_write) {
+    auto writing = fs_.open("test.bin");
+    ASSERT_EQ(writing.write(pattern, sizeof(pattern)), (int32_t)sizeof(pattern));
+    writing.close();
+
+    auto appending = fs_.open("test.bin");
+    ASSERT_EQ(appending.write(pattern, sizeof(pattern)), (int32_t)sizeof(pattern));
+    appending.close();
+
+    auto read = 0;
+    auto reading = fs_.open("test.bin", true);
+    read_and_verify_pattern(reading, pattern, sizeof(pattern), read);
+    reading.close();
+
+    ASSERT_EQ(read, (int32_t)sizeof(pattern) * 2);
+}
+
+TEST_F(FileOpsSuite, WriteMultipleSectorsAndAppendAndRead) {
+    uint8_t pattern[] = { 'a', 's', 'd', 'f' };
+
+    auto total_writing = SectorSize + SectorSize / 2;
+
+    ASSERT_EQ(total_writing % sizeof(pattern), (size_t)0);
+
+    auto wrote = 0;
+    for (auto i = 0; i < 3; ++i) {
+        auto writing = fs_.open("test.bin");
+        write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
+        writing.close();
+    }
+
+    ASSERT_EQ(wrote, (int32_t)total_writing * 3);
+
+    auto read = 0;
+    auto reading = fs_.open("test.bin", true);
+    read_and_verify_pattern(reading, pattern, sizeof(pattern), read);
+    reading.close();
+
+    ASSERT_EQ(read, (int32_t)total_writing * 3);
+}
+
+TEST_F(FileOpsSuite, WriteTwoBlocksAndAppendAndRead) {
+    uint8_t pattern[] = { 'a', 's', 'd', 'f' };
+
+    auto total_writing = (int32_t)(geometry_.block_size() + SectorSize + SectorSize / 2);
+    auto total_appending = SectorSize * 2;
+
+    ASSERT_EQ(total_writing % sizeof(pattern), (size_t)0);
+
+    auto wrote = 0;
+    auto writing = fs_.open("test.bin");
+    write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
+    writing.close();
+
+    auto appending = fs_.open("test.bin");
+    write_pattern(appending, pattern, sizeof(pattern), total_appending, wrote);
+    appending.close();
+
+    ASSERT_EQ(wrote, total_writing + total_appending);
+
+    auto read = 0;
+    auto reading = fs_.open("test.bin", true);
+    read_and_verify_pattern(reading, pattern, sizeof(pattern), read);
+    reading.close();
+
+    ASSERT_EQ(read, wrote);
+}
+
+TEST_F(FileOpsSuite, WriteToTailSectorAndAppend) {
+    uint8_t pattern[] = { 'a', 's', 'd', 'f' };
+
+    auto total_writing = (int32_t)(geometry_.block_size() + SectorSize);
+    auto total_appending = SectorSize * 2;
+
+    ASSERT_EQ(total_writing % sizeof(pattern), (size_t)0);
+
+    auto wrote = 0;
+    auto writing = fs_.open("test.bin");
+    write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
+    writing.close();
+
+    auto appending = fs_.open("test.bin");
+    write_pattern(appending, pattern, sizeof(pattern), total_appending, wrote);
+    appending.close();
+
+    ASSERT_EQ(wrote, total_writing + total_appending);
+
+    auto read = 0;
+    auto reading = fs_.open("test.bin", true);
+    read_and_verify_pattern(reading, pattern, sizeof(pattern), read);
+    reading.close();
+
+    ASSERT_EQ(read, wrote);
+}
+
+static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t total_to_write, int32_t &wrote) {
+    auto written = 0;
+
+    while (written < total_to_write) {
         if (file.write(pattern, pattern_length) != pattern_length) {
             break;
         }
 
+        written += pattern_length;
         wrote += pattern_length;
     }
 }
 
 static void read_and_verify_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t &read) {
     uint8_t buffer[8];
-
-    read = 0;
 
     ASSERT_EQ(sizeof(buffer) % pattern_length, (size_t) 0);
 

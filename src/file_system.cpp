@@ -216,27 +216,28 @@ bool OpenFile::tail_sector() {
 BlockAddress OpenFile::seek_eof() {
     auto &g = fs_->storage().geometry();
 
-    auto addr = head_;
+    auto addr = BlockAddress::tail_sector_of(head_.block, g);
     while (true) {
-        /*
-        sdebug << "Check for linked block: " << addr << std::endl;;
-        auto tail_addr = BlockAddress::tail_sector_of(addr.block, g);
-        if (!fs_->storage_->read(tail_addr, buffer_, sizeof(buffer_))) {
-            return { };
-        }
-        */
-
-        sdebug << addr << std::endl;
         if (!fs_->storage_->read(addr, buffer_, sizeof(buffer_))) {
             return { };
         }
 
-        auto tail = tail_info<SectorTail>(buffer_);
-        if (tail->bytes == 0 || tail->bytes == SECTOR_INDEX_INVALID) {
-            break;
+        if (addr.tail_sector(g)) {
+            auto tail = tail_info<BlockTail>(buffer_);
+            if (tail->linked_block != BLOCK_INDEX_INVALID) {
+                addr = BlockAddress::tail_sector_of(tail->linked_block, g);
+            }
+            else {
+                addr = BlockAddress{ addr.block, SectorSize };
+            }
         }
-
-        addr.add(SectorSize);
+        else {
+            auto tail = tail_info<SectorTail>(buffer_);
+            if (tail->bytes == 0 || tail->bytes == SECTOR_INDEX_INVALID) {
+                break;
+            }
+            addr.add(SectorSize);
+        }
     }
     return head_ = addr;
 }
