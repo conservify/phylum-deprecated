@@ -18,17 +18,23 @@ enum class Seek {
 };
 
 class OpenFile {
+    static constexpr uint32_t INVALID_LENGTH = UINT32_MAX;
+    static constexpr uint8_t POSITION_SAVE_FREQUENCY = 8;
+
 private:
     FileSystem *fs_;
     uint32_t id_;
     BlockAddress head_;
     bool readonly_{ false };
 
-    uint32_t position_{ 0 };
-    uint32_t available_{ 0 };
+    uint32_t bytes_in_block_{ 0 };
     uint32_t length_{ 0 };
+    uint32_t position_{ 0 };
     uint8_t blocks_since_save_{ 0 };
+
     uint8_t buffer_[SectorSize];
+    uint16_t available_{ 0 };
+    uint16_t buffpos_{ 0 };
 
 public:
     OpenFile(FileSystem &fs, file_id_t id, BlockAddress head, bool readonly);
@@ -36,7 +42,10 @@ public:
     friend class FileSystem;
 
 public:
+    uint32_t size();
+    uint32_t tell();
     int32_t seek(Seek seek);
+    int32_t seek(int32_t position);
     int32_t write(const void *ptr, size_t size);
     int32_t read(void *ptr, size_t size);
     int32_t flush(block_index_t linked);
@@ -44,6 +53,14 @@ public:
 
 private:
     bool tail_sector();
+
+    struct SeekStatistics {
+        BlockAddress address;
+        int32_t blocks;
+        int32_t bytes;
+    };
+
+    SeekStatistics seek(BlockAddress starting);
 
 };
 

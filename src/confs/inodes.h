@@ -37,7 +37,7 @@ public:
 
 public:
     static uint64_t file_beginning(uint32_t id) {
-        return make(2, id);
+        return make(id, 0);
     }
 
     static uint64_t file_position(uint32_t id, uint32_t length) {

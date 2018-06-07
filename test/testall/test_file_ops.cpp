@@ -54,6 +54,7 @@ TEST_F(FileOpsSuite, WriteFile) {
 
     auto file = fs_.open("test.bin");
     ASSERT_EQ(file.write("Jacob", 5), 5);
+    ASSERT_EQ(file.size(), (uint32_t)5);
     file.close();
 }
 
@@ -62,6 +63,7 @@ TEST_F(FileOpsSuite, WriteLessThanASectorAndRead) {
 
     auto writing = fs_.open("test.bin");
     ASSERT_EQ(writing.write("Jacob", 5), 5);
+    ASSERT_EQ(writing.size(), (uint32_t)5);
     writing.close();
 
     uint8_t buffer[32];
@@ -81,6 +83,7 @@ TEST_F(FileOpsSuite, WriteTwoSectorsAndRead) {
     auto writing = fs_.open("test.bin");
     write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
     ASSERT_EQ(wrote, total_writing);
+    ASSERT_EQ(writing.size(), (uint32_t)total_writing);
     writing.close();
 
     auto reading = fs_.open("test.bin", true);
@@ -102,6 +105,7 @@ TEST_F(FileOpsSuite, WriteTwoBlocksAndRead) {
     auto writing = fs_.open("test.bin");
     write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
     ASSERT_EQ(wrote, total_writing);
+    ASSERT_EQ(writing.size(), (uint32_t)total_writing);
     writing.close();
 
     auto reading = fs_.open("test.bin", true);
@@ -120,6 +124,7 @@ TEST_F(FileOpsSuite, WriteLessThanASectorAndAppendAndRead) {
 
     auto appending = fs_.open("test.bin");
     ASSERT_EQ(appending.write(pattern, sizeof(pattern)), (int32_t)sizeof(pattern));
+    ASSERT_EQ(appending.size(), (uint32_t)sizeof(pattern) * 2);
     appending.close();
 
     auto read = 0;
@@ -165,10 +170,12 @@ TEST_F(FileOpsSuite, WriteTwoBlocksAndAppendAndRead) {
     auto wrote = 0;
     auto writing = fs_.open("test.bin");
     write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
+    ASSERT_EQ(writing.size(), (uint32_t)total_writing);
     writing.close();
 
     auto appending = fs_.open("test.bin");
     write_pattern(appending, pattern, sizeof(pattern), total_appending, wrote);
+    ASSERT_EQ(appending.size(), (uint32_t)(total_writing + total_appending));
     appending.close();
 
     ASSERT_EQ(wrote, total_writing + total_appending);
@@ -192,10 +199,12 @@ TEST_F(FileOpsSuite, WriteToTailSectorAndAppend) {
     auto wrote = 0;
     auto writing = fs_.open("test.bin");
     write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
+    ASSERT_EQ(writing.size(), (uint32_t)(total_writing));
     writing.close();
 
     auto appending = fs_.open("test.bin");
     write_pattern(appending, pattern, sizeof(pattern), total_appending, wrote);
+    ASSERT_EQ(appending.size(), (uint32_t)(total_writing + total_appending));
     appending.close();
 
     ASSERT_EQ(wrote, total_writing + total_appending);
@@ -218,6 +227,7 @@ TEST_F(FileOpsSuite, Write3BlocksAndReadAndSeekBeginning) {
     auto wrote = 0;
     auto writing = fs_.open("test.bin");
     write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
+    ASSERT_EQ(writing.size(), (uint32_t)(total_writing));
     writing.close();
 
     auto read = 0;
@@ -240,14 +250,42 @@ TEST_F(FileOpsSuite, Write128Blocks) {
     auto wrote = 0;
     auto writing = fs_.open("test.bin");
     write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
+    ASSERT_EQ(writing.size(), (uint32_t)(total_writing));
     writing.close();
 
     auto read = 0;
     auto reading = fs_.open("test.bin", true);
     read_and_verify_pattern(reading, pattern, sizeof(pattern), read);
+
+    // Ensure that the size operation here doesn't need to read.
+    storage_.log().clear();
+    ASSERT_EQ(reading.size(), (uint32_t)(total_writing));
+    ASSERT_EQ(storage_.log().size(), 0);
+
     reading.close();
 
     ASSERT_EQ(read, wrote);
+}
+
+TEST_F(FileOpsSuite, Write128BlocksAndCalculateLength) {
+    uint8_t pattern[] = { 'a', 's', 'd', 'f' };
+
+    auto total_writing = (int32_t)(geometry_.block_size() * 128);
+
+    ASSERT_EQ(total_writing % sizeof(pattern), (size_t)0);
+
+    auto wrote = 0;
+    auto writing = fs_.open("test.bin");
+    write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
+    ASSERT_EQ(writing.size(), (uint32_t)(total_writing));
+    writing.close();
+
+    // This requires a seek to the end of the file.
+    auto reading = fs_.open("test.bin", true);
+    storage_.log().clear();
+    ASSERT_EQ(reading.size(), (uint32_t)(total_writing));
+    ASSERT_EQ(storage_.log().size(), 11);
+    reading.close();
 }
 
 TEST_F(FileOpsSuite, Write128BlocksAndSeekToEoF) {
@@ -260,15 +298,20 @@ TEST_F(FileOpsSuite, Write128BlocksAndSeekToEoF) {
     auto wrote = 0;
     auto writing = fs_.open("test.bin");
     write_pattern(writing, pattern, sizeof(pattern), total_writing, wrote);
+    ASSERT_EQ(writing.size(), (uint32_t)(total_writing));
     writing.close();
 
     storage_.log().clear();
 
     auto reading = fs_.open("test.bin", true);
-    ASSERT_EQ(reading.seek(Seek::End), 0);
-    reading.close();
+    ASSERT_EQ(reading.seek(Seek::End), (int32_t)total_writing);
+    ASSERT_EQ(storage_.log().size(), 11);
 
-    ASSERT_EQ(storage_.log().size(), 10);
+    storage_.log().clear();
+    ASSERT_EQ(reading.size(), (uint32_t)(total_writing));
+    ASSERT_EQ(storage_.log().size(), 0);
+
+    reading.close();
 }
 
 static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t total_to_write, int32_t &wrote) {

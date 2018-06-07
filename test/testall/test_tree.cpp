@@ -68,8 +68,6 @@ TEST_F(TreeSuite, SingleLevelMultipleLookup) {
     tree.add(30, 7);
     tree.add(20, 8);
 
-    // tree.dump(sdebug, false);
-
     ASSERT_EQ(tree.lookup(17), 5);
 }
 

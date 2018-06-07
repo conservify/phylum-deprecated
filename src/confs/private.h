@@ -70,6 +70,7 @@ struct SectorTail {
 
 struct BlockTail {
     SectorTail sector;
+    uint32_t bytes_in_block{ 0 };
     block_index_t linked_block{ BLOCK_INDEX_INVALID };
 
     BlockTail() {
