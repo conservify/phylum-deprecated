@@ -4,6 +4,7 @@
 #include <confs/backend.h>
 #include <confs/block_alloc.h>
 #include <confs/persisted_tree.h>
+#include <confs/crc.h>
 
 namespace confs {
 
@@ -36,15 +37,20 @@ public:
     }
 
 public:
-    static uint64_t file_beginning(uint32_t id) {
+    static INodeKey file_beginning(uint32_t id) {
         return make(id, 0);
     }
 
-    static uint64_t file_position(uint32_t id, uint32_t length) {
+    static INodeKey file_position(uint32_t id, uint32_t length) {
         return make(id, length);
     }
 
-    static uint64_t file_maximum(uint32_t id) {
+    static INodeKey file_beginning(const char *name) {
+        auto id = crc32_checksum((uint8_t *)name, strlen(name));
+        return file_position(id, 0);
+    }
+
+    static INodeKey file_maximum(uint32_t id) {
         return make(id, ((uint32_t)-1));
     }
 

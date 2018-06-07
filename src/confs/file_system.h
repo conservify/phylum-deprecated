@@ -48,10 +48,10 @@ public:
     int32_t seek(uint32_t position);
     int32_t write(const void *ptr, size_t size);
     int32_t read(void *ptr, size_t size);
-    int32_t flush(block_index_t linked);
     void close();
 
 private:
+    int32_t flush();
     bool tail_sector();
 
     struct SeekStatistics {
@@ -97,7 +97,7 @@ public:
 private:
     bool touch();
     bool format();
-    BlockAddress initialize_block(block_index_t block, file_id_t file_id);
+    BlockAddress initialize_block(block_index_t block, file_id_t file_id, block_index_t previous);
 
 };
 

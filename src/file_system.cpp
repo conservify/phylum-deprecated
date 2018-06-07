@@ -32,10 +32,7 @@ public:
 public:
     TreeContext(FileSystem &fs) :
         fs(fs), cache(fs.nodes_), tree(cache) {
-
-        if (fs.tree_addr_.valid()) {
-            tree.head(fs.tree_addr_);
-        }
+        tree.head(fs.tree_addr_);
     }
 
     ~TreeContext() {
@@ -93,8 +90,7 @@ bool FileSystem::open(bool wipe) {
 bool FileSystem::exists(const char *name) {
     TreeContext<NodeType> tc{ *this };
 
-    auto id = crc32_checksum((uint8_t *)name, strlen(name));
-    auto key = INodeKey::file_beginning(id);
+    auto key = INodeKey::file_beginning(name);
 
     return tc.find(key) != 0;
 }
@@ -102,12 +98,12 @@ bool FileSystem::exists(const char *name) {
 OpenFile FileSystem::open(const char *name, bool readonly) {
     TreeContext<NodeType> tc{ *this };
 
-    auto id = crc32_checksum((uint8_t *)name, strlen(name));
-    auto key = INodeKey::file_beginning(id);
+    auto key = INodeKey::file_beginning(name);
+    auto id = key.upper();
 
     auto existing = tc.find(key);
     if (existing == 0) {
-        auto head = initialize_block(allocator_.allocate(), id);
+        auto head = initialize_block(allocator_.allocate(), id, BLOCK_INDEX_INVALID);
         tc.add(key, head.to_uint64());
         return { *this, id, head, readonly };
     }
@@ -142,11 +138,12 @@ bool FileSystem::close() {
     return storage_->close();
 }
 
-BlockAddress FileSystem::initialize_block(block_index_t block, file_id_t file_id) {
+BlockAddress FileSystem::initialize_block(block_index_t block, file_id_t file_id, block_index_t previous) {
     FileBlockHeader header;
 
     header.fill();
     header.file_id = file_id;
+    header.header.linked_block = previous;
 
     if (!storage_->erase(block)) {
         return { };
@@ -274,7 +271,7 @@ int32_t OpenFile::write(const void *ptr, size_t size) {
         auto copying = to_write > remaining ? remaining : to_write;
 
         if (remaining == 0) {
-            if (flush(BLOCK_INDEX_INVALID) == 0) {
+            if (flush() == 0) {
                 return wrote;
             }
         }
@@ -292,7 +289,7 @@ int32_t OpenFile::write(const void *ptr, size_t size) {
     return wrote;
 }
 
-int32_t OpenFile::flush(block_index_t linked) {
+int32_t OpenFile::flush() {
     if (readonly_) {
         return 0;
     }
@@ -303,6 +300,7 @@ int32_t OpenFile::flush(block_index_t linked) {
 
     // If this is the tail sector in the block write the tail section that links
     // to the following block.
+    auto linked = BLOCK_INDEX_INVALID;
     auto writing_tail_sector = tail_sector();
     auto addr = head_;
     if (writing_tail_sector) {
@@ -326,7 +324,7 @@ int32_t OpenFile::flush(block_index_t linked) {
 
     // We could do this in the if scope above, I like doing things "in order" though.
     if (writing_tail_sector) {
-        head_ = fs_->initialize_block(linked, id_);
+        head_ = fs_->initialize_block(linked, id_, head_.block);
         if (!head_.valid()) {
             assert(false); // TODO: Yikes.
         }
@@ -398,7 +396,7 @@ int32_t OpenFile::read(void *ptr, size_t size) {
 }
 
 void OpenFile::close() {
-    flush(BLOCK_INDEX_INVALID);
+    flush();
 }
 
 }
