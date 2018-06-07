@@ -8,6 +8,9 @@
 
 using namespace confs;
 
+static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t total_to_write, int32_t &wrote);
+static void read_and_verify_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t &read);
+
 class FileOpsSuite : public ::testing::Test {
 protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
@@ -54,7 +57,7 @@ TEST_F(FileOpsSuite, WriteFile) {
     file.close();
 }
 
-TEST_F(FileOpsSuite, WriteAndReadLessThanASector) {
+TEST_F(FileOpsSuite, WriteLessThanASectorAndRead) {
     ASSERT_FALSE(fs_.exists("test.bin"));
 
     auto writing = fs_.open("test.bin");
@@ -67,43 +70,23 @@ TEST_F(FileOpsSuite, WriteAndReadLessThanASector) {
     reading.close();
 }
 
-static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t total_to_write, int32_t &wrote) {
-    wrote = 0;
+TEST_F(FileOpsSuite, WriteLessThanASectorAndAppendAndRead) {
+    uint8_t pattern[] = { 'a', 's', 'd', 'f' };
 
-    while (wrote < total_to_write) {
-        if (file.write(pattern, pattern_length) != pattern_length) {
-            break;
-        }
+    auto writing = fs_.open("test.bin");
+    ASSERT_EQ(writing.write(pattern, sizeof(pattern)), (int32_t)sizeof(pattern));
+    writing.close();
 
-        wrote += pattern_length;
-    }
-}
+    writing = fs_.open("test.bin");
+    ASSERT_EQ(writing.write(pattern, sizeof(pattern)), (int32_t)sizeof(pattern));
+    writing.close();
 
-static void read_and_verify_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t &read) {
-    uint8_t buffer[8];
+    auto read = 0;
+    auto reading = fs_.open("test.bin", true);
+    read_and_verify_pattern(reading, pattern, sizeof(pattern), read);
+    reading.close();
 
-    read = 0;
-
-    ASSERT_EQ(sizeof(buffer) % pattern_length, (size_t) 0);
-
-    while (true) {
-        auto bytes = file.read(buffer, sizeof(buffer));
-        if (bytes == 0) {
-            break;
-        }
-
-        auto i = 0;
-        while (i < bytes) {
-            auto left = bytes - i;
-            auto pattern_position = read % pattern_length;
-            auto comparing = left > (pattern_length - pattern_position) ? (pattern_length - pattern_position) : left;
-
-            ASSERT_EQ(memcmp(buffer + i, pattern + pattern_position, comparing), 0);
-
-            i += comparing;
-            read += comparing;
-        }
-    }
+    ASSERT_EQ(read, (int32_t)sizeof(pattern) * 2);
 }
 
 TEST_F(FileOpsSuite, WriteAndReadTwoSectors) {
@@ -146,4 +129,43 @@ TEST_F(FileOpsSuite, WriteAndReadIntoSecondBlock) {
     reading.close();
 
     ASSERT_EQ(read, wrote);
- }
+}
+
+static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t total_to_write, int32_t &wrote) {
+    wrote = 0;
+
+    while (wrote < total_to_write) {
+        if (file.write(pattern, pattern_length) != pattern_length) {
+            break;
+        }
+
+        wrote += pattern_length;
+    }
+}
+
+static void read_and_verify_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t &read) {
+    uint8_t buffer[8];
+
+    read = 0;
+
+    ASSERT_EQ(sizeof(buffer) % pattern_length, (size_t) 0);
+
+    while (true) {
+        auto bytes = file.read(buffer, sizeof(buffer));
+        if (bytes == 0) {
+            break;
+        }
+
+        auto i = 0;
+        while (i < bytes) {
+            auto left = bytes - i;
+            auto pattern_position = read % pattern_length;
+            auto comparing = left > (pattern_length - pattern_position) ? (pattern_length - pattern_position) : left;
+
+            ASSERT_EQ(memcmp(buffer + i, pattern + pattern_position, comparing), 0);
+
+            i += comparing;
+            read += comparing;
+        }
+    }
+}

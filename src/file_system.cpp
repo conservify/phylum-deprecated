@@ -101,18 +101,20 @@ OpenFile FileSystem::open(const char *name, bool readonly) {
     auto id = crc32_checksum((uint8_t *)name, strlen(name));
     auto key = make_key(2, id);
 
-    auto head = BlockAddress{ };
     auto existing = tc.find(key);
     if (existing == 0) {
-        head = initialize_block(allocator_.allocate(), id);
+        auto head = initialize_block(allocator_.allocate(), id);
         tc.add(key, head.to_uint64());
-    }
-    else {
-        // TODO: Find last block if writing.
-        head = BlockAddress::from_uint64(existing);
+        return { *this, id, head, readonly };
     }
 
-    return { *this, id, head, readonly };
+    // TODO: Find a better starting address for the seek.
+    auto head = BlockAddress::from_uint64(existing);
+    auto file = OpenFile { *this, id, head, readonly };
+    if (!readonly) {
+        file.seek_eof();
+    }
+    return file;
 }
 
 bool FileSystem::close() {
@@ -196,6 +198,12 @@ BlockAddress FileSystem::initialize_block(block_index_t block, file_id_t file_id
     return BlockAddress { block, SectorSize };
 }
 
+template<typename T, size_t N>
+static T *tail_info(uint8_t(&buffer)[N]) {
+    auto tail_offset = sizeof(buffer) - sizeof(T);
+    return reinterpret_cast<T*>(buffer + tail_offset);
+}
+
 OpenFile::OpenFile(FileSystem &fs, file_id_t id, BlockAddress head, bool readonly) :
     fs_(&fs), id_(id), head_(head), readonly_(readonly) {
     assert(sizeof(buffer_) == SectorSize);
@@ -205,16 +213,42 @@ bool OpenFile::tail_sector() {
     return head_.tail_sector(fs_->storage().geometry());
 }
 
-int32_t OpenFile::write(const void *ptr, size_t size) {
+BlockAddress OpenFile::seek_eof() {
     auto &g = fs_->storage().geometry();
+
+    auto addr = head_;
+    while (true) {
+        /*
+        sdebug << "Check for linked block: " << addr << std::endl;;
+        auto tail_addr = BlockAddress::tail_sector_of(addr.block, g);
+        if (!fs_->storage_->read(tail_addr, buffer_, sizeof(buffer_))) {
+            return { };
+        }
+        */
+
+        sdebug << addr << std::endl;
+        if (!fs_->storage_->read(addr, buffer_, sizeof(buffer_))) {
+            return { };
+        }
+
+        auto tail = tail_info<SectorTail>(buffer_);
+        if (tail->bytes == 0 || tail->bytes == SECTOR_INDEX_INVALID) {
+            break;
+        }
+
+        addr.add(SectorSize);
+    }
+    return head_ = addr;
+}
+
+int32_t OpenFile::write(const void *ptr, size_t size) {
     auto to_write = size;
     auto wrote = 0;
 
     assert(!readonly_);
 
     while (to_write > 0) {
-        auto tail_sector = head_.tail_sector(g);
-        auto overhead = tail_sector ? sizeof(BlockTail) : sizeof(SectorTail);
+        auto overhead = tail_sector() ? sizeof(BlockTail) : sizeof(SectorTail);
         auto remaining = sizeof(buffer_) - overhead - position_;
         auto copying = to_write > remaining ? remaining : to_write;
 
@@ -232,12 +266,6 @@ int32_t OpenFile::write(const void *ptr, size_t size) {
     }
 
     return wrote;
-}
-
-template<typename T, size_t N>
-static T *tail_info(uint8_t(&buffer)[N]) {
-    auto tail_offset = sizeof(buffer) - sizeof(T);
-    return reinterpret_cast<T*>(buffer + tail_offset);
 }
 
 int32_t OpenFile::flush(block_index_t linked) {

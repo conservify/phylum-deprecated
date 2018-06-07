@@ -26,6 +26,8 @@ private:
 public:
     OpenFile(FileSystem &fs, file_id_t id, BlockAddress head, bool readonly);
 
+    friend class FileSystem;
+
 public:
     int32_t write(const void *ptr, size_t size);
     int32_t read(void *ptr, size_t size);
@@ -34,6 +36,7 @@ public:
 
 private:
     bool tail_sector();
+    BlockAddress seek_eof();
 
 };
 

@@ -205,6 +205,10 @@ public:
         return position >= g.block_size() - g.sector_size;
     }
 
+    static BlockAddress tail_sector_of(block_index_t block, const Geometry &g) {
+        return { block, g.block_size() - g.sector_size };
+    }
+
     static BlockAddress from_uint64(uint64_t value) {
         uint32_t block = value >> 32;
         uint32_t position = value & ((uint32_t)-1);
