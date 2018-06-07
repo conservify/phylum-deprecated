@@ -81,7 +81,6 @@ private:
     bool touch();
     bool format();
     BlockAddress initialize_block(block_index_t block, file_id_t file_id);
-    BlockAddress find_tree();
 
 };
 

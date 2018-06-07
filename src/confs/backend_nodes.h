@@ -99,6 +99,47 @@ public:
         return location_;
     }
 
+    BlockAddress find_head(block_index_t block) {
+        SerializerType serializer;
+
+        assert(block != BLOCK_INDEX_INVALID);
+
+        auto &geometry = storage_->geometry();
+        auto required = serializer.size(true);
+        auto iter = BlockAddress{ block, 0 };
+        auto found = BlockAddress{ };
+
+        // We could compare TreeHead timestamps, though we always append.
+        while (iter.remaining_in_block(geometry) > required) {
+            TreeHead head;
+            NodeType node;
+
+            if (iter.beginning_of_block()) {
+                TreeBlockHeader header;
+                if (!storage_->read(iter, &header, sizeof(TreeBlockHeader))) {
+                    return { };
+                }
+
+                if (!header.valid()) {
+                    return found;
+                }
+
+                iter.add(SectorSize);
+            }
+            else {
+                if (deserialize(iter, &node, &head)) {
+                    found = iter;
+                    iter.add(required);
+                }
+                else {
+                    break;
+                }
+            }
+        }
+
+        return found;
+    }
+
 private:
     BlockAddress initialize_block(block_index_t block) {
         TreeBlockHeader header;
