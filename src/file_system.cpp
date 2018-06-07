@@ -199,6 +199,7 @@ BlockAddress FileSystem::initialize_block(block_index_t block, file_id_t file_id
 
 OpenFile::OpenFile(FileSystem &fs, file_id_t id, BlockAddress head, bool readonly) :
     fs_(&fs), id_(id), head_(head), readonly_(readonly) {
+    assert(sizeof(buffer_) == SectorSize);
 }
 
 size_t OpenFile::write(const void *ptr, size_t size) {
@@ -235,10 +236,8 @@ size_t OpenFile::write(const void *ptr, size_t size) {
 }
 
 size_t OpenFile::read(void *ptr, size_t size) {
-
-    sdebug << "Read: " << head_ << std::endl;
-
     if (available_ == position_) {
+        sdebug << "Read: " << head_ << std::endl;
         if (!fs_->storage_->read(head_, buffer_, sizeof(buffer_))) {
             return 0;
         }
@@ -247,15 +246,18 @@ size_t OpenFile::read(void *ptr, size_t size) {
         auto tail = reinterpret_cast<SectorTail*>(buffer_ + tail_offset);
 
         if (tail->bytes == 0 || tail->bytes == SECTOR_INDEX_INVALID) {
+            sdebug << "EoF: " << head_ << std::endl;
             return 0;
         }
 
         available_ = tail->bytes;
+        position_ = 0;
 
-        sdebug << "Tail: " << available_ << std::endl;
+        head_.add(SectorSize);
     }
 
-    auto copying = available_ > size ? size : available_;
+    auto remaining = available_ - position_;
+    auto copying = remaining > size ? size : remaining;
     memcpy(ptr, buffer_ + position_, copying);
 
     position_ += copying;
@@ -267,26 +269,27 @@ size_t OpenFile::flush() {
     if (readonly_) {
         return 0;
     }
+
     if (position_ == 0) {
         return 0;
     }
 
+    auto flushed = position_;
     auto tail_offset = sizeof(buffer_) - sizeof(SectorTail);
     auto tail = reinterpret_cast<SectorTail*>(buffer_ + tail_offset);
 
     tail->bytes = position_;
 
     sdebug << "Write: " << head_ << std::endl;
-
     if (!fs_->storage_->write(head_, buffer_, sizeof(buffer_))) {
         return 0;
     }
 
-    head_.add(position_);
+    head_.add(SectorSize);
 
     position_ = 0;
 
-    return 0;
+    return flushed;
 }
 
 void OpenFile::close() {
