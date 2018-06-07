@@ -35,6 +35,19 @@ public:
         return ((uint64_t)upper << 32) | (uint64_t)lower;
     }
 
+public:
+    static uint64_t file_beginning(uint32_t id) {
+        return make(2, id);
+    }
+
+    static uint64_t file_position(uint32_t id, uint32_t length) {
+        return make(id, length);
+    }
+
+    static uint64_t file_maximum(uint32_t id) {
+        return make(id, ((uint32_t)-1));
+    }
+
 };
 
 inline std::ostream &operator<<(std::ostream &os, const INodeKey &e) {

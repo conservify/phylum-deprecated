@@ -94,7 +94,7 @@ bool FileSystem::exists(const char *name) {
     TreeContext<NodeType> tc{ *this };
 
     auto id = crc32_checksum((uint8_t *)name, strlen(name));
-    auto key = INodeKey(2, id);
+    auto key = INodeKey::file_beginning(id);
 
     return tc.find(key) != 0;
 }
@@ -103,7 +103,7 @@ OpenFile FileSystem::open(const char *name, bool readonly) {
     TreeContext<NodeType> tc{ *this };
 
     auto id = crc32_checksum((uint8_t *)name, strlen(name));
-    auto key = INodeKey(2, id);
+    auto key = INodeKey::file_beginning(id);
 
     auto existing = tc.find(key);
     if (existing == 0) {
@@ -181,14 +181,14 @@ int32_t OpenFile::seek(Seek seek) {
     case Seek::End: {
         uint64_t value;
         uint64_t saved;
-        if (tc.find_last_less_then(INodeKey{ id_, UINT32_MAX }, &value, &saved)) {
+        if (tc.find_last_less_then(INodeKey::file_maximum(id_), &value, &saved)) {
             head_ = BlockAddress::from_uint64(value);
             length_ = INodeKey(saved).lower();
         }
         break;
     }
     case Seek::Beginning: {
-        head_ = BlockAddress::from_uint64(tc.find(INodeKey(2, id_)));
+        head_ = BlockAddress::from_uint64(tc.find(INodeKey::file_beginning(id_)));
         return 0;
     }
     }
@@ -270,14 +270,13 @@ int32_t OpenFile::flush(block_index_t linked) {
         tail->linked_block = linked;
         head_ = fs_->initialize_block(linked, id_);
         if (!head_.valid()) {
-            // TODO: Yikes.
-            return 0;
+            assert(false); // TODO: Yikes.
         }
 
         blocks_since_save_++;
         if (blocks_since_save_ == 8) {
             TreeContext<FileSystem::NodeType> tc{ *fs_ };
-            auto key = INodeKey{ id_, length_ + position_ };
+            auto key = INodeKey::file_position(id_, length_ + position_);
             tc.add(key, head_.to_uint64());
             blocks_since_save_ = 0;
         }
