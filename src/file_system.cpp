@@ -20,6 +20,7 @@ struct FileBlockHeader {
     }
 };
 
+// NOTE: This is typically ~1700 bytes!
 template<typename NodeType>
 struct TreeContext {
 public:
@@ -81,6 +82,10 @@ bool FileSystem::initialize(bool wipe) {
     if (!storage_->open()) {
         return false;
     }
+
+    #ifdef PHYLUM_ARDUINO_DEBUG
+    sdebug() << "sizeof(TreeContext<NodeType>): " << sizeof(TreeContext<NodeType>) << std::endl;
+    #endif
 
     return open(wipe);
 }

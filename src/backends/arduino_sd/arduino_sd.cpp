@@ -25,7 +25,9 @@ bool ArduinoSdBackend::initialize(const Geometry &g, uint8_t cs) {
     geometry_ = g;
     geometry_.number_of_blocks = number_of_sd_blocks;
 
+    #ifdef PHYLUM_ARDUINO_DEBUG
     sdebug() << "Ready: FsBlocks " << number_of_fs_blocks << " SdBlocks: " << number_of_sd_blocks << std::endl;
+    #endif
 
     return true;
 }
@@ -45,21 +47,27 @@ Geometry &ArduinoSdBackend::geometry() {
 bool ArduinoSdBackend::erase(block_index_t block) {
     auto first_sd_block = get_sd_block(geometry_, BlockAddress{ block, 0 });
     auto last_sd_block = get_sd_block(geometry_, BlockAddress{ block + 1, 0 });
+    #ifdef PHYLUM_ARDUINO_DEBUG
     sdebug() << "Erase(" << block << ")" << std::endl;
+    #endif
     return sd_raw_erase(&sd_, first_sd_block, last_sd_block);
 }
 
 bool ArduinoSdBackend::read(BlockAddress addr, void *d, size_t n) {
     auto sd_block = get_sd_block(geometry_, addr);
     auto offset = addr.sector_offset(geometry_);
+    #ifdef PHYLUM_ARDUINO_DEBUG
     sdebug() << "Read(" << addr << " " << n << ")" << std::endl;
+    #endif
     return sd_raw_read_data(&sd_, sd_block, offset, n, (uint8_t *)d);
 }
 
 bool ArduinoSdBackend::write(BlockAddress addr, void *d, size_t n) {
     auto sd_block = get_sd_block(geometry_, addr);
     auto offset = addr.sector_offset(geometry_);
+    #ifdef PHYLUM_ARDUINO_DEBUG
     sdebug() << "Write(" << addr << " " << n << ")" << std::endl;
+    #endif
     return sd_raw_write_data(&sd_, sd_block, offset, n, (uint8_t *)d, true);
 }
 

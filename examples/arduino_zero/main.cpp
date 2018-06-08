@@ -12,6 +12,13 @@ static void fail() {
     }
 }
 
+extern "C" char *sbrk(int32_t i);
+
+static uint32_t free_memory() {
+    char stack_dummy = 0;
+    return &stack_dummy - sbrk(0);
+}
+
 void setup() {
     Serial.begin(115200);
 
@@ -19,9 +26,16 @@ void setup() {
         delay(10);
     }
 
-    Serial.println("phylum-test: Starting...");
+    sdebug() << "phylum-test: Starting: " << free_memory() << std::endl;
 
-    Serial.println("phylum-test: Initialize Backend");
+    sdebug() << "phylum-test: Done: " << free_memory() << std::endl;
+    sdebug() << "phylum-test: sizeof(FileSystem): " << sizeof(FileSystem) << std::endl;
+    sdebug() << "phylum-test: sizeof(OpenFile): " << sizeof(OpenFile) << std::endl;
+    sdebug() << "phylum-test: sizeof(SequentialBlockAllocator): " << sizeof(SequentialBlockAllocator) << std::endl;
+    sdebug() << "phylum-test: sizeof(ArduinoSdBackend): " << sizeof(ArduinoSdBackend) << std::endl;
+    sdebug() << "phylum-test: sizeof(Node): " << sizeof(Node<uint64_t, uint64_t, BlockAddress, 6, 6>) << std::endl;
+
+    sdebug() << "phylum-test: Initialize Backend" << std::endl;
 
     Geometry g{ 0, 4, 4, SectorSize };
     ArduinoSdBackend storage;
@@ -29,7 +43,7 @@ void setup() {
         fail();
     }
 
-    Serial.println("phylum-test: Initialize FS");
+    sdebug() << "phylum-test: Initialize FS" << std::endl;
 
     SequentialBlockAllocator allocator{ storage };
     FileSystem fs{ storage, allocator };
@@ -37,18 +51,19 @@ void setup() {
         fail();
     }
 
-    Serial.println("phylum-test: Creating small file...");
+    sdebug() << "phylum-test: Creating small file..." << std::endl;
     {
         auto file = fs.open("small.bin");
         if (!file.write("Jacob", 5)) {
             fail();
         }
 
-        Serial.println("phylum-test: Closing");
+        sdebug() << "Bytes: " << file.size() << std::endl;
+
         file.close();
     }
 
-    Serial.println("phylum-test: Creating large file...");
+    sdebug() << "phylum-test: Creating large file..." << std::endl;
     {
         auto file = fs.open("large.bin");
         auto wrote = 0;
@@ -59,11 +74,10 @@ void setup() {
             wrote += 5;
         }
 
-        Serial.println("phylum-test: Closing");
+        sdebug() << "Bytes: " << file.size() << std::endl;
+
         file.close();
     }
-
-    Serial.println("phylum-test: Done");
 
     while (true) {
         delay(10);
