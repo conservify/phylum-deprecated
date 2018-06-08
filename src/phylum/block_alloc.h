@@ -15,6 +15,8 @@ private:
     bool initialized_{ false };
     #ifndef ARDUINO
     std::queue<block_index_t> free_;
+    #else
+    uint32_t block_{ 3 };
     #endif
     StorageBackend *storage_;
 

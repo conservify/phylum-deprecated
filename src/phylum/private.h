@@ -138,7 +138,7 @@ public:
         block(block), position(position) {
     }
 
-    BlockAddress(SectorAddress addr) : block(addr.block), position(addr.sector * SectorSize) {
+    BlockAddress(SectorAddress addr, uint32_t offset = 0) : block(addr.block), position(addr.sector * SectorSize + offset) {
     }
 
 public:

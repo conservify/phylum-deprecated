@@ -43,10 +43,6 @@ Geometry &LinuxMemoryBackend::geometry() {
     return geometry_;
 }
 
-size_t LinuxMemoryBackend::size() {
-    return size_;
-}
-
 bool LinuxMemoryBackend::erase(block_index_t block) {
     assert(geometry_.contains({ block, 0 }));
 

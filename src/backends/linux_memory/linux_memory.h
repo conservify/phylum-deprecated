@@ -31,7 +31,6 @@ public:
     bool open() override;
     bool close() override;
     Geometry &geometry() override;
-    size_t size() override;
     bool erase(block_index_t block) override;
     void randomize();
     bool read(SectorAddress addr, size_t offset, void *d, size_t n) override;

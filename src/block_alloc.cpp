@@ -26,7 +26,7 @@ block_index_t BlockAllocator::allocate() {
 
     return block;
     #else
-    return 0;
+    return block_++;
     #endif
 }
 

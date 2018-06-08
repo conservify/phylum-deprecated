@@ -11,21 +11,20 @@ namespace phylum {
 
 class ArduinoSdBackend : public StorageBackend {
 private:
+    sd_raw_t sd_;
     Geometry geometry_;
 
 public:
     ArduinoSdBackend();
 
 public:
-    bool initialize();
+    bool initialize(const Geometry &g, uint8_t sd);
 
 public:
     bool open() override;
     bool close() override;
     Geometry &geometry() override;
-    size_t size() override;
     bool erase(block_index_t block) override;
-    void randomize();
     bool read(SectorAddress addr, size_t offset, void *d, size_t n) override;
     bool write(SectorAddress addr, size_t offset, void *d, size_t n) override;
     bool read(BlockAddress addr, void *d, size_t n) override;
