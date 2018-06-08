@@ -1,0 +1,38 @@
+#ifndef __PHYLUM_ARDUINO_SD_H_INCLUDED
+#define __PHYLUM_ARDUINO_SD_H_INCLUDED
+
+#include <phylum/phylum.h>
+#include <phylum/private.h>
+#include <phylum/backend.h>
+
+#include "sd_raw.h"
+
+namespace phylum {
+
+class ArduinoSdBackend : public StorageBackend {
+private:
+    Geometry geometry_;
+
+public:
+    ArduinoSdBackend();
+
+public:
+    bool initialize();
+
+public:
+    bool open() override;
+    bool close() override;
+    Geometry &geometry() override;
+    size_t size() override;
+    bool erase(block_index_t block) override;
+    void randomize();
+    bool read(SectorAddress addr, size_t offset, void *d, size_t n) override;
+    bool write(SectorAddress addr, size_t offset, void *d, size_t n) override;
+    bool read(BlockAddress addr, void *d, size_t n) override;
+    bool write(BlockAddress addr, void *d, size_t n) override;
+
+};
+
+}
+
+#endif

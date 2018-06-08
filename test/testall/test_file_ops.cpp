@@ -2,7 +2,7 @@
 #include <cstring>
 
 #include "phylum/file_system.h"
-#include "backends/linux-memory/linux-memory.h"
+#include "backends/linux_memory/linux_memory.h"
 
 #include "utilities.h"
 

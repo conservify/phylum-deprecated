@@ -4,7 +4,7 @@
 #include "phylum/inodes.h"
 #include "phylum/persisted_tree.h"
 #include "phylum/in_memory_nodes.h"
-#include "backends/linux-memory/linux-memory.h"
+#include "backends/linux_memory/linux_memory.h"
 
 #include "utilities.h"
 

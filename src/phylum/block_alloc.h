@@ -4,14 +4,18 @@
 #include <phylum/private.h>
 #include <phylum/backend.h>
 
+#ifndef ARDUINO
 #include <queue>
+#endif
 
 namespace phylum {
 
 class BlockAllocator {
 private:
     bool initialized_{ false };
+    #ifndef ARDUINO
     std::queue<block_index_t> free_;
+    #endif
     StorageBackend *storage_;
 
 public:

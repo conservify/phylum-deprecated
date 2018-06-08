@@ -1,7 +1,10 @@
 #ifndef __PHYLUM_PRIVATE_H_INCLUDED
 #define __PHYLUM_PRIVATE_H_INCLUDED
 
+#ifndef ARDUINO
 #include <iostream>
+#endif
+
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -222,6 +225,8 @@ public:
 
 };
 
+#ifndef ARDUINO
+
 extern std::ostream &sdebug;
 
 inline std::ostream& operator<<(std::ostream& os, const SectorAddress &addr) {
@@ -262,6 +267,8 @@ inline std::ostream& operator<<(std::ostream& os, const BlockAllocSector &h) {
 inline std::ostream& operator<<(std::ostream& os, const BlockTail &h) {
     return os << "BlockTail<>";
 }
+
+#endif
 
 }
 

@@ -56,9 +56,11 @@ public:
 
 };
 
+#ifndef ARDUINO
 inline std::ostream &operator<<(std::ostream &os, const INodeKey &e) {
     return os << "INodeKey<" << e.upper() << " " << e.lower() << ">";
 }
+#endif
 
 }
 

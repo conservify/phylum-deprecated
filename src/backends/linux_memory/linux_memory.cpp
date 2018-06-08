@@ -1,4 +1,4 @@
-#include "linux-memory.h"
+#include "linux_memory.h"
 
 namespace phylum {
 

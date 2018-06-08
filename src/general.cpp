@@ -3,7 +3,9 @@
 
 namespace phylum {
 
+#ifndef ARDUINO
 std::ostream &sdebug = std::cout;
+#endif
 
 constexpr char BlockMagic::MagicKey[];
 

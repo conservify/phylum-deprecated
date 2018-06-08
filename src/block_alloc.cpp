@@ -10,6 +10,7 @@ bool BlockAllocator::initialize(Geometry &geometry) {
 }
 
 block_index_t BlockAllocator::allocate() {
+    #ifndef ARDUINO
     if (!initialized_) {
         for (auto i = 3; i < (int32_t)storage_->geometry().number_of_blocks; ++i) {
             free(i);
@@ -24,10 +25,15 @@ block_index_t BlockAllocator::allocate() {
     free_.pop();
 
     return block;
+    #else
+    return 0;
+    #endif
 }
 
 void BlockAllocator::free(block_index_t block) {
+    #ifndef ARDUINO
     free_.push(block);
+    #endif
 }
 
 }
