@@ -77,13 +77,11 @@ public:
         return *this;
     }
 
-    #ifndef ARDUINO
     template<typename NADDRESS>
     friend std::ostream& operator<<(std::ostream& os, const NodeRef<NADDRESS> &n);
 
     template<typename KEY, typename VALUE, typename NADDRESS, size_t N, size_t M>
     friend std::ostream& operator<<(std::ostream& os, const Node<KEY, VALUE, NADDRESS, N, M> &n);
-    #endif
 
 public:
     bool valid() const {
@@ -139,8 +137,6 @@ public:
 
 };
 
-#ifndef ARDUINO
-
 template<typename KEY, typename VALUE, typename ADDRESS, size_t N, size_t M>
 std::ostream& operator<<(std::ostream& os, const Node<KEY, VALUE, ADDRESS, N, M> &n) {
     os << "NODE<" << (size_t)n.depth << " " << (size_t)n.number_keys << "";
@@ -165,8 +161,6 @@ template<typename ADDRESS>
 std::ostream& operator<<(std::ostream& os, const NodeRef<ADDRESS> &n) {
     return os << "Ref<#" << (size_t)n.index_ << " addr=" << n.address() << ">";
 }
-
-#endif
 
 template<typename NODE>
 class NodeCache {

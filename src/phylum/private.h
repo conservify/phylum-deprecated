@@ -10,6 +10,8 @@
 #include <cstring>
 #include <cassert>
 
+#include "phylum/platform.h"
+
 namespace phylum {
 
 using block_age_t = uint32_t;
@@ -225,10 +227,6 @@ public:
 
 };
 
-#ifndef ARDUINO
-
-extern std::ostream &sdebug;
-
 inline std::ostream& operator<<(std::ostream& os, const SectorAddress &addr) {
     if (!addr.valid()) {
         return os << "<invalid>";
@@ -267,8 +265,6 @@ inline std::ostream& operator<<(std::ostream& os, const BlockAllocSector &h) {
 inline std::ostream& operator<<(std::ostream& os, const BlockTail &h) {
     return os << "BlockTail<>";
 }
-
-#endif
 
 }
 

@@ -37,11 +37,31 @@ void setup() {
         fail();
     }
 
-    auto file = fs.open("test.bin");
-    if (!file.write("Jacob", 5)) {
-        fail();
+    Serial.println("phylum-test: Creating small file...");
+    {
+        auto file = fs.open("small.bin");
+        if (!file.write("Jacob", 5)) {
+            fail();
+        }
+
+        Serial.println("phylum-test: Closing");
+        file.close();
     }
-    file.close();
+
+    Serial.println("phylum-test: Creating large file...");
+    {
+        auto file = fs.open("large.bin");
+        auto wrote = 0;
+        while (wrote < 1024 * 1025) {
+            if (file.write("Jacob", 5) != 5) {
+                fail();
+            }
+            wrote += 5;
+        }
+
+        Serial.println("phylum-test: Closing");
+        file.close();
+    }
 
     Serial.println("phylum-test: Done");
 

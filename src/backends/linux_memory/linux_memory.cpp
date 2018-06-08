@@ -73,7 +73,7 @@ bool LinuxMemoryBackend::read(SectorAddress addr, size_t offset, void *d, size_t
 static void verify_erased(BlockAddress addr, uint8_t *p, size_t n) {
     for (size_t i = 0; i < n; ++i) {
         if (*p != 0xff) {
-            sdebug << "Corruption: " << addr << std::endl;
+            sdebug() << "Corruption: " << addr << std::endl;
             assert(*p == 0xff);
         }
         p++;
