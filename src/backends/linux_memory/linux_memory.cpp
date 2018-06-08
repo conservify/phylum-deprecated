@@ -44,7 +44,7 @@ Geometry &LinuxMemoryBackend::geometry() {
 }
 
 bool LinuxMemoryBackend::erase(block_index_t block) {
-    assert(geometry_.contains({ block, 0 }));
+    assert(geometry_.contains(BlockAddress{ block, 0 }));
 
     auto p = ptr_ + (block * geometry_.block_size());
     memset(p, 0xff, geometry_.block_size());
@@ -55,17 +55,25 @@ bool LinuxMemoryBackend::erase(block_index_t block) {
 }
 
 bool LinuxMemoryBackend::read(SectorAddress addr, size_t offset, void *d, size_t n) {
+    return read(BlockAddress{ addr, (uint32_t)offset }, d, n);
+}
+
+bool LinuxMemoryBackend::write(SectorAddress addr, size_t offset, void *d, size_t n) {
+    return write(BlockAddress{ addr, (uint32_t)offset }, d, n);
+}
+
+bool LinuxMemoryBackend::read(BlockAddress addr, void *d, size_t n) {
     assert(addr.valid());
     assert(geometry_.contains(addr));
     assert(n <= geometry_.sector_size);
 
-    auto o = addr.block * geometry_.block_size() + (addr.sector * geometry_.sector_size) + offset;
+    auto o = addr.block * geometry_.block_size() + (addr.position);
     assert(o + n < size_);
 
     auto p = ptr_ + o;
     memcpy(d, p, n);
 
-    log_.append(LogEntry{ OperationType::Read, addr, p, offset, n });
+    log_.append(LogEntry{ OperationType::Read, addr, p, n });
 
     return true;
 }
@@ -80,28 +88,20 @@ static void verify_erased(BlockAddress addr, uint8_t *p, size_t n) {
     }
 }
 
-bool LinuxMemoryBackend::write(SectorAddress addr, size_t offset, void *d, size_t n) {
+bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
     assert(geometry_.contains(addr));
     assert(n <= geometry_.sector_size);
 
-    auto o = addr.block * geometry_.block_size() + (addr.sector * geometry_.sector_size) + offset;
+    auto o = addr.block * geometry_.block_size() + (addr.position);
     assert(o + n < size_);
 
     auto p = ptr_ + o;
-    verify_erased(BlockAddress{ addr.block, addr.sector * geometry_.sector_size + (uint32_t)offset }, p, n);
+    verify_erased(addr, p, n);
     memcpy(p, d, n);
 
-    log_.append(LogEntry{ OperationType::Write, addr, p, offset, n });
+    log_.append(LogEntry{ OperationType::Write, addr, p, n });
 
     return true;
-}
-
-bool LinuxMemoryBackend::read(BlockAddress addr, void *d, size_t n) {
-    return read(addr.sector(geometry_), addr.sector_offset(geometry_), d, n);
-}
-
-bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
-    return write(addr.sector(geometry_), addr.sector_offset(geometry_), d, n);
 }
 
 }

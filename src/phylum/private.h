@@ -100,6 +100,8 @@ struct SectorAddress {
     }
 };
 
+struct BlockAddress;
+
 struct Geometry {
     block_index_t number_of_blocks;
     page_index_t pages_per_block;
@@ -125,9 +127,11 @@ struct Geometry {
         return number_of_blocks > 0 && pages_per_block > 0 && sectors_per_page > 0 && sector_size > 0;
     }
 
-    bool contains(SectorAddress addr) const {
+    bool contains(const SectorAddress addr) const {
         return addr.block < number_of_blocks && addr.sector < sectors_per_block();
     }
+
+    bool contains(const BlockAddress addr) const;
 };
 
 struct BlockAddress {
@@ -226,6 +230,10 @@ public:
     }
 
 };
+
+inline bool Geometry::contains(const BlockAddress addr) const {
+    return addr.block < number_of_blocks && addr.position < block_size();
+}
 
 inline std::ostream& operator<<(std::ostream& os, const SectorAddress &addr) {
     if (!addr.valid()) {
