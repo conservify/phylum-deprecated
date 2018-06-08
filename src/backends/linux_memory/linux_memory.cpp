@@ -40,7 +40,7 @@ bool LinuxMemoryBackend::close() {
 }
 
 Geometry &LinuxMemoryBackend::geometry() {
-    return geometry_;
+   return geometry_;
 }
 
 bool LinuxMemoryBackend::erase(block_index_t block) {

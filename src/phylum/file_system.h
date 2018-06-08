@@ -75,8 +75,7 @@ private:
     BlockAddress tree_addr_;
 
 public:
-    FileSystem(StorageBackend &storage, BlockAllocator &allocator) : storage_(&storage), allocator_(&allocator), sbm_{ storage, allocator }, nodes_{ storage, allocator } {
-    }
+    FileSystem(StorageBackend &storage, BlockAllocator &allocator);
 
     template<typename NodeType>
     friend struct TreeContext;

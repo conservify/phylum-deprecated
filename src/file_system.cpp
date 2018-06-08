@@ -70,6 +70,9 @@ public:
     }
 };
 
+FileSystem::FileSystem(StorageBackend &storage, BlockAllocator &allocator) : storage_(&storage), allocator_(&allocator), sbm_{ storage, allocator }, nodes_{ storage, allocator } {
+}
+
 void FileSystem::prepare(SuperBlock &sb) {
     sb.tree = tree_addr_.block;
 }
@@ -326,15 +329,17 @@ int32_t OpenFile::flush() {
     auto writing_tail_sector = tail_sector();
     auto addr = head_;
     if (writing_tail_sector) {
-        auto tail = tail_info<BlockTail>(buffer_);
         linked = fs_->allocator_->allocate();
-        tail->sector.bytes = buffpos_;
-        tail->bytes_in_block = bytes_in_block_;
-        tail->linked_block = linked;
+        BlockTail tail;
+        tail.sector.bytes = buffpos_;
+        tail.bytes_in_block = bytes_in_block_;
+        tail.linked_block = linked;
+        memcpy(tail_info<BlockTail>(buffer_), &tail, sizeof(BlockTail));
     }
     else {
-        auto tail = tail_info<SectorTail>(buffer_);
-        tail->bytes = buffpos_;
+        SectorTail tail;
+        tail.bytes = buffpos_;
+        memcpy(tail_info<SectorTail>(buffer_), &tail, sizeof(SectorTail));
         head_.add(SectorSize);
     }
 
