@@ -42,6 +42,7 @@ bool SequentialBlockAllocator::initialize(Geometry &geometry) {
 }
 
 block_index_t SequentialBlockAllocator::allocate() {
+    assert(block_ < storage_->geometry().number_of_blocks);
     return block_++;
 }
 
