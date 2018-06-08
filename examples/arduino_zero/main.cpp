@@ -31,10 +31,17 @@ void setup() {
 
     Serial.println("phylum-test: Initialize FS");
 
-    FileSystem fs{ storage };
+    SequentialBlockAllocator allocator{ storage };
+    FileSystem fs{ storage, allocator };
     if (!fs.initialize(true)) {
         fail();
     }
+
+    auto file = fs.open("test.bin");
+    if (!file.write("Jacob", 5)) {
+        fail();
+    }
+    file.close();
 
     Serial.println("phylum-test: Done");
 

@@ -69,13 +69,13 @@ private:
     using NodeType = Node<uint64_t, uint64_t, BlockAddress, 6, 6>;
 
     StorageBackend *storage_;
-    BlockAllocator allocator_;
+    BlockAllocator *allocator_;
     SuperBlockManager sbm_;
     StorageBackendNodeStorage<NodeType> nodes_;
     BlockAddress tree_addr_;
 
 public:
-    FileSystem(StorageBackend &storage) : storage_(&storage), allocator_(storage), sbm_{ storage, allocator_ }, nodes_{ storage, allocator_ } {
+    FileSystem(StorageBackend &storage, BlockAllocator &allocator) : storage_(&storage), allocator_(&allocator), sbm_{ storage, allocator }, nodes_{ storage, allocator } {
     }
 
     template<typename NodeType>

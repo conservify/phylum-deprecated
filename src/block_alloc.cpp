@@ -2,15 +2,16 @@
 
 namespace phylum {
 
-BlockAllocator::BlockAllocator(StorageBackend &storage) : storage_(&storage) {
+#ifndef ARDUINO
+
+QueueBlockAllocator::QueueBlockAllocator(StorageBackend &storage) : storage_(&storage) {
 }
 
-bool BlockAllocator::initialize(Geometry &geometry) {
+bool QueueBlockAllocator::initialize(Geometry &geometry) {
     return true;
 }
 
-block_index_t BlockAllocator::allocate() {
-    #ifndef ARDUINO
+block_index_t QueueBlockAllocator::allocate() {
     if (!initialized_) {
         for (auto i = 3; i < (int32_t)storage_->geometry().number_of_blocks; ++i) {
             free(i);
@@ -25,15 +26,26 @@ block_index_t BlockAllocator::allocate() {
     free_.pop();
 
     return block;
-    #else
-    return block_++;
-    #endif
 }
 
-void BlockAllocator::free(block_index_t block) {
-    #ifndef ARDUINO
+void QueueBlockAllocator::free(block_index_t block) {
     free_.push(block);
-    #endif
+}
+
+#endif
+
+SequentialBlockAllocator::SequentialBlockAllocator(StorageBackend &storage) : storage_(&storage) {
+}
+
+bool SequentialBlockAllocator::initialize(Geometry &geometry) {
+    return true;
+}
+
+block_index_t SequentialBlockAllocator::allocate() {
+    return block_++;
+}
+
+void SequentialBlockAllocator::free(block_index_t block) {
 }
 
 }

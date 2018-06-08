@@ -14,7 +14,7 @@ class PersistedTreeSuite : public ::testing::Test {
 protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend storage_;
-    BlockAllocator allocator_{ storage_ };
+    QueueBlockAllocator allocator_{ storage_ };
 
 protected:
     void SetUp() override {

@@ -14,7 +14,7 @@ protected:
 protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend storage_;
-    BlockAllocator allocator_{ storage_ };
+    QueueBlockAllocator allocator_{ storage_ };
     SuperBlockManager sbm_{ storage_, allocator_ };
 
 protected:
