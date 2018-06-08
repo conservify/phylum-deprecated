@@ -20,7 +20,8 @@ struct FileBlockHeader {
     }
 };
 
-// NOTE: This is typically ~1700 bytes!
+// NOTE: This is typically ~1700 bytes. With the union between children and
+// values in NodeType this weighs in around 1300 bytes.
 template<typename NodeType>
 struct TreeContext {
 public:

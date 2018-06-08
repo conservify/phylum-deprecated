@@ -87,7 +87,7 @@ private:
             s->leaf.size = sizeof(serialized_node_t);
             s->leaf.number_keys = node->number_keys;
             memcpy(&s->leaf.keys, &node->keys, sizeof(node->keys));
-            memcpy(&s->leaf.values, &node->values, sizeof(node->values));
+            memcpy(&s->leaf.values, &node->d.values, sizeof(node->d.values));
         }
         else {
             assert(!node->empty());
@@ -97,9 +97,9 @@ private:
             memcpy(&s->inner.keys, &node->keys, sizeof(node->keys));
             for (auto i = (IndexType)0; i < NODE::InnerSize + 1; ++i) {
                 if (i <= node->number_keys) {
-                    assert(node->children[i].address().valid());
+                    assert(node->d.children[i].address().valid());
                 }
-                s->inner.children[i] = node->children[i].address();
+                s->inner.children[i] = node->d.children[i].address();
             }
         }
         return true;
@@ -107,22 +107,22 @@ private:
 
     bool deserialize(const serialized_node_t *s, NodeType *node) {
         assert(sizeof(node->keys) == sizeof(s->leaf.keys));
-        assert(sizeof(node->values) == sizeof(s->leaf.values));
+        assert(sizeof(node->d.values) == sizeof(s->leaf.values));
 
         if (s->level == 0) {
             node->depth = s->leaf.level;
             node->number_keys = s->leaf.number_keys;
             memcpy(&node->keys, &s->leaf.keys, sizeof(node->keys));
-            memcpy(&node->values, &s->leaf.values, sizeof(node->values));
+            memcpy(&node->d.values, &s->leaf.values, sizeof(node->d.values));
         }
         else {
             node->depth = s->inner.level;
             node->number_keys = s->inner.number_keys;
             memcpy(&node->keys, &s->inner.keys, sizeof(node->keys));
             for (auto i = (IndexType)0; i < NODE::InnerSize + 1; ++i) {
-                node->children[i].clear();
+                node->d.children[i].clear();
                 if (s->inner.children[i].valid()) {
-                    node->children[i].address(s->inner.children[i]);
+                    node->d.children[i].address(s->inner.children[i]);
                 }
             }
             assert(!node->empty());

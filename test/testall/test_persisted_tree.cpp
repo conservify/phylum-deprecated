@@ -31,7 +31,7 @@ protected:
 TEST_F(PersistedTreeSuite, BuildTree) {
     using NodeType = Node<int32_t, int32_t, BlockAddress, 6, 6>;
     auto storage = InMemoryNodeStorage<NodeType>{ 2048 };
-    auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
+    MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
     auto tree = PersistedTree<NodeType>{ cache };
 
     tree.add(100, 5738);
@@ -59,7 +59,7 @@ TEST_F(PersistedTreeSuite, BuildTree) {
 TEST_F(PersistedTreeSuite, Remove) {
     using NodeType = Node<int32_t, int32_t, BlockAddress, 6, 6>;
     auto storage = InMemoryNodeStorage<NodeType>{ 2048 };
-    auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
+    MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
     auto tree = PersistedTree<NodeType>{ cache };
 
     tree.add(100, 5738);
@@ -84,7 +84,7 @@ TEST_F(PersistedTreeSuite, Remove) {
 TEST_F(PersistedTreeSuite, MultipleLookupRandom) {
     using NodeType = Node<int32_t, int32_t, BlockAddress, 6, 6>;
     auto storage = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
-    auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
+    MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
     auto tree = PersistedTree<NodeType>{ cache };
     auto map = std::map<NodeType::KeyType, NodeType::ValueType>{};
 
@@ -110,7 +110,7 @@ TEST_F(PersistedTreeSuite, MultipleLookupCustomKeyType) {
 
     using NodeType = Node<uint64_t, int32_t, BlockAddress, 6, 6>;
     auto storage = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
-    auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
+    MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
     auto tree = PersistedTree<NodeType>{ cache };
     auto map = std::map<NodeType::KeyType, NodeType::ValueType>{};
 
@@ -139,7 +139,7 @@ TEST_F(PersistedTreeSuite, FindLastLessThanLookup) {
 
     using NodeType = Node<uint64_t, int32_t, BlockAddress, 6, 6>;
     auto storage = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
-    auto cache = MemoryConstrainedNodeCache<NodeType, 8>{ storage };
+    MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
     auto tree = PersistedTree<NodeType>{ cache };
     auto map = std::map<NodeType::KeyType, NodeType::ValueType>{};
 

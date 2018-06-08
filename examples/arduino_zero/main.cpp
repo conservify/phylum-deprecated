@@ -28,7 +28,6 @@ void setup() {
 
     sdebug() << "phylum-test: Starting: " << free_memory() << std::endl;
 
-    sdebug() << "phylum-test: Done: " << free_memory() << std::endl;
     sdebug() << "phylum-test: sizeof(FileSystem): " << sizeof(FileSystem) << std::endl;
     sdebug() << "phylum-test: sizeof(OpenFile): " << sizeof(OpenFile) << std::endl;
     sdebug() << "phylum-test: sizeof(SequentialBlockAllocator): " << sizeof(SequentialBlockAllocator) << std::endl;
@@ -78,6 +77,8 @@ void setup() {
 
         file.close();
     }
+
+    sdebug() << "phylum-test: Done: " << free_memory() << std::endl;
 
     while (true) {
         delay(10);

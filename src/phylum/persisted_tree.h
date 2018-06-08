@@ -113,8 +113,15 @@ public:
     DepthType depth;
     IndexType number_keys;
     KEY keys[N];
-    VALUE values[M];
-    NodeRefType children[N + 1];
+    union data_t {
+        VALUE values[M];
+        NodeRefType children[N + 1];
+
+        data_t() {
+        }
+    };
+
+    data_t d;
 
     Node() {
     }
@@ -124,9 +131,9 @@ public:
         number_keys = 0;
         for (auto i = (IndexType)0; i < N; ++i) {
             keys[i] = 0;
-            values[i] = 0;
+            d.values[i] = 0;
         }
-        for (auto &ref : children) {
+        for (auto &ref : d.children) {
             ref.clear();
         }
     }
@@ -143,12 +150,12 @@ std::ostream& operator<<(std::ostream& os, const Node<KEY, VALUE, ADDRESS, N, M>
 
     if (n.depth == 0) {
         for (auto i = 0; i < n.number_keys; ++i) {
-            os << " " << n.keys[i] << "=" << n.values[i];
+            os << " " << n.keys[i] << "=" << n.d.values[i];
         }
     }
     else {
         for (auto i = 0; i < n.number_keys + 1; ++i) {
-            os << " " << n.keys[i] << "=Child(#" << (size_t)n.children[i].index() << " " << n.children[i].address() << ")";
+            os << " " << n.keys[i] << "=Child(#" << (size_t)n.d.children[i].index() << " " << n.d.children[i].address() << ")";
         }
     }
 
@@ -270,8 +277,8 @@ private:
         auto node = &nodes_[ref.index()];
         if (node->depth > 0) {
             for (auto i = 0; i <= node->number_keys; ++i) {
-                if (node->children[i].index() != 0xff) {
-                    node->children[i] = flush(node->children[i]);
+                if (node->d.children[i].index() != 0xff) {
+                    node->d.children[i] = flush(node->d.children[i]);
                 }
             }
         }
@@ -336,7 +343,7 @@ public:
 
         auto index = Keys::leaf_position_for(key, node->keys, node->number_keys);
         if (index < node->number_keys && node->keys[index] == key) {
-            value = node->values[index];
+            value = node->d.values[index];
         }
 
         nodes_->clear();
@@ -378,9 +385,9 @@ public:
 
             if (index < node->number_keys) {
                 assert(node->keys[index] < key);
-                if (node->values[index]) {
+                if (node->d.values[index]) {
                     if (value != nullptr) {
-                        *value = node->values[index];
+                        *value = node->d.values[index];
                     }
                     if (found != nullptr) {
                         *found = node->keys[index];
@@ -431,8 +438,8 @@ public:
             new_node->depth = node->depth + 1;
             new_node->number_keys = 1;
             new_node->keys[0] = split_outcome.key;
-            new_node->children[0] = split_outcome.left;
-            new_node->children[1] = split_outcome.right;
+            new_node->d.children[0] = split_outcome.left;
+            new_node->d.children[1] = split_outcome.right;
         }
 
         ref_ = nodes_->flush();
@@ -459,7 +466,7 @@ public:
 
         auto index = Keys::leaf_position_for(key, node->keys, node->number_keys);
         if (node->keys[index] == key) {
-            node->values[index] = 0;
+            node->d.values[index] = 0;
             nodes_->flush();
             return true;
         }
@@ -495,7 +502,7 @@ private:
     };
 
     NodeRefType load_child(NodeType *node, IndexType i) {
-        return node->children[i] = nodes_->load(node->children[i]);
+        return node->d.children[i] = nodes_->load(node->d.children[i]);
     }
 
     SplitOutcome leaf_insert(NodeRefType nref, KEY key, VALUE value) {
@@ -513,7 +520,7 @@ private:
             new_sibling->number_keys = node->number_keys - threshold;
             for (auto j = 0; j < new_sibling->number_keys; ++j) {
                 new_sibling->keys[j] = node->keys[threshold + j];
-                new_sibling->values[j] = node->values[threshold + j];
+                new_sibling->d.values[j] = node->d.values[threshold + j];
             }
             node->number_keys = threshold;
 
@@ -548,16 +555,16 @@ private:
 
         if (node->keys[index] == key) {
             // We are inserting a duplicate value. Simply overwrite the old one
-            node->values[index] = value;
+            node->d.values[index] = value;
         }
         else {
             for (auto i = node->number_keys; i > index; --i) {
                 node->keys[i] = node->keys[i - 1];
-                node->values[i] = node->values[i - 1];
+                node->d.values[i] = node->d.values[i - 1];
             }
             node->number_keys++;
             node->keys[index] = key;
-            node->values[index] = value;
+            node->d.values[index] = value;
         }
     }
 
@@ -575,9 +582,9 @@ private:
             new_sibling->number_keys = node->number_keys - threshold;
             for (auto i = 0; i < new_sibling->number_keys; ++i) {
                 new_sibling->keys[i] = node->keys[threshold + i];
-                new_sibling->children[i] = node->children[threshold + i];
+                new_sibling->d.children[i] = node->d.children[threshold + i];
             }
-            new_sibling->children[new_sibling->number_keys] = node->children[node->number_keys];
+            new_sibling->d.children[new_sibling->number_keys] = node->d.children[node->number_keys];
 
             node->number_keys = threshold - 1;
 
@@ -622,19 +629,19 @@ private:
         if (ins) {
             if (index == node->number_keys) {
                 node->keys[index] = ins.key;
-                node->children[index] = ins.left;
-                node->children[index + 1] = ins.right;
+                node->d.children[index] = ins.left;
+                node->d.children[index + 1] = ins.right;
                 node->number_keys++;
             }
             else {
-                node->children[node->number_keys + 1] = node->children[node->number_keys];
+                node->d.children[node->number_keys + 1] = node->d.children[node->number_keys];
                 for (auto i = node->number_keys; i != index; --i) {
-                    node->children[i] = node->children[i - 1];
+                    node->d.children[i] = node->d.children[i - 1];
                     node->keys[i] = node->keys[i - 1];
                 }
                 node->number_keys++;
-                node->children[index] = ins.left;
-                node->children[index + 1] = ins.right;
+                node->d.children[index] = ins.left;
+                node->d.children[index + 1] = ins.right;
                 node->keys[index] = ins.key;
             }
         }
