@@ -55,7 +55,7 @@ public:
         auto required = serializer.size(head != nullptr);
 
         uint8_t buffer[SerializerType::HeadNodeSize];
-        if (!storage_->read(sector, offset, buffer, required)) {
+        if (!storage_->read({ sector, offset }, buffer, required)) {
             return false;
         }
 
@@ -94,7 +94,7 @@ public:
             return { };
         }
 
-        if (!storage_->write(sector, offset, buffer, required)) {
+        if (!storage_->write({ sector, offset }, buffer, required)) {
             return { };
         }
 
@@ -152,7 +152,7 @@ private:
             return { };
         }
 
-        if (!storage_->write({ block, 0 }, 0, &header, sizeof(TreeBlockHeader))) {
+        if (!storage_->write({ block, 0 }, &header, sizeof(TreeBlockHeader))) {
             return { };
         }
 

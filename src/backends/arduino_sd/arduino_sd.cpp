@@ -49,14 +49,6 @@ bool ArduinoSdBackend::erase(block_index_t block) {
     return sd_raw_erase(&sd_, first_sd_block, last_sd_block);
 }
 
-bool ArduinoSdBackend::read(SectorAddress addr, size_t offset, void *d, size_t n) {
-    return read(BlockAddress{ addr, offset }, d, n);
-}
-
-bool ArduinoSdBackend::write(SectorAddress addr, size_t offset, void *d, size_t n) {
-    return write(BlockAddress{ addr, offset }, d, n);
-}
-
 bool ArduinoSdBackend::read(BlockAddress addr, void *d, size_t n) {
     auto sd_block = get_sd_block(geometry_, addr);
     auto offset = addr.sector_offset(geometry_);

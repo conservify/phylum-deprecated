@@ -160,7 +160,7 @@ BlockAddress FileSystem::initialize_block(block_index_t block, file_id_t file_id
         return { };
     }
 
-    if (!storage_->write({ block, 0 }, 0, &header, sizeof(FileBlockHeader))) {
+    if (!storage_->write({ block, 0 }, &header, sizeof(FileBlockHeader))) {
         return { };
     }
 

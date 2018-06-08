@@ -54,14 +54,6 @@ bool LinuxMemoryBackend::erase(block_index_t block) {
     return true;
 }
 
-bool LinuxMemoryBackend::read(SectorAddress addr, size_t offset, void *d, size_t n) {
-    return read(BlockAddress{ addr, (uint32_t)offset }, d, n);
-}
-
-bool LinuxMemoryBackend::write(SectorAddress addr, size_t offset, void *d, size_t n) {
-    return write(BlockAddress{ addr, (uint32_t)offset }, d, n);
-}
-
 bool LinuxMemoryBackend::read(BlockAddress addr, void *d, size_t n) {
     assert(addr.valid());
     assert(geometry_.contains(addr));
