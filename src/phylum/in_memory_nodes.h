@@ -1,10 +1,10 @@
-#ifndef __CONFS_IN_MEMORY_NODES_H_INCLUDED
-#define __CONFS_IN_MEMORY_NODES_H_INCLUDED
+#ifndef __PHYLUM_IN_MEMORY_NODES_H_INCLUDED
+#define __PHYLUM_IN_MEMORY_NODES_H_INCLUDED
 
-#include "confs/persisted_tree.h"
-#include "confs/node_serializer.h"
+#include "phylum/persisted_tree.h"
+#include "phylum/node_serializer.h"
 
-namespace confs {
+namespace phylum {
 
 template<typename NODE, typename ADDRESS = typename NODE::AddressType>
 class InMemoryNodeStorage : public NodeStorage<NODE, ADDRESS> {

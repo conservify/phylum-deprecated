@@ -1,10 +1,11 @@
 #include <gtest/gtest.h>
 
-#include "utilities.h"
-#include "confs/super_block.h"
+#include "phylum/super_block.h"
 #include "backends/linux-memory/linux-memory.h"
 
-using namespace confs;
+#include "utilities.h"
+
+using namespace phylum;
 
 class SuperBlockSuite : public ::testing::Test {
 protected:

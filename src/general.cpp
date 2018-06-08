@@ -1,7 +1,7 @@
-#include <confs/confs.h>
-#include <confs/private.h>
+#include "phylum/phylum.h"
+#include "phylum/private.h"
 
-namespace confs {
+namespace phylum {
 
 std::ostream &sdebug = std::cout;
 

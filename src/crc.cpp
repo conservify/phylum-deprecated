@@ -1,6 +1,6 @@
-#include "confs/crc.h"
+#include "phylum/crc.h"
 
-namespace confs {
+namespace phylum {
 
 #if defined(PROGMEM)
 #define FLASH_PROGMEM PROGMEM

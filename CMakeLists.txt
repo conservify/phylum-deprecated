@@ -1,4 +1,4 @@
-project("ConsFS")
+project(phylum)
 cmake_minimum_required(VERSION 2.6)
 
 enable_testing()

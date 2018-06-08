@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
 #include <cstring>
 
-#include "confs/file_system.h"
+#include "phylum/file_system.h"
 #include "backends/linux-memory/linux-memory.h"
 
 #include "utilities.h"
 
-using namespace confs;
+using namespace phylum;
 
 static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t total_to_write, int32_t &wrote);
 static void read_and_verify_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t &read);

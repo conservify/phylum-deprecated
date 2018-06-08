@@ -1,5 +1,5 @@
-#ifndef __CONFS_PRIVATE_H_INCLUDED
-#define __CONFS_PRIVATE_H_INCLUDED
+#ifndef __PHYLUM_PRIVATE_H_INCLUDED
+#define __PHYLUM_PRIVATE_H_INCLUDED
 
 #include <iostream>
 #include <cstdint>
@@ -7,7 +7,7 @@
 #include <cstring>
 #include <cassert>
 
-namespace confs {
+namespace phylum {
 
 using block_age_t = uint32_t;
 using block_index_t = uint32_t;
@@ -18,7 +18,7 @@ using file_id_t = uint32_t;
 
 constexpr int32_t SectorSize = 512;
 
-constexpr sector_index_t CONFS_SECTOR_HEAD = 1;
+constexpr sector_index_t SECTOR_HEAD = 1;
 constexpr timestamp_t TIMESTAMP_INVALID = ((timestamp_t)-1);
 constexpr block_index_t BLOCK_INDEX_INVALID = ((block_index_t)-1);
 constexpr sector_index_t SECTOR_INDEX_INVALID = ((sector_index_t)-1);

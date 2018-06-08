@@ -1,14 +1,14 @@
 #include <gtest/gtest.h>
 
-#include <confs/block_alloc.h>
-#include <confs/inodes.h>
-#include <confs/persisted_tree.h>
-#include <confs/in_memory_nodes.h>
-#include <backends/linux-memory/linux-memory.h>
+#include "phylum/block_alloc.h"
+#include "phylum/inodes.h"
+#include "phylum/persisted_tree.h"
+#include "phylum/in_memory_nodes.h"
+#include "backends/linux-memory/linux-memory.h"
 
 #include "utilities.h"
 
-using namespace confs;
+using namespace phylum;
 
 class PersistedTreeSuite : public ::testing::Test {
 protected:

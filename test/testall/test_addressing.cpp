@@ -2,6 +2,8 @@
 
 #include "utilities.h"
 
+using namespace phylum;
+
 class AddressingSuite : public ::testing::Test {
 };
 

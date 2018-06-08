@@ -1,4 +1,4 @@
-#+TITLE:	README for cfs
+#+TITLE:	README for phylum
 #+AUTHOR:	Jacob Lewallen
 #+EMAIL:	jacob@conservify.org
 

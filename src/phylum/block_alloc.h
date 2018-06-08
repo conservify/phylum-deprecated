@@ -1,13 +1,12 @@
-#ifndef __CONFS_BLOCK_ALLOC_H_INCLUDED
-#define __CONFS_BLOCK_ALLOC_H_INCLUDED
+#ifndef __PHYLUM_BLOCK_ALLOC_H_INCLUDED
+#define __PHYLUM_BLOCK_ALLOC_H_INCLUDED
 
-#include <confs/confs.h>
-#include <confs/private.h>
-#include <confs/backend.h>
+#include <phylum/private.h>
+#include <phylum/backend.h>
 
 #include <queue>
 
-namespace confs {
+namespace phylum {
 
 class BlockAllocator {
 private:

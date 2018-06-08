@@ -1,14 +1,14 @@
-#ifndef __CONFS_FILE_SYSTEM_H_INCLUDED
-#define __CONFS_FILE_SYSTEM_H_INCLUDED
+#ifndef __PHYLUM_FILE_SYSTEM_H_INCLUDED
+#define __PHYLUM_FILE_SYSTEM_H_INCLUDED
 
-#include "confs/persisted_tree.h"
-#include "confs/block_alloc.h"
-#include "confs/super_block.h"
-#include "confs/crc.h"
-#include "confs/inodes.h"
-#include "confs/backend_nodes.h"
+#include "phylum/persisted_tree.h"
+#include "phylum/block_alloc.h"
+#include "phylum/super_block.h"
+#include "phylum/crc.h"
+#include "phylum/inodes.h"
+#include "phylum/backend_nodes.h"
 
-namespace confs {
+namespace phylum {
 
 class FileSystem;
 

@@ -1,10 +1,10 @@
-#ifndef __CONFS_PERSISTED_TREE_H_INCLUDED
-#define __CONFS_PERSISTED_TREE_H_INCLUDED
+#ifndef __PHYLUM_PERSISTED_TREE_H_INCLUDED
+#define __PHYLUM_PERSISTED_TREE_H_INCLUDED
 
-#include "confs/private.h"
-#include "confs/tree.h"
+#include "phylum/private.h"
+#include "phylum/tree.h"
 
-namespace confs {
+namespace phylum {
 
 using DepthType = uint8_t;
 using IndexType = uint8_t;
@@ -221,7 +221,7 @@ public:
 
         storage_->deserialize(ref.address(), node, head ? &information_ : nullptr);
 
-        #ifdef CONFS_PERSISTED_TREE_LOGGING
+        #ifdef PHYLUM_PERSISTED_TREE_LOGGING
         sdebug << "Load: " << ref.address() << " " << *node << std::endl;
         #endif
 
@@ -229,7 +229,7 @@ public:
     }
 
     virtual NodeRefType flush() override {
-        #ifdef CONFS_PERSISTED_TREE_LOGGING
+        #ifdef PHYLUM_PERSISTED_TREE_LOGGING
         sdebug << "Flushing Node Cache: " << (size_t)index_ << std::endl;
         #endif
 
@@ -278,7 +278,7 @@ private:
 
         ref.address(storage_->serialize(ref.address(), node, head ? &information_ : nullptr));
 
-        #ifdef CONFS_PERSISTED_TREE_LOGGING
+        #ifdef PHYLUM_PERSISTED_TREE_LOGGING
         sdebug << "   " << " W(#" << (int32_t)ref.index() << " " << ref.address() << " = " << *node << ")" << std::endl;
         #endif
 
@@ -423,7 +423,7 @@ public:
         }
 
         if (split_outcome) {
-            #ifdef CONFS_PERSISTED_TREE_LOGGING
+            #ifdef PHYLUM_PERSISTED_TREE_LOGGING
             sdebug << "New Root (" << (size_t)node->depth << " " << split_outcome.key << ")" << std::endl;
             #endif
             auto new_nref = nodes_->allocate();
@@ -541,7 +541,7 @@ private:
         assert(index < M);
         assert(index <= node->number_keys);
 
-        #ifdef CONFS_PERSISTED_TREE_LOGGING
+        #ifdef PHYLUM_PERSISTED_TREE_LOGGING
         sdebug << "Add " << key << " to " << *node << " index=" << (size_t)index <<
             " keys=" << (size_t)node->number_keys << std::endl;
         #endif

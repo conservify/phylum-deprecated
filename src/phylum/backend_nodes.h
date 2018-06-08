@@ -1,10 +1,10 @@
-#ifndef __CONFS_BACKEND_NODES_H_INCLUDED
-#define __CONFS_BACKEND_NODES_H_INCLUDED
+#ifndef __PHYLUM_BACKEND_NODES_H_INCLUDED
+#define __PHYLUM_BACKEND_NODES_H_INCLUDED
 
-#include "confs/persisted_tree.h"
-#include "confs/node_serializer.h"
+#include "phylum/persisted_tree.h"
+#include "phylum/node_serializer.h"
 
-namespace confs {
+namespace phylum {
 
 struct TreeBlockHeader {
     BlockAllocSector header;

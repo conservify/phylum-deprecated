@@ -1,9 +1,9 @@
-#ifndef __CONFS_BACKEND_H_INCLUDED
-#define __CONFS_BACKEND_H_INCLUDED
+#ifndef __PHYLUM_BACKEND_H_INCLUDED
+#define __PHYLUM_BACKEND_H_INCLUDED
 
-#include <confs/private.h>
+#include <phylum/private.h>
 
-namespace confs {
+namespace phylum {
 
 class StorageBackend {
 public:

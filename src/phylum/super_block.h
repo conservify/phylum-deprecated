@@ -1,11 +1,11 @@
-#ifndef __CONFS_SUPER_BLOCK_H_INCLUDED
-#define __CONFS_SUPER_BLOCK_H_INCLUDED
+#ifndef __PHYLUM_SUPER_BLOCK_H_INCLUDED
+#define __PHYLUM_SUPER_BLOCK_H_INCLUDED
 
-#include "confs/backend.h"
-#include "confs/private.h"
-#include "confs/block_alloc.h"
+#include "phylum/backend.h"
+#include "phylum/private.h"
+#include "phylum/block_alloc.h"
 
-namespace confs {
+namespace phylum {
 
 struct SuperBlockLink {
     BlockAllocSector header;

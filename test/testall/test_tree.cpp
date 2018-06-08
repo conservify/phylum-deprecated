@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
 
-#include <confs/tree.h>
-#include <confs/private.h>
-#include <confs/inodes.h>
+#include "phylum/tree.h"
+#include "phylum/private.h"
+#include "phylum/inodes.h"
 
 #include "utilities.h"
 
-using namespace confs;
+using namespace phylum;
 
 using StandardTree = BPlusTree<uint64_t, int64_t, 6, 6>;
 

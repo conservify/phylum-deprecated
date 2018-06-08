@@ -1,7 +1,7 @@
-#ifndef __CONFS_NODES_SERIALIZER_H_INCLUDED
-#define __CONFS_NODES_SERIALIZER_H_INCLUDED
+#ifndef __PHYLUM_NODES_SERIALIZER_H_INCLUDED
+#define __PHYLUM_NODES_SERIALIZER_H_INCLUDED
 
-namespace confs {
+namespace phylum {
 
 template<typename NODE>
 class NodeSerializer {

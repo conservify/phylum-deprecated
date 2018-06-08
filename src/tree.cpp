@@ -1,5 +1,5 @@
-#include "confs/tree.h"
+#include "phylum/tree.h"
 
-namespace confs {
+namespace phylum {
 
 }

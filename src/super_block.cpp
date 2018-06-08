@@ -1,8 +1,8 @@
-#include "confs/confs.h"
-#include "confs/private.h"
-#include "confs/super_block.h"
+#include "phylum/phylum.h"
+#include "phylum/private.h"
+#include "phylum/super_block.h"
 
-namespace confs {
+namespace phylum {
 
 constexpr block_index_t SuperBlockManager::AnchorBlocks[];
 
@@ -69,7 +69,7 @@ bool SuperBlockManager::locate() {
 }
 
 bool SuperBlockManager::find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where) {
-    for (auto s = CONFS_SECTOR_HEAD; s < storage_->geometry().sectors_per_block(); ++s) {
+    for (auto s = SECTOR_HEAD; s < storage_->geometry().sectors_per_block(); ++s) {
         SuperBlockLink link;
 
         if (!read({ block, s }, link)) {
@@ -112,12 +112,12 @@ bool SuperBlockManager::create() {
 
             assert(sb_.tree != BLOCK_INDEX_INVALID);
 
-            if (!write({ block, CONFS_SECTOR_HEAD }, sb_)) {
+            if (!write({ block, SECTOR_HEAD }, sb_)) {
                 return false;
             }
         }
         else {
-            if (!write({ block, CONFS_SECTOR_HEAD }, link)) {
+            if (!write({ block, SECTOR_HEAD }, link)) {
                 return false;
             }
         }
@@ -132,7 +132,7 @@ bool SuperBlockManager::create() {
             return false;
         }
 
-        if (!write({ anchor, CONFS_SECTOR_HEAD }, link)) {
+        if (!write({ anchor, SECTOR_HEAD }, link)) {
             return false;
         }
 
@@ -157,7 +157,7 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
         if (AnchorBlocks[i] == addr.block) {
             relocated = {
                 AnchorBlocks[(i + 1) % number_of_anchors],
-                CONFS_SECTOR_HEAD
+                SECTOR_HEAD
             };
 
             if (!storage_->erase(relocated.block)) {
@@ -169,7 +169,7 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
     }
 
     auto block = allocator_->allocate();
-    relocated = { block, CONFS_SECTOR_HEAD };
+    relocated = { block, SECTOR_HEAD };
     if (!storage_->erase(block)) {
         return false;
     }

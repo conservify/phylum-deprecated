@@ -1,5 +1,5 @@
-#ifndef __CONFS_TREE_H_INCLUDED
-#define __CONFS_TREE_H_INCLUDED
+#ifndef __PHYLUM_TREE_H_INCLUDED
+#define __PHYLUM_TREE_H_INCLUDED
 
 #include <functional>
 #include <cassert>
@@ -8,7 +8,7 @@
 #include <iomanip>
 #include <iostream>
 
-namespace confs {
+namespace phylum {
 
 class Keys {
 public:

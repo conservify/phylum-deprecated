@@ -15,7 +15,3 @@ std::map<uint64_t, uint64_t> random_data() {
 
     return data;
 }
-
-namespace confs {
-
-}

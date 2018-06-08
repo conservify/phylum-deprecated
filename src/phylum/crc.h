@@ -1,10 +1,10 @@
-#ifndef __CONFS_CRC_H_INCLUDED
-#define __CONFS_CRC_H_INCLUDED
+#ifndef __PHYLUM_CRC_H_INCLUDED
+#define __PHYLUM_CRC_H_INCLUDED
 
 #include <cstdint>
 #include <cstdlib>
 
-namespace confs {
+namespace phylum {
 
 uint32_t crc32_update(uint32_t crc, uint8_t data);
 

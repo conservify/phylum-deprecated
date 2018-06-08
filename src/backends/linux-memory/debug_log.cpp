@@ -1,6 +1,6 @@
 #include "debug_log.h"
 
-namespace confs {
+namespace phylum {
 
 std::ostream& operator<<(std::ostream& os, const LogEntry& e) {
     switch (e.type_) {

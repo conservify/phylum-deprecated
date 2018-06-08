@@ -1,13 +1,13 @@
-#ifndef __CONFS_LINUX_MEMORY_H_INCLUDED
-#define __CONFS_LINUX_MEMORY_H_INCLUDED
+#ifndef __PHYLUM_LINUX_MEMORY_H_INCLUDED
+#define __PHYLUM_LINUX_MEMORY_H_INCLUDED
 
-#include <confs/confs.h>
-#include <confs/private.h>
-#include <confs/backend.h>
+#include <phylum/phylum.h>
+#include <phylum/private.h>
+#include <phylum/backend.h>
 
 #include "debug_log.h"
 
-namespace confs {
+namespace phylum {
 
 class LinuxMemoryBackend : public StorageBackend {
 private:

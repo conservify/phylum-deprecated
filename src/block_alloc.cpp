@@ -1,6 +1,6 @@
-#include "confs/block_alloc.h"
+#include "phylum/block_alloc.h"
 
-namespace confs {
+namespace phylum {
 
 BlockAllocator::BlockAllocator(StorageBackend &storage) : storage_(&storage) {
 }

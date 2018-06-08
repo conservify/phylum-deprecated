@@ -1,12 +1,12 @@
-#ifndef __CONFS_INODES_H_INCLUDED
-#define __CONFS_INODES_H_INCLUDED
+#ifndef __PHYLUM_INODES_H_INCLUDED
+#define __PHYLUM_INODES_H_INCLUDED
 
-#include <confs/backend.h>
-#include <confs/block_alloc.h>
-#include <confs/persisted_tree.h>
-#include <confs/crc.h>
+#include <phylum/backend.h>
+#include <phylum/block_alloc.h>
+#include <phylum/persisted_tree.h>
+#include <phylum/crc.h>
 
-namespace confs {
+namespace phylum {
 
 class INodeKey {
 private:

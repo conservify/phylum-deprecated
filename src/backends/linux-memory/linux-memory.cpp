@@ -1,6 +1,6 @@
 #include "linux-memory.h"
 
-namespace confs {
+namespace phylum {
 
 LinuxMemoryBackend::LinuxMemoryBackend() : size_(0), ptr_(nullptr) {
 }

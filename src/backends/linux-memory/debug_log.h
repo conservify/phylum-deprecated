@@ -1,5 +1,5 @@
-#ifndef __CONFS_LINUX_MEMORY_DEBUG_LOG_H_
-#define __CONFS_LINUX_MEMORY_DEBUG_LOG_H_
+#ifndef __PHYLUM_LINUX_MEMORY_DEBUG_LOG_H_
+#define __PHYLUM_LINUX_MEMORY_DEBUG_LOG_H_
 
 #include <cassert>
 #include <cstring>
@@ -10,10 +10,10 @@
 #include <vector>
 #include <list>
 
-#include <confs/confs.h>
-#include <confs/private.h>
+#include <phylum/phylum.h>
+#include <phylum/private.h>
 
-namespace confs {
+namespace phylum {
 
 enum class OperationType {
     Opened,
