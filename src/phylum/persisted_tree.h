@@ -178,6 +178,7 @@ public:
 public:
     virtual NodeRefType allocate() = 0;
     virtual NodeRefType load(NodeRefType ref, bool head = false) = 0;
+    virtual void unload(NodeRefType ref) = 0;
     virtual NodeType *resolve(NodeRefType ref) = 0;
     virtual NodeRefType flush() = 0;
     virtual void clear() = 0;
@@ -240,6 +241,15 @@ public:
         #endif
 
         return ref;
+    }
+
+    virtual void unload(NodeRefType ref) override {
+        assert(ref.address().valid());
+        assert(index_ - 1 == ref.index());
+
+        index_--;
+
+        nodes_[ref.index()].clear();
     }
 
     virtual NodeRefType flush() override {
@@ -498,8 +508,8 @@ public:
 
     using PersistedTreeVisitorType = PersistedTreeVisitor<NodeRefType, NodeType>;
 
-    void accept(NodeRefType ref, PersistedTreeVisitorType &visitor) {
-        auto nref = nodes_->load(ref, true);
+    void accept(NodeRefType ref, PersistedTreeVisitorType &visitor, bool head = false) {
+        auto nref = nodes_->load(ref, head);
         auto node = nodes_->resolve(nref);
 
         visitor.visit(nref, node);
@@ -511,10 +521,14 @@ public:
                 }
             }
         }
+
+        nodes_->unload(nref);
     }
 
     void accept(PersistedTreeVisitorType &visitor) {
-        accept(ref_, visitor);
+        create_if_necessary();
+
+        accept(ref_, visitor, true);
     }
 
 private:

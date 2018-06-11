@@ -172,12 +172,13 @@ TEST_F(PersistedTreeSuite, FindLessThanLookup) {
     }
 }
 
-TEST_F(PersistedTreeSuite, WalkTree) {
+TEST_F(PersistedTreeSuite, WalkSmallTree) {
     using NodeType = Node<int32_t, int32_t, BlockAddress, 6, 6>;
     using NodeRefType = NodeRef<BlockAddress>;
-    auto storage = InMemoryNodeStorage<NodeType>{ 2048 };
+
+    InMemoryNodeStorage<NodeType> storage{ 2048 };
     MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
-    auto tree = PersistedTree<NodeType>{ cache };
+    PersistedTree<NodeType> tree{ cache };
 
     tree.add(100, 5738);
     tree.add(10, 1);
@@ -188,12 +189,71 @@ TEST_F(PersistedTreeSuite, WalkTree) {
     tree.add(9, 6);
     tree.add(30, 7);
 
-    class : public PersistedTreeVisitor<NodeRefType, NodeType> {
+    struct : public PersistedTreeVisitor<NodeRefType, NodeType> {
     public:
+        int32_t calls = 0;
+
         virtual void visit(NodeRefType nref, NodeType *node) override {
-            sdebug() << "" << (int32_t)node->depth << std::endl;
+            calls++;
         }
     } visitor;
 
     tree.accept(visitor);
+
+    ASSERT_EQ(visitor.calls, 3);
+}
+
+
+TEST_F(PersistedTreeSuite, WalkLargeTree) {
+    using NodeType = Node<uint64_t, int32_t, BlockAddress, 6, 6>;
+    using NodeRefType = NodeRef<BlockAddress>;
+
+    std::vector<uint32_t> inodes;
+    std::map<uint32_t, uint32_t> last_offsets;
+
+    InMemoryNodeStorage<NodeType> storage{ 1024 * 1024 };
+    MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
+    PersistedTree<NodeType> tree{ cache };
+    std::map<NodeType::KeyType, NodeType::ValueType> map;
+
+    for (auto i = 0; i < 8; ++i) {
+        auto inode = (uint32_t)(random() % 2048 + 1024);
+        inodes.push_back(inode);
+
+        auto offset = 512;
+
+        for (auto j = 0; j < 128; ++j) {
+            auto key = INodeKey(inode, offset);
+            tree.add(key, inode);
+            last_offsets[inode] = offset;
+            map[key] = inode;
+            offset += random() % 4096;
+        }
+    }
+
+    for (auto inode : inodes) {
+        NodeType::KeyType found;
+        NodeType::ValueType value;
+
+        auto key = INodeKey(inode, UINT32_MAX);
+
+        ASSERT_TRUE(tree.find_less_then(key, &value, &found));
+
+        auto key_offset = (found) & ((uint32_t)-1);
+
+        EXPECT_EQ(last_offsets[inode], key_offset);
+    }
+
+    struct : public PersistedTreeVisitor<NodeRefType, NodeType> {
+    public:
+        int32_t calls = 0;
+
+        virtual void visit(NodeRefType nref, NodeType *node) override {
+            calls++;
+        }
+    } visitor;
+
+    tree.accept(visitor);
+
+    ASSERT_EQ(visitor.calls, 494);
 }
