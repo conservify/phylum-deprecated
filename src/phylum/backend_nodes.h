@@ -23,11 +23,9 @@ struct TreeBlockHeader {
     }
 };
 
-#ifndef ARDUINO
 inline std::ostream& operator<<(std::ostream& os, const TreeBlockHeader &h) {
     return os << "TreeBlock<" << h.header << ">";
 }
-#endif
 
 template<typename NODE>
 class StorageBackendNodeStorage : public NodeStorage<NODE, BlockAddress> {

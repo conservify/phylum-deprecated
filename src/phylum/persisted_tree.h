@@ -484,7 +484,7 @@ public:
         auto index = Keys::leaf_position_for(key, node->keys, node->number_keys);
         if (node->keys[index] == key) {
             node->d.values[index] = 0;
-            nodes_->flush();
+            ref_ = nodes_->flush();
             return true;
         }
         else {
