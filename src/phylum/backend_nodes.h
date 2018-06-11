@@ -77,6 +77,7 @@ public:
             location_ = initialize_block(allocator_->allocate(BlockType::Tree));
         }
         else {
+            // Skip over the previous block.
             location_.add(required);
 
             if (!location_.find_room(geometry, required)) {

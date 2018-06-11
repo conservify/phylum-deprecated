@@ -196,14 +196,14 @@ public:
     bool find_room(const Geometry &g, uint32_t n) {
         assert(n <= g.sector_size);
 
-        auto sector_remaining = remaining_in_sector(g);
-        if (sector_remaining > n) {
-            return true;
+        auto block_remaining = remaining_in_block(g);
+        if (n > block_remaining) {
+            return false;
         }
 
-        auto block_remaining = remaining_in_block(g);
-        if (block_remaining < n) {
-            return false;
+        auto sector_remaining = remaining_in_sector(g);
+        if (sector_remaining >= n) {
+            return true;
         }
 
         position += sector_remaining;

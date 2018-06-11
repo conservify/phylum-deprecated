@@ -59,3 +59,15 @@ TEST_F(AddressingSuite, AddressIterating) {
 
     ASSERT_TRUE(iter.find_room(g, 128));
 }
+
+
+TEST_F(AddressingSuite, FindRoomAtEndOfBlock) {
+    Geometry g{ 1024, 4, 4, 512 };
+    BlockAddress iter{ 0, 0 };
+
+    // This checks for a bug where we tested the sector remaining before block
+    // remaining which assumed our sector was valid.
+    iter.add(iter.remaining_in_block(g));
+
+    ASSERT_FALSE(iter.find_room(g, 128));
+}
