@@ -236,7 +236,7 @@ public:
         storage_->deserialize(ref.address(), node, head ? &information_ : nullptr);
 
         #ifdef PHYLUM_PERSISTED_TREE_LOGGING
-        sdebug << "Load: " << ref.address() << " " << *node << std::endl;
+        sdebug() << "Load: " << ref.address() << " " << *node << std::endl;
         #endif
 
         return ref;
@@ -244,7 +244,7 @@ public:
 
     virtual NodeRefType flush() override {
         #ifdef PHYLUM_PERSISTED_TREE_LOGGING
-        sdebug << "Flushing Node Cache: " << (size_t)index_ << std::endl;
+        sdebug() << "Flushing Node Cache: " << (size_t)index_ << std::endl;
         #endif
 
         if (index_ == 0) {
@@ -293,7 +293,7 @@ private:
         ref.address(storage_->serialize(ref.address(), node, head ? &information_ : nullptr));
 
         #ifdef PHYLUM_PERSISTED_TREE_LOGGING
-        sdebug << "   " << " W(#" << (int32_t)ref.index() << " " << ref.address() << " = " << *node << ")" << std::endl;
+        sdebug() << "   " << " W(#" << (int32_t)ref.index() << " " << ref.address() << " = " << *node << ")" << std::endl;
         #endif
 
         return ref;
@@ -438,7 +438,7 @@ public:
 
         if (split_outcome) {
             #ifdef PHYLUM_PERSISTED_TREE_LOGGING
-            sdebug << "New Root (" << (size_t)node->depth << " " << split_outcome.key << ")" << std::endl;
+            sdebug() << "New Root (" << (size_t)node->depth << " " << split_outcome.key << ")" << std::endl;
             #endif
             auto new_nref = nodes_->allocate();
             auto new_node = nodes_->resolve(new_nref);
@@ -577,7 +577,7 @@ private:
         assert(index <= node->number_keys);
 
         #ifdef PHYLUM_PERSISTED_TREE_LOGGING
-        sdebug << "Add " << key << " to " << *node << " index=" << (size_t)index <<
+        sdebug() << "Add " << key << " to " << *node << " index=" << (size_t)index <<
             " keys=" << (size_t)node->number_keys << std::endl;
         #endif
 

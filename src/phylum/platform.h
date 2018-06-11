@@ -49,6 +49,10 @@ public:
         return printf("%lu", i);
     }
 
+    LogStream& operator<<(uint64_t i) {
+        return printf("%lu", i);
+    }
+
     LogStream& operator<<(int8_t i) {
         return printf("%d", i);
     }
@@ -58,6 +62,10 @@ public:
     }
 
     LogStream& operator<<(int32_t i) {
+        return printf("%d", i);
+    }
+
+    LogStream& operator<<(int64_t i) {
         return printf("%d", i);
     }
 
