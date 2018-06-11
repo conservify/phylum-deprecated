@@ -133,7 +133,7 @@ TEST_F(PersistedTreeSuite, MultipleLookupCustomKeyType) {
     }
 }
 
-TEST_F(PersistedTreeSuite, FindLastLessThanLookup) {
+TEST_F(PersistedTreeSuite, FindLessThanLookup) {
     std::vector<uint32_t> inodes;
     std::map<uint32_t, uint32_t> last_offsets;
 
@@ -170,4 +170,30 @@ TEST_F(PersistedTreeSuite, FindLastLessThanLookup) {
 
         EXPECT_EQ(last_offsets[inode], key_offset);
     }
+}
+
+TEST_F(PersistedTreeSuite, WalkTree) {
+    using NodeType = Node<int32_t, int32_t, BlockAddress, 6, 6>;
+    using NodeRefType = NodeRef<BlockAddress>;
+    auto storage = InMemoryNodeStorage<NodeType>{ 2048 };
+    MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
+    auto tree = PersistedTree<NodeType>{ cache };
+
+    tree.add(100, 5738);
+    tree.add(10, 1);
+    tree.add(22, 2);
+    tree.add(8, 3);
+    tree.add(3, 4);
+    tree.add(17, 5);
+    tree.add(9, 6);
+    tree.add(30, 7);
+
+    class : public PersistedTreeVisitor<NodeRefType, NodeType> {
+    public:
+        virtual void visit(NodeRefType nref, NodeType *node) override {
+            sdebug() << "" << (int32_t)node->depth << std::endl;
+        }
+    } visitor;
+
+    tree.accept(visitor);
 }

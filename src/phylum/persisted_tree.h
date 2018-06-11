@@ -184,6 +184,13 @@ public:
 
 };
 
+template<typename NodeRefType, typename NodeType>
+class PersistedTreeVisitor {
+public:
+    virtual void visit(NodeRefType nref, NodeType *node) = 0;
+
+};
+
 template<typename NODE, size_t SIZE>
 class MemoryConstrainedNodeCache : public NodeCache<NODE> {
 public:
@@ -487,6 +494,27 @@ public:
         ref_ = nodes_->flush();
 
         return ref_.address();
+    }
+
+    using PersistedTreeVisitorType = PersistedTreeVisitor<NodeRefType, NodeType>;
+
+    void accept(NodeRefType ref, PersistedTreeVisitorType &visitor) {
+        auto nref = nodes_->load(ref, true);
+        auto node = nodes_->resolve(nref);
+
+        visitor.visit(nref, node);
+
+        if (node->depth > 0) {
+            for (auto i = 0; i < node->number_keys + 1; ++i) {
+                if (node->d.children[i].valid()) {
+                    accept(node->d.children[i], visitor);
+                }
+            }
+        }
+    }
+
+    void accept(PersistedTreeVisitorType &visitor) {
+        accept(ref_, visitor);
     }
 
 private:
