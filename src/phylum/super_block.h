@@ -18,8 +18,8 @@ struct SuperBlockLink {
 
 struct SuperBlock {
     SuperBlockLink link;
+    AllocatorState allocator;
     block_index_t tree{ 0 };
-    block_index_t alloc_head{ BLOCK_INDEX_INVALID };
 
     SuperBlock() : link(BlockType::SuperBlock) {
     }

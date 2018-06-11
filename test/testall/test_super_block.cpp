@@ -98,3 +98,40 @@ TEST_F(SuperBlockSuite, AnchorAreaRolloverTwice) {
     ASSERT_NE(sbm_.location().block, old.block);
     ASSERT_EQ(sbm_.location().sector, 13);
 }
+
+class SuperBlockSequentialAllocatorSuite : public ::testing::Test {
+protected:
+    Geometry geometry_{ 1024, 4, 4, 512 };
+    LinuxMemoryBackend storage_;
+    SequentialBlockAllocator allocator_{ geometry_ };
+    SuperBlockManager sbm_{ storage_, allocator_ };
+
+protected:
+    void SetUp() override {
+        ASSERT_TRUE(storage_.initialize(geometry_));
+        ASSERT_TRUE(storage_.open());
+    }
+
+    void TearDown() override {
+        ASSERT_TRUE(storage_.close());
+    }
+
+};
+
+TEST_F(SuperBlockSequentialAllocatorSuite, SaveAndLoadAllocatorState) {
+    ASSERT_TRUE(sbm_.create());
+
+    ASSERT_EQ(allocator_.state().head, (block_index_t)8);
+
+    for (auto i = 0; i < 18; ++i) {
+        ASSERT_TRUE(sbm_.save());
+    }
+
+    ASSERT_EQ(allocator_.state().head, (block_index_t)9);
+
+    allocator_.state({ BLOCK_INDEX_INVALID });
+
+    ASSERT_TRUE(sbm_.locate());
+
+    ASSERT_EQ(allocator_.state().head, (block_index_t)9);
+}

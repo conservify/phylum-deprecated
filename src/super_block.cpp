@@ -65,6 +65,8 @@ bool SuperBlockManager::locate() {
         return false;
     }
 
+    allocator_->state(sb_.allocator);
+
     return true;
 }
 
@@ -91,6 +93,7 @@ bool SuperBlockManager::find_link(block_index_t block, SuperBlockLink &found, Se
 }
 
 bool SuperBlockManager::create() {
+    block_index_t super_block_block = BLOCK_INDEX_INVALID;
     SuperBlockLink link;
     link.chained_block = BLOCK_INDEX_INVALID;
     link.header.magic.fill();
@@ -107,14 +110,8 @@ bool SuperBlockManager::create() {
 
         // First of these blocks is actually where the super block goes.
         if (i == 0) {
+            super_block_block  = block;
             sb_.link = link;
-            sb_.tree = allocator_->allocate(BlockType::Tree);
-
-            assert(sb_.tree != BLOCK_INDEX_INVALID);
-
-            if (!write({ block, SECTOR_HEAD }, sb_)) {
-                return false;
-            }
         }
         else {
             if (!write({ block, SECTOR_HEAD }, link)) {
@@ -137,6 +134,19 @@ bool SuperBlockManager::create() {
         }
 
         link.header.timestamp--;
+    }
+
+    // We pull allocator state after doing the above allocations to ensure the
+    // first state we write is correct.
+    sb_.tree = allocator_->allocate(BlockType::Tree);
+    sb_.journal = allocator_->allocate(BlockType::Journal);
+    sb_.allocator = allocator_->state();
+
+    assert(sb_.tree != BLOCK_INDEX_INVALID);
+    assert(sb_.journal != BLOCK_INDEX_INVALID);
+
+    if (!write({ super_block_block, SECTOR_HEAD }, sb_)) {
+        return false;
     }
 
     return locate();
@@ -206,6 +216,7 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
 
 bool SuperBlockManager::save() {
     sb_.link.header.timestamp++;
+    sb_.allocator = allocator_->state();
 
     auto sb_write = PendingWrite{
         BlockType::SuperBlock,

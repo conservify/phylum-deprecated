@@ -185,6 +185,15 @@ TYPED_TEST(PersistedTreeSuite, FindLessThanLookup) {
     }
 }
 
+template<typename NodeType, typename NodeRefType>
+struct SimpleVisitor : PersistedTreeVisitor<NodeRefType, NodeType> {
+    int32_t calls = 0;
+
+    virtual void visit(NodeRefType nref, NodeType *node) override {
+        calls++;
+    }
+};
+
 TYPED_TEST(PersistedTreeSuite, WalkSmallTree) {
     PersistedTree<typename TypeParam::NodeType> tree{ this->cfg_.cache_ };
 
@@ -197,14 +206,7 @@ TYPED_TEST(PersistedTreeSuite, WalkSmallTree) {
     tree.add(9, 6);
     tree.add(30, 7);
 
-    struct : public PersistedTreeVisitor<typename TypeParam::NodeRefType, typename TypeParam::NodeType> {
-    public:
-        int32_t calls = 0;
-
-        virtual void visit(typename TypeParam::NodeRefType nref, typename TypeParam::NodeType *node) override {
-            calls++;
-        }
-    } visitor;
+    SimpleVisitor<typename TypeParam::NodeType, typename TypeParam::NodeRefType> visitor;
 
     tree.accept(visitor);
 
@@ -234,27 +236,7 @@ TYPED_TEST(PersistedTreeSuite, WalkLargeTree) {
         }
     }
 
-    for (auto inode : inodes) {
-        typename TypeParam::NodeType::KeyType found;
-        typename TypeParam::NodeType::ValueType value;
-
-        auto key = INodeKey(inode, UINT32_MAX);
-
-        ASSERT_TRUE(tree.find_less_then(key, &value, &found));
-
-        auto key_offset = (found) & ((uint32_t)-1);
-
-        EXPECT_EQ(last_offsets[inode], key_offset);
-    }
-
-    struct : public PersistedTreeVisitor<typename TypeParam::NodeRefType, typename TypeParam::NodeType> {
-    public:
-        int32_t calls = 0;
-
-        virtual void visit(typename TypeParam::NodeRefType nref, typename TypeParam::NodeType *node) override {
-            calls++;
-        }
-    } visitor;
+    SimpleVisitor<typename TypeParam::NodeType, typename TypeParam::NodeRefType> visitor;
 
     tree.accept(visitor);
 

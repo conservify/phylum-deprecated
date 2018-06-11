@@ -10,11 +10,39 @@
 
 namespace phylum {
 
+// TODO: This should be customizable per-allocator. Template overhead doesn't
+// seem worth the effort though.
+struct AllocatorState {
+    block_index_t head;
+
+    AllocatorState(block_index_t head = BLOCK_INDEX_INVALID) : head(head) {
+    }
+};
+
 class BlockAllocator {
 public:
     virtual bool initialize(Geometry &geometry) = 0;
+    virtual AllocatorState state() = 0;
+    virtual void state(AllocatorState state) = 0;
     virtual block_index_t allocate(BlockType type) = 0;
     virtual void free(block_index_t block) = 0;
+
+};
+
+class SequentialBlockAllocator : public BlockAllocator {
+private:
+    Geometry *geometry_;
+    uint32_t block_{ 3 };
+
+public:
+    SequentialBlockAllocator(Geometry &geometry);
+
+public:
+    virtual bool initialize(Geometry &geometry) override;
+    virtual AllocatorState state() override;
+    virtual void state(AllocatorState state) override;
+    virtual block_index_t allocate(BlockType type) override;
+    virtual void free(block_index_t block) override;
 
 };
 
@@ -30,26 +58,13 @@ public:
 
 public:
     virtual bool initialize(Geometry &geometry) override;
+    virtual AllocatorState state() override;
+    virtual void state(AllocatorState state) override;
     virtual block_index_t allocate(BlockType type) override;
     virtual void free(block_index_t block) override;
 
 };
 #endif
-
-class SequentialBlockAllocator : public BlockAllocator {
-private:
-    Geometry *geometry_;
-    uint32_t block_{ 3 };
-
-public:
-    SequentialBlockAllocator(Geometry &geometry);
-
-public:
-    virtual bool initialize(Geometry &geometry) override;
-    virtual block_index_t allocate(BlockType type) override;
-    virtual void free(block_index_t block) override;
-
-};
 
 }
 

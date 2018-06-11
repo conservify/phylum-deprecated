@@ -89,7 +89,7 @@ public:
             entries_.back().backup();
         }
 
-        // sdebug << entry << std::endl;
+        // sdebug() << entry << std::endl;
     }
 
     int32_t size() const {

@@ -2,6 +2,29 @@
 
 namespace phylum {
 
+SequentialBlockAllocator::SequentialBlockAllocator(Geometry &geometry) : geometry_(&geometry) {
+}
+
+bool SequentialBlockAllocator::initialize(Geometry &geometry) {
+    return true;
+}
+
+AllocatorState SequentialBlockAllocator::state() {
+    return { block_ };
+}
+
+void SequentialBlockAllocator::state(AllocatorState state) {
+    block_ = state.head;
+}
+
+block_index_t SequentialBlockAllocator::allocate(BlockType type) {
+    assert(block_ < geometry_->number_of_blocks);
+    return block_++;
+}
+
+void SequentialBlockAllocator::free(block_index_t block) {
+}
+
 #ifndef ARDUINO
 
 QueueBlockAllocator::QueueBlockAllocator(Geometry &geometry) : geometry_(&geometry) {
@@ -9,6 +32,13 @@ QueueBlockAllocator::QueueBlockAllocator(Geometry &geometry) : geometry_(&geomet
 
 bool QueueBlockAllocator::initialize(Geometry &geometry) {
     return true;
+}
+
+AllocatorState QueueBlockAllocator::state() {
+    return { BLOCK_INDEX_INVALID };
+}
+
+void QueueBlockAllocator::state(AllocatorState state) {
 }
 
 block_index_t QueueBlockAllocator::allocate(BlockType type) {
@@ -33,20 +63,5 @@ void QueueBlockAllocator::free(block_index_t block) {
 }
 
 #endif
-
-SequentialBlockAllocator::SequentialBlockAllocator(Geometry &geometry) : geometry_(&geometry) {
-}
-
-bool SequentialBlockAllocator::initialize(Geometry &geometry) {
-    return true;
-}
-
-block_index_t SequentialBlockAllocator::allocate(BlockType type) {
-    assert(block_ < geometry_->number_of_blocks);
-    return block_++;
-}
-
-void SequentialBlockAllocator::free(block_index_t block) {
-}
 
 }
