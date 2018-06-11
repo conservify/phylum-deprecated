@@ -12,27 +12,30 @@ using namespace phylum;
 
 class PersistedTreeSuite : public ::testing::Test {
 protected:
+    using NodeType = Node<uint64_t, int32_t, BlockAddress, 6, 6>;
+    using NodeRefType = NodeRef<BlockAddress>;
+
     Geometry geometry_{ 1024, 4, 4, 512 };
-    LinuxMemoryBackend storage_;
-    QueueBlockAllocator allocator_{ storage_ };
+    LinuxMemoryBackend backend_;
+    QueueBlockAllocator allocator_{ geometry_ };
+    InMemoryNodeStorage<NodeType> nodes_{ 128 * 1024 };
+    // StorageBackendNodeStorage<NodeType> nodes_{ backend_, allocator_ };
+    MemoryConstrainedNodeCache<NodeType, 8> cache_{ nodes_ };
 
 protected:
     void SetUp() override {
-        ASSERT_TRUE(storage_.initialize(geometry_));
-        ASSERT_TRUE(storage_.open());
+        ASSERT_TRUE(backend_.initialize(geometry_));
+        ASSERT_TRUE(backend_.open());
     }
 
     void TearDown() override {
-        ASSERT_TRUE(storage_.close());
+        ASSERT_TRUE(backend_.close());
     }
 
 };
 
 TEST_F(PersistedTreeSuite, BuildTree) {
-    using NodeType = Node<int32_t, int32_t, BlockAddress, 6, 6>;
-    auto storage = InMemoryNodeStorage<NodeType>{ 2048 };
-    MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
-    auto tree = PersistedTree<NodeType>{ cache };
+    PersistedTree<NodeType> tree{ cache_ };
 
     tree.add(100, 5738);
 
@@ -57,10 +60,7 @@ TEST_F(PersistedTreeSuite, BuildTree) {
 }
 
 TEST_F(PersistedTreeSuite, Remove) {
-    using NodeType = Node<int32_t, int32_t, BlockAddress, 6, 6>;
-    auto storage = InMemoryNodeStorage<NodeType>{ 2048 };
-    MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
-    auto tree = PersistedTree<NodeType>{ cache };
+    PersistedTree<NodeType> tree{ cache_ };
 
     tree.add(100, 5738);
 
@@ -82,11 +82,9 @@ TEST_F(PersistedTreeSuite, Remove) {
 }
 
 TEST_F(PersistedTreeSuite, MultipleLookupRandom) {
-    using NodeType = Node<int32_t, int32_t, BlockAddress, 6, 6>;
-    auto storage = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
-    MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
-    auto tree = PersistedTree<NodeType>{ cache };
-    auto map = std::map<NodeType::KeyType, NodeType::ValueType>{};
+    PersistedTree<NodeType> tree{ cache_ };
+
+    std::map<NodeType::KeyType, NodeType::ValueType> map;
 
     srand(1);
 
@@ -106,13 +104,10 @@ TEST_F(PersistedTreeSuite, MultipleLookupRandom) {
 }
 
 TEST_F(PersistedTreeSuite, MultipleLookupCustomKeyType) {
-    std::vector<uint32_t> inodes;
+    PersistedTree<NodeType> tree{ cache_ };
 
-    using NodeType = Node<uint64_t, int32_t, BlockAddress, 6, 6>;
-    auto storage = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
-    MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
-    auto tree = PersistedTree<NodeType>{ cache };
-    auto map = std::map<NodeType::KeyType, NodeType::ValueType>{};
+    std::map<NodeType::KeyType, NodeType::ValueType> map;
+    std::vector<uint32_t> inodes;
 
     for (auto i = 0; i < 8; ++i) {
         auto inode = (uint32_t)(random() % 2048 + 1024);
@@ -134,14 +129,11 @@ TEST_F(PersistedTreeSuite, MultipleLookupCustomKeyType) {
 }
 
 TEST_F(PersistedTreeSuite, FindLessThanLookup) {
-    std::vector<uint32_t> inodes;
-    std::map<uint32_t, uint32_t> last_offsets;
+    PersistedTree<NodeType> tree{ cache_ };
 
-    using NodeType = Node<uint64_t, int32_t, BlockAddress, 6, 6>;
-    auto storage = InMemoryNodeStorage<NodeType>{ 1024 * 1024 };
-    MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
-    auto tree = PersistedTree<NodeType>{ cache };
-    auto map = std::map<NodeType::KeyType, NodeType::ValueType>{};
+    std::map<NodeType::KeyType, NodeType::ValueType> map;
+    std::map<uint32_t, uint32_t> last_offsets;
+    std::vector<uint32_t> inodes;
 
     for (auto i = 0; i < 8; ++i) {
         auto inode = (uint32_t)(random() % 2048 + 1024);
@@ -173,12 +165,7 @@ TEST_F(PersistedTreeSuite, FindLessThanLookup) {
 }
 
 TEST_F(PersistedTreeSuite, WalkSmallTree) {
-    using NodeType = Node<int32_t, int32_t, BlockAddress, 6, 6>;
-    using NodeRefType = NodeRef<BlockAddress>;
-
-    InMemoryNodeStorage<NodeType> storage{ 2048 };
-    MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
-    PersistedTree<NodeType> tree{ cache };
+    PersistedTree<NodeType> tree{ cache_ };
 
     tree.add(100, 5738);
     tree.add(10, 1);
@@ -205,16 +192,11 @@ TEST_F(PersistedTreeSuite, WalkSmallTree) {
 
 
 TEST_F(PersistedTreeSuite, WalkLargeTree) {
-    using NodeType = Node<uint64_t, int32_t, BlockAddress, 6, 6>;
-    using NodeRefType = NodeRef<BlockAddress>;
+    PersistedTree<NodeType> tree{ cache_ };
 
-    std::vector<uint32_t> inodes;
-    std::map<uint32_t, uint32_t> last_offsets;
-
-    InMemoryNodeStorage<NodeType> storage{ 1024 * 1024 };
-    MemoryConstrainedNodeCache<NodeType, 8> cache{ storage };
-    PersistedTree<NodeType> tree{ cache };
     std::map<NodeType::KeyType, NodeType::ValueType> map;
+    std::map<uint32_t, uint32_t> last_offsets;
+    std::vector<uint32_t> inodes;
 
     for (auto i = 0; i < 8; ++i) {
         auto inode = (uint32_t)(random() % 2048 + 1024);

@@ -21,12 +21,12 @@ public:
 #ifndef ARDUINO
 class QueueBlockAllocator : public BlockAllocator {
 private:
-    StorageBackend *storage_;
+    Geometry *geometry_;
     bool initialized_{ false };
     std::queue<block_index_t> free_;
 
 public:
-    QueueBlockAllocator(StorageBackend &storage);
+    QueueBlockAllocator(Geometry &geometry);
 
 public:
     virtual bool initialize(Geometry &geometry) override;
@@ -38,11 +38,11 @@ public:
 
 class SequentialBlockAllocator : public BlockAllocator {
 private:
-    StorageBackend *storage_;
+    Geometry *geometry_;
     uint32_t block_{ 3 };
 
 public:
-    SequentialBlockAllocator(StorageBackend &storage);
+    SequentialBlockAllocator(Geometry &geometry);
 
 public:
     virtual bool initialize(Geometry &geometry) override;

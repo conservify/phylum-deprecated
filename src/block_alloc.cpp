@@ -4,7 +4,7 @@ namespace phylum {
 
 #ifndef ARDUINO
 
-QueueBlockAllocator::QueueBlockAllocator(StorageBackend &storage) : storage_(&storage) {
+QueueBlockAllocator::QueueBlockAllocator(Geometry &geometry) : geometry_(&geometry) {
 }
 
 bool QueueBlockAllocator::initialize(Geometry &geometry) {
@@ -13,7 +13,7 @@ bool QueueBlockAllocator::initialize(Geometry &geometry) {
 
 block_index_t QueueBlockAllocator::allocate(BlockType type) {
     if (!initialized_) {
-        for (auto i = 3; i < (int32_t)storage_->geometry().number_of_blocks; ++i) {
+        for (auto i = 3; i < (int32_t)geometry_->number_of_blocks; ++i) {
             free(i);
         }
         initialized_ = true;
@@ -34,7 +34,7 @@ void QueueBlockAllocator::free(block_index_t block) {
 
 #endif
 
-SequentialBlockAllocator::SequentialBlockAllocator(StorageBackend &storage) : storage_(&storage) {
+SequentialBlockAllocator::SequentialBlockAllocator(Geometry &geometry) : geometry_(&geometry) {
 }
 
 bool SequentialBlockAllocator::initialize(Geometry &geometry) {
@@ -42,7 +42,7 @@ bool SequentialBlockAllocator::initialize(Geometry &geometry) {
 }
 
 block_index_t SequentialBlockAllocator::allocate(BlockType type) {
-    assert(block_ < storage_->geometry().number_of_blocks);
+    assert(block_ < geometry_->number_of_blocks);
     return block_++;
 }
 

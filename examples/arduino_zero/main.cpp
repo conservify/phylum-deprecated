@@ -44,7 +44,7 @@ void setup() {
 
     sdebug() << "phylum-test: Initialize FS" << std::endl;
 
-    SequentialBlockAllocator allocator{ storage };
+    SequentialBlockAllocator allocator{ storage.geometry() };
     FileSystem fs{ storage, allocator };
     if (!fs.initialize(true)) {
         fail();

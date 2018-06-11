@@ -72,7 +72,8 @@ public:
     }
 };
 
-FileSystem::FileSystem(StorageBackend &storage, BlockAllocator &allocator) : storage_(&storage), allocator_(&allocator), sbm_{ storage, allocator }, nodes_{ storage, allocator } {
+FileSystem::FileSystem(StorageBackend &storage, BlockAllocator &allocator) :
+    storage_(&storage), allocator_(&allocator), sbm_{ storage, allocator }, nodes_{ storage, allocator } {
 }
 
 void FileSystem::prepare(SuperBlock &sb) {

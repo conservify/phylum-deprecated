@@ -56,6 +56,7 @@ private:
 
     BlockAddress allocate(size_t size) {
         auto addr = BlockAddress{ 0, (uint32_t)position_ };
+        assert(position_ + size < size_);
         position_ += size;
         return addr;
     }
