@@ -1,4 +1,5 @@
 #include "phylum/file_system.h"
+#include "phylum/journal.h"
 
 namespace phylum {
 
@@ -95,6 +96,11 @@ bool FileSystem::initialize(bool wipe) {
 bool FileSystem::open(bool wipe) {
     if (wipe || !sbm_.locate()) {
         if (!format()) {
+            return false;
+        }
+
+        Journal journal{ *storage_ };
+        if (!journal.format(sbm_.block().journal)) {
             return false;
         }
     }

@@ -44,6 +44,7 @@ enum class BlockType {
     Anchor,
     SuperBlockLink,
     SuperBlock,
+    Journal,
     File,
     Tree,
     Error,
