@@ -76,13 +76,13 @@ public:
         // We always dicsard the incoming address. Our memory backend refuses
         // writes to unerased areas.
         if (!location_.valid()) {
-            location_ = initialize_block(allocator_->allocate());
+            location_ = initialize_block(allocator_->allocate(BlockType::Tree));
         }
         else {
             location_.add(required);
 
             if (!location_.find_room(geometry, required)) {
-                location_ = initialize_block(allocator_->allocate());
+                location_ = initialize_block(allocator_->allocate(BlockType::Tree));
             }
         }
 

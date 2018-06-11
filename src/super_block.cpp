@@ -98,7 +98,7 @@ bool SuperBlockManager::create() {
     link.header.age = 0;
 
     for (auto i = 0; i < chain_length() + 1; ++i) {
-        auto block = allocator_->allocate();
+        auto block = allocator_->allocate(i == 0 ? BlockType::SuperBlock : BlockType::SuperBlockLink);
         assert(block != BLOCK_INDEX_INVALID);
 
         if (!storage_->erase(block)) {
@@ -108,7 +108,7 @@ bool SuperBlockManager::create() {
         // First of these blocks is actually where the super block goes.
         if (i == 0) {
             sb_.link = link;
-            sb_.tree = allocator_->allocate();
+            sb_.tree = allocator_->allocate(BlockType::Tree);
 
             assert(sb_.tree != BLOCK_INDEX_INVALID);
 
@@ -168,7 +168,7 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
         }
     }
 
-    auto block = allocator_->allocate();
+    auto block = allocator_->allocate(pending.type);
     relocated = { block, SECTOR_HEAD };
     if (!storage_->erase(block)) {
         return false;
@@ -189,6 +189,7 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
     link.chained_block = block;
 
     auto link_write = PendingWrite {
+        BlockType::SuperBlockLink,
         &link,
         sizeof(SuperBlockLink)
     };
@@ -207,6 +208,7 @@ bool SuperBlockManager::save() {
     sb_.link.header.timestamp++;
 
     auto sb_write = PendingWrite{
+        BlockType::SuperBlock,
         &sb_,
         sizeof(SuperBlock)
     };

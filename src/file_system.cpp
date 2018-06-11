@@ -119,7 +119,7 @@ OpenFile FileSystem::open(const char *name, bool readonly) {
 
     auto existing = tc.find(key);
     if (existing == 0) {
-        auto head = initialize_block(allocator_->allocate(), id, BLOCK_INDEX_INVALID);
+        auto head = initialize_block(allocator_->allocate(BlockType::File), id, BLOCK_INDEX_INVALID);
         tc.add(key, head);
         return { *this, id, head, readonly };
     }
@@ -335,7 +335,7 @@ int32_t OpenFile::flush() {
     auto writing_tail_sector = tail_sector();
     auto addr = head_;
     if (writing_tail_sector) {
-        linked = fs_->allocator_->allocate();
+        linked = fs_->allocator_->allocate(BlockType::File);
         BlockTail tail;
         tail.sector.bytes = buffpos_;
         tail.bytes_in_block = bytes_in_block_;

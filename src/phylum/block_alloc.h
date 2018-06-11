@@ -13,7 +13,7 @@ namespace phylum {
 class BlockAllocator {
 public:
     virtual bool initialize(Geometry &geometry) = 0;
-    virtual block_index_t allocate() = 0;
+    virtual block_index_t allocate(BlockType type) = 0;
     virtual void free(block_index_t block) = 0;
 
 };
@@ -30,7 +30,7 @@ public:
 
 public:
     virtual bool initialize(Geometry &geometry) override;
-    virtual block_index_t allocate() override;
+    virtual block_index_t allocate(BlockType type) override;
     virtual void free(block_index_t block) override;
 
 };
@@ -46,7 +46,7 @@ public:
 
 public:
     virtual bool initialize(Geometry &geometry) override;
-    virtual block_index_t allocate() override;
+    virtual block_index_t allocate(BlockType type) override;
     virtual void free(block_index_t block) override;
 
 };

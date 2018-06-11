@@ -11,7 +11,7 @@ bool QueueBlockAllocator::initialize(Geometry &geometry) {
     return true;
 }
 
-block_index_t QueueBlockAllocator::allocate() {
+block_index_t QueueBlockAllocator::allocate(BlockType type) {
     if (!initialized_) {
         for (auto i = 3; i < (int32_t)storage_->geometry().number_of_blocks; ++i) {
             free(i);
@@ -41,7 +41,7 @@ bool SequentialBlockAllocator::initialize(Geometry &geometry) {
     return true;
 }
 
-block_index_t SequentialBlockAllocator::allocate() {
+block_index_t SequentialBlockAllocator::allocate(BlockType type) {
     assert(block_ < storage_->geometry().number_of_blocks);
     return block_++;
 }

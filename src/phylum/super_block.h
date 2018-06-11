@@ -65,6 +65,7 @@ private:
     bool find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where);
 
     struct PendingWrite {
+        BlockType type;
         void *ptr;
         size_t n;
     };
