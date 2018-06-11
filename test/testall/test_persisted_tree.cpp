@@ -10,8 +10,7 @@
 
 using namespace phylum;
 
-class PersistedTreeSuite : public ::testing::Test {
-protected:
+struct InMemoryTreeConfiguration {
     using NodeType = Node<uint64_t, int32_t, BlockAddress, 6, 6>;
     using NodeRefType = NodeRef<BlockAddress>;
 
@@ -19,23 +18,45 @@ protected:
     LinuxMemoryBackend backend_;
     QueueBlockAllocator allocator_{ geometry_ };
     InMemoryNodeStorage<NodeType> nodes_{ 128 * 1024 };
-    // StorageBackendNodeStorage<NodeType> nodes_{ backend_, allocator_ };
     MemoryConstrainedNodeCache<NodeType, 8> cache_{ nodes_ };
+};
+
+struct StorageBackendTreeConfiguration {
+    using NodeType = Node<uint64_t, int32_t, BlockAddress, 6, 6>;
+    using NodeRefType = NodeRef<BlockAddress>;
+
+    Geometry geometry_{ 1024, 4, 4, 512 };
+    LinuxMemoryBackend backend_;
+    QueueBlockAllocator allocator_{ geometry_ };
+    StorageBackendNodeStorage<NodeType> nodes_{ backend_, allocator_ };
+    MemoryConstrainedNodeCache<NodeType, 8> cache_{ nodes_ };
+};
+
+template<typename T>
+class PersistedTreeSuite : public ::testing::Test {
+protected:
+    // using NodeType = typename T::NodeType;
+    // using NodeRefType = typename T::NodeRefType;
+
+    T cfg_;
 
 protected:
     void SetUp() override {
-        ASSERT_TRUE(backend_.initialize(geometry_));
-        ASSERT_TRUE(backend_.open());
+        ASSERT_TRUE(cfg_.backend_.initialize(cfg_.geometry_));
+        ASSERT_TRUE(cfg_.backend_.open());
     }
 
     void TearDown() override {
-        ASSERT_TRUE(backend_.close());
+        ASSERT_TRUE(cfg_.backend_.close());
     }
-
 };
 
-TEST_F(PersistedTreeSuite, BuildTree) {
-    PersistedTree<NodeType> tree{ cache_ };
+typedef ::testing::Types<StorageBackendTreeConfiguration, InMemoryTreeConfiguration> Implementations;
+
+TYPED_TEST_CASE(PersistedTreeSuite, Implementations);
+
+TYPED_TEST(PersistedTreeSuite, BuildTree) {
+    PersistedTree<typename TypeParam::NodeType> tree{ this->cfg_.cache_ };
 
     tree.add(100, 5738);
 
@@ -59,8 +80,8 @@ TEST_F(PersistedTreeSuite, BuildTree) {
     ASSERT_EQ(tree.find(100), 5738);
 }
 
-TEST_F(PersistedTreeSuite, Remove) {
-    PersistedTree<NodeType> tree{ cache_ };
+TYPED_TEST(PersistedTreeSuite, Remove) {
+    PersistedTree<typename TypeParam::NodeType> tree{ this->cfg_.cache_ };
 
     tree.add(100, 5738);
 
@@ -81,10 +102,10 @@ TEST_F(PersistedTreeSuite, Remove) {
     ASSERT_EQ(tree.find(100), 0);
 }
 
-TEST_F(PersistedTreeSuite, MultipleLookupRandom) {
-    PersistedTree<NodeType> tree{ cache_ };
+TYPED_TEST(PersistedTreeSuite, MultipleLookupRandom) {
+    PersistedTree<typename TypeParam::NodeType> tree{ this->cfg_.cache_ };
 
-    std::map<NodeType::KeyType, NodeType::ValueType> map;
+    std::map<typename TypeParam::NodeType::KeyType, typename TypeParam::NodeType::ValueType> map;
 
     srand(1);
 
@@ -103,10 +124,10 @@ TEST_F(PersistedTreeSuite, MultipleLookupRandom) {
     }
 }
 
-TEST_F(PersistedTreeSuite, MultipleLookupCustomKeyType) {
-    PersistedTree<NodeType> tree{ cache_ };
+TYPED_TEST(PersistedTreeSuite, MultipleLookupCustomKeyType) {
+    PersistedTree<typename TypeParam::NodeType> tree{ this->cfg_.cache_ };
 
-    std::map<NodeType::KeyType, NodeType::ValueType> map;
+    std::map<typename TypeParam::NodeType::KeyType, typename TypeParam::NodeType::ValueType> map;
     std::vector<uint32_t> inodes;
 
     for (auto i = 0; i < 8; ++i) {
@@ -128,10 +149,10 @@ TEST_F(PersistedTreeSuite, MultipleLookupCustomKeyType) {
     }
 }
 
-TEST_F(PersistedTreeSuite, FindLessThanLookup) {
-    PersistedTree<NodeType> tree{ cache_ };
+TYPED_TEST(PersistedTreeSuite, FindLessThanLookup) {
+    PersistedTree<typename TypeParam::NodeType> tree{ this->cfg_.cache_ };
 
-    std::map<NodeType::KeyType, NodeType::ValueType> map;
+    std::map<typename TypeParam::NodeType::KeyType, typename TypeParam::NodeType::ValueType> map;
     std::map<uint32_t, uint32_t> last_offsets;
     std::vector<uint32_t> inodes;
 
@@ -151,8 +172,8 @@ TEST_F(PersistedTreeSuite, FindLessThanLookup) {
     }
 
     for (auto inode : inodes) {
-        NodeType::KeyType found;
-        NodeType::ValueType value;
+        typename TypeParam::NodeType::KeyType found;
+        typename TypeParam::NodeType::ValueType value;
 
         auto key = INodeKey(inode, UINT32_MAX);
 
@@ -164,8 +185,8 @@ TEST_F(PersistedTreeSuite, FindLessThanLookup) {
     }
 }
 
-TEST_F(PersistedTreeSuite, WalkSmallTree) {
-    PersistedTree<NodeType> tree{ cache_ };
+TYPED_TEST(PersistedTreeSuite, WalkSmallTree) {
+    PersistedTree<typename TypeParam::NodeType> tree{ this->cfg_.cache_ };
 
     tree.add(100, 5738);
     tree.add(10, 1);
@@ -176,11 +197,11 @@ TEST_F(PersistedTreeSuite, WalkSmallTree) {
     tree.add(9, 6);
     tree.add(30, 7);
 
-    struct : public PersistedTreeVisitor<NodeRefType, NodeType> {
+    struct : public PersistedTreeVisitor<typename TypeParam::NodeRefType, typename TypeParam::NodeType> {
     public:
         int32_t calls = 0;
 
-        virtual void visit(NodeRefType nref, NodeType *node) override {
+        virtual void visit(typename TypeParam::NodeRefType nref, typename TypeParam::NodeType *node) override {
             calls++;
         }
     } visitor;
@@ -191,10 +212,10 @@ TEST_F(PersistedTreeSuite, WalkSmallTree) {
 }
 
 
-TEST_F(PersistedTreeSuite, WalkLargeTree) {
-    PersistedTree<NodeType> tree{ cache_ };
+TYPED_TEST(PersistedTreeSuite, WalkLargeTree) {
+    PersistedTree<typename TypeParam::NodeType> tree{ this->cfg_.cache_ };
 
-    std::map<NodeType::KeyType, NodeType::ValueType> map;
+    std::map<typename TypeParam::NodeType::KeyType, typename TypeParam::NodeType::ValueType> map;
     std::map<uint32_t, uint32_t> last_offsets;
     std::vector<uint32_t> inodes;
 
@@ -214,8 +235,8 @@ TEST_F(PersistedTreeSuite, WalkLargeTree) {
     }
 
     for (auto inode : inodes) {
-        NodeType::KeyType found;
-        NodeType::ValueType value;
+        typename TypeParam::NodeType::KeyType found;
+        typename TypeParam::NodeType::ValueType value;
 
         auto key = INodeKey(inode, UINT32_MAX);
 
@@ -226,11 +247,11 @@ TEST_F(PersistedTreeSuite, WalkLargeTree) {
         EXPECT_EQ(last_offsets[inode], key_offset);
     }
 
-    struct : public PersistedTreeVisitor<NodeRefType, NodeType> {
+    struct : public PersistedTreeVisitor<typename TypeParam::NodeRefType, typename TypeParam::NodeType> {
     public:
         int32_t calls = 0;
 
-        virtual void visit(NodeRefType nref, NodeType *node) override {
+        virtual void visit(typename TypeParam::NodeRefType nref, typename TypeParam::NodeType *node) override {
             calls++;
         }
     } visitor;
