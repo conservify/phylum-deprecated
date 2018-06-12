@@ -36,7 +36,7 @@ TEST_F(JournalSuite, AppendingAFewEntries) {
         ASSERT_TRUE(fs_.journal().append({ JournalEntryType::Allocation, (block_index_t)(i + 10) }));
     }
 
-    BlockAddress expected{ 7, 1 * SectorSize + 80 };
+    BlockAddress expected{ 7, 1 * SectorSize + 120 };
     ASSERT_EQ(fs_.journal().location(), expected);
 }
 
@@ -48,7 +48,7 @@ TEST_F(JournalSuite, AppendingEntriesIntoFollowingBlock) {
         ASSERT_TRUE(fs_.journal().append({ JournalEntryType::Allocation, (block_index_t)(i + 10) }));
     }
 
-    BlockAddress expected{ 9, 2 * SectorSize + 56 };
+    BlockAddress expected{ 9, 2 * SectorSize + 192 };
     ASSERT_EQ(fs_.journal().location(), expected);
 }
 
@@ -62,7 +62,7 @@ TEST_F(JournalSuite, FindsEndOfJournalFromFirstBlock) {
         ASSERT_TRUE(fs_.journal().append({ JournalEntryType::Allocation, (block_index_t)(i + 10) }));
     }
 
-    BlockAddress expected{ 10, 3 * SectorSize + 64 };
+    BlockAddress expected{ 10, 3 * SectorSize + 312 };
     ASSERT_EQ(fs_.journal().location(), expected);
 
     Journal journal{ storage_, allocator_ };

@@ -15,6 +15,7 @@ enum class JournalEntryType : uint8_t {
 struct JournalEntry {
     JournalEntryType type;
     block_index_t block;
+    BlockType block_type;
 
     bool valid() {
         return type != JournalEntryType::Zeros && type != JournalEntryType::Ones;
@@ -36,9 +37,12 @@ public:
     }
 
 public:
-    bool locate(block_index_t block);
     bool format(block_index_t block);
+    bool locate(block_index_t block);
     bool append(JournalEntry entry);
+
+private:
+    bool initialize_block(block_index_t block, block_index_t linked = BLOCK_INDEX_INVALID);
 
 };
 

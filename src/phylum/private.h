@@ -227,6 +227,10 @@ public:
         return position >= g.block_size() - g.sector_size;
     }
 
+    static BlockAddress tail_data_of(block_index_t block, const Geometry &g, size_t size) {
+        return BlockAddress{ block, g.block_size() - (uint32_t)size };
+    }
+
     static BlockAddress tail_sector_of(block_index_t block, const Geometry &g) {
         return { block, g.block_size() - g.sector_size };
     }
@@ -242,6 +246,10 @@ public:
     }
 
 };
+
+inline bool is_valid_block(block_index_t block) {
+    return block != BLOCK_INDEX_INVALID && block != 0;
+}
 
 inline bool Geometry::contains(const BlockAddress addr) const {
     return addr.block < number_of_blocks && addr.position < block_size();
