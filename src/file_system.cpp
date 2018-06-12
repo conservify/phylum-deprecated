@@ -108,7 +108,7 @@ bool FileSystem::open(bool wipe) {
         return false;
     }
 
-    tree_addr_ = nodes_.find_head(sbm_.tree_block());
+    tree_addr_ = nodes_.find_head(sbm_.tree());
 
     return tree_addr_.valid();
 }

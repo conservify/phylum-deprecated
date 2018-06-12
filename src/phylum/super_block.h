@@ -43,7 +43,7 @@ public:
         return location_;
     }
 
-    block_index_t tree_block() {
+    block_index_t tree() {
         return sb_.tree;
     }
 
