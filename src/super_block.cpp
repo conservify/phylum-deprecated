@@ -138,7 +138,7 @@ bool SuperBlockManager::create() {
 
     // We pull allocator state after doing the above allocations to ensure the
     // first state we write is correct.
-    sb_.tree = allocator_->allocate(BlockType::Tree);
+    sb_.tree = allocator_->allocate(BlockType::Leaf);
     sb_.journal = allocator_->allocate(BlockType::Journal);
     sb_.allocator = allocator_->state();
 

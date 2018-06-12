@@ -16,7 +16,7 @@ struct InMemoryTreeConfiguration {
 
     Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend backend_;
-    QueueBlockAllocator allocator_{ geometry_ };
+    DebuggingBlockAllocator allocator_{ geometry_ };
     InMemoryNodeStorage<NodeType> nodes_{ 128 * 1024 };
     MemoryConstrainedNodeCache<NodeType, 8> cache_{ nodes_ };
 };
@@ -27,7 +27,7 @@ struct StorageBackendTreeConfiguration {
 
     Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend backend_;
-    QueueBlockAllocator allocator_{ geometry_ };
+    DebuggingBlockAllocator allocator_{ geometry_ };
     StorageBackendNodeStorage<NodeType> nodes_{ backend_, allocator_ };
     MemoryConstrainedNodeCache<NodeType, 8> cache_{ nodes_ };
 };
@@ -187,9 +187,19 @@ TYPED_TEST(PersistedTreeSuite, FindLessThanLookup) {
 
 template<typename NodeType, typename NodeRefType>
 struct SimpleVisitor : PersistedTreeVisitor<NodeRefType, NodeType> {
+    std::map<block_index_t, size_t> blocks_visited;
     int32_t calls = 0;
 
+    std::set<block_index_t> blocks() {
+        std::set<block_index_t> b;
+        for (auto &pair : blocks_visited) {
+            b.insert(pair.first);
+        }
+        return b;
+    }
+
     virtual void visit(NodeRefType nref, NodeType *node) override {
+        blocks_visited[nref.address().block]++;
         calls++;
     }
 };

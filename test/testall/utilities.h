@@ -5,8 +5,10 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include <set>
 #include <iomanip>
 #include <string>
+#include <algorithm>
 
 #include <phylum/tree.h>
 #include <phylum/private.h>

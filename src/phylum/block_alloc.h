@@ -6,6 +6,8 @@
 
 #ifndef ARDUINO
 #include <queue>
+#include <map>
+#include <set>
 #endif
 
 namespace phylum {
@@ -47,6 +49,34 @@ public:
 };
 
 #ifndef ARDUINO
+
+class DebuggingBlockAllocator : public SequentialBlockAllocator {
+private:
+    std::map<block_index_t, BlockType> allocations_;
+
+public:
+    DebuggingBlockAllocator(Geometry &geometry);
+
+public:
+    std::map<block_index_t, BlockType> &allocations() {
+        return allocations_;
+    }
+
+    std::set<block_index_t> blocks_of_type(BlockType type) {
+        std::set<block_index_t> blocks;
+        for (auto &pair : allocations_) {
+            if (pair.second == type) {
+                blocks.insert(pair.first);
+            }
+        }
+        return blocks;
+    }
+
+public:
+    virtual block_index_t allocate(BlockType type) override;
+
+};
+
 class QueueBlockAllocator : public BlockAllocator {
 private:
     Geometry *geometry_;

@@ -15,7 +15,7 @@ class FileOpsSuite : public ::testing::Test {
 protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend storage_;
-    QueueBlockAllocator allocator_{ geometry_ };
+    DebuggingBlockAllocator allocator_{ geometry_ };
     FileSystem fs_{ storage_, allocator_ };
 
 protected:

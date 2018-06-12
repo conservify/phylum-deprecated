@@ -27,6 +27,15 @@ void SequentialBlockAllocator::free(block_index_t block) {
 
 #ifndef ARDUINO
 
+DebuggingBlockAllocator::DebuggingBlockAllocator(Geometry &geometry) : SequentialBlockAllocator(geometry) {
+}
+
+block_index_t DebuggingBlockAllocator::allocate(BlockType type) {
+    auto block = SequentialBlockAllocator::allocate(type);
+    allocations_[block] = type;
+    return block;
+}
+
 QueueBlockAllocator::QueueBlockAllocator(Geometry &geometry) : geometry_(&geometry) {
 }
 
