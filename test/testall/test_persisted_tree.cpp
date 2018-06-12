@@ -107,7 +107,7 @@ TYPED_TEST(PersistedTreeSuite, MultipleLookupRandom) {
 
     std::map<typename TypeParam::NodeType::KeyType, typename TypeParam::NodeType::ValueType> map;
 
-    srand(1);
+    srandom(1);
 
     auto value = 1;
     for (auto i = 0; i < 1024; ++i) {
@@ -230,7 +230,7 @@ TYPED_TEST(PersistedTreeSuite, WalkLargeTree) {
     std::map<uint32_t, uint32_t> last_offsets;
     std::vector<uint32_t> inodes;
 
-    srand(1);
+    srandom(1);
 
     for (auto i = 0; i < 8; ++i) {
         auto inode = (uint32_t)(random() % 2048 + 1024);
