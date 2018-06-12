@@ -2,6 +2,9 @@
 
 namespace phylum {
 
+
+uint8_t LinuxMemoryBackend::EraseByte = 0xff;
+
 LinuxMemoryBackend::LinuxMemoryBackend() : size_(0), ptr_(nullptr) {
 }
 
@@ -47,7 +50,7 @@ bool LinuxMemoryBackend::erase(block_index_t block) {
     assert(geometry_.contains(BlockAddress{ block, 0 }));
 
     auto p = ptr_ + (block * geometry_.block_size());
-    memset(p, 0xff, geometry_.block_size());
+    memset(p, EraseByte, geometry_.block_size());
 
     log_.append(LogEntry{ OperationType::EraseBlock, block, p });
 
@@ -73,9 +76,9 @@ bool LinuxMemoryBackend::read(BlockAddress addr, void *d, size_t n) {
 
 static void verify_erased(BlockAddress addr, uint8_t *p, size_t n) {
     for (size_t i = 0; i < n; ++i) {
-        if (*p != 0xff) {
+        if (*p != LinuxMemoryBackend::EraseByte) {
             sdebug() << "Corruption: " << addr << std::endl;
-            assert(*p == 0xff);
+            assert(*p == LinuxMemoryBackend::EraseByte);
         }
         p++;
     }

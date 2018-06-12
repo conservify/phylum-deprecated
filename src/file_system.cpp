@@ -229,7 +229,7 @@ OpenFile::SeekStatistics OpenFile::seek(BlockAddress starting, uint32_t max) {
         // can just skip this one entirely.
         if (addr.tail_sector(g)) {
             auto tail = tail_info<BlockTail>(buffer_);
-            if (tail->linked_block != BLOCK_INDEX_INVALID && max > tail->bytes_in_block) {
+            if (is_valid_block(tail->linked_block) && max > tail->bytes_in_block) {
                 addr = BlockAddress::tail_sector_of(tail->linked_block, g);
                 bytes += tail->bytes_in_block;
                 max -= tail->bytes_in_block;

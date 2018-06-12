@@ -17,6 +17,9 @@ private:
     uint8_t *ptr_;
 
 public:
+    static uint8_t EraseByte;
+
+public:
     LinuxMemoryBackend();
 
 public:
