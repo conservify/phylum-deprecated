@@ -251,5 +251,5 @@ TYPED_TEST(PersistedTreeSuite, WalkLargeTree) {
 
     tree.accept(visitor);
 
-    ASSERT_EQ(visitor.calls, 494);
+    ASSERT_EQ(visitor.calls, 493);
 }
