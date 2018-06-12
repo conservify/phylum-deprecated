@@ -13,8 +13,9 @@ using namespace phylum;
 struct InMemoryTreeConfiguration {
     using NodeType = Node<uint64_t, int32_t, BlockAddress, 6, 6>;
     using NodeRefType = NodeRef<BlockAddress>;
+    using SerializerType = NodeSerializer<NodeType>;
 
-    Geometry geometry_{ 1024, 4, 4, 512 };
+    Geometry geometry_{ 128, 4, 4, 512 };
     LinuxMemoryBackend backend_;
     DebuggingBlockAllocator allocator_{ geometry_ };
     InMemoryNodeStorage<NodeType> nodes_{ 128 * 1024 };
@@ -24,8 +25,9 @@ struct InMemoryTreeConfiguration {
 struct StorageBackendTreeConfiguration {
     using NodeType = Node<uint64_t, int32_t, BlockAddress, 6, 6>;
     using NodeRefType = NodeRef<BlockAddress>;
+    using SerializerType = NodeSerializer<NodeType>;
 
-    Geometry geometry_{ 1024, 4, 4, 512 };
+    Geometry geometry_{ 128, 4, 4, 512 };
     LinuxMemoryBackend backend_;
     DebuggingBlockAllocator allocator_{ geometry_ };
     StorageBackendNodeStorage<NodeType> nodes_{ backend_, allocator_ };
@@ -35,9 +37,6 @@ struct StorageBackendTreeConfiguration {
 template<typename T>
 class PersistedTreeSuite : public ::testing::Test {
 protected:
-    // using NodeType = typename T::NodeType;
-    // using NodeRefType = typename T::NodeRefType;
-
     T cfg_;
 
 protected:

@@ -41,9 +41,6 @@ public:
     bool locate(block_index_t block);
     bool append(JournalEntry entry);
 
-private:
-    bool initialize_block(block_index_t block, block_index_t linked = BLOCK_INDEX_INVALID);
-
 };
 
 }

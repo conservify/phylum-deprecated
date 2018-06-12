@@ -3,13 +3,14 @@
 
 #include "phylum/persisted_tree.h"
 #include "phylum/node_serializer.h"
+#include "phylum/layout.h"
 
 namespace phylum {
 
-struct TreeBlockHeader {
+struct TreeBlockHead {
     BlockAllocSector header;
 
-    TreeBlockHeader(BlockType type) : header(type) {
+    TreeBlockHead(BlockType type) : header(type) {
     }
 
     void fill() {
@@ -23,8 +24,17 @@ struct TreeBlockHeader {
     }
 };
 
-inline std::ostream& operator<<(std::ostream& os, const TreeBlockHeader &h) {
+struct TreeBlockTail {
+    block_index_t linked_block{ BLOCK_INDEX_INVALID };
+};
+
+inline std::ostream& operator<<(std::ostream& os, const TreeBlockHead &h) {
     return os << "TreeBlock<" << h.header << ">";
+}
+
+static inline BlockLayout<TreeBlockHead, TreeBlockTail> get_layout(StorageBackend &storage,
+              BlockAllocator &allocator, BlockAddress address, BlockType type) {
+    return { storage, allocator, address, type };
 }
 
 template<typename NODE>
@@ -40,21 +50,18 @@ private:
     BlockAddress leaf_;
 
 public:
-    StorageBackendNodeStorage(StorageBackend &storage, BlockAllocator &allocator) : storage_(&storage), allocator_(&allocator) {
+    StorageBackendNodeStorage(StorageBackend &storage, BlockAllocator &allocator)
+        : storage_(&storage), allocator_(&allocator) {
     }
 
 public:
     bool deserialize(BlockAddress addr, NodeType *node, TreeHead *head) {
         SerializerType serializer;
 
-        auto &geometry = storage_->geometry();
-
-        auto sector = addr.sector(geometry);
-        auto offset = addr.sector_offset(geometry);
         auto required = serializer.size(head != nullptr);
 
         uint8_t buffer[SerializerType::HeadNodeSize];
-        if (!storage_->read({ sector, offset }, buffer, required)) {
+        if (!storage_->read(addr, buffer, required)) {
             return false;
         }
 
@@ -68,38 +75,29 @@ public:
     BlockAddress serialize(BlockAddress addr, const NodeType *node, const TreeHead *head) {
         SerializerType serializer;
 
-        auto &geometry = storage_->geometry();
         auto &location = node->depth == 0 ? leaf_ : index_;
         auto type = node->depth == 0 ? BlockType::Leaf : BlockType::Index;
         auto required = serializer.size(head != nullptr);
+        auto layout = get_layout(*storage_, *allocator_, location, type);
 
-        // We always dicsard the incoming address. Our memory backend refuses
-        // writes to unerased areas.
-        if (!location.valid()) {
-            location = initialize_block(allocator_->allocate(type), type);
-        }
-        else {
-            // Skip over the previous block.
-            location.add(required);
-
-            if (!location.find_room(geometry, required)) {
-                location = initialize_block(allocator_->allocate(type), type);
-            }
+        auto address = layout.find_available(required);
+        if (!address.valid()) {
+            return { };
         }
 
-        auto sector = location.sector(geometry);
-        auto offset = location.sector_offset(geometry);
+        location = address;
+        location.add(required);
 
         uint8_t buffer[SerializerType::HeadNodeSize];
         if (!serializer.serialize(buffer, node, head)) {
             return { };
         }
 
-        if (!storage_->write({ sector, offset }, buffer, required)) {
+        if (!storage_->write(address, buffer, required)) {
             return { };
         }
 
-        return location;
+        return address;
     }
 
     BlockAddress find_head(block_index_t block) {
@@ -107,57 +105,30 @@ public:
 
         assert(block != BLOCK_INDEX_INVALID);
 
-        auto &geometry = storage_->geometry();
+        auto layout = get_layout(*storage_, *allocator_, BlockAddress{ block, 0 }, BlockType::Error);
         auto required = serializer.size(true);
-        auto iter = BlockAddress{ block, 0 };
-        auto found = BlockAddress{ };
 
-        // We could compare TreeHead timestamps, though we always append.
-        while (iter.remaining_in_block(geometry) > required) {
+        auto fn = [&](StorageBackend &storage, BlockAddress& address) -> bool {
             TreeHead head;
             NodeType node;
 
-            if (iter.beginning_of_block()) {
-                TreeBlockHeader header(BlockType::Error);
-                if (!storage_->read(iter, &header, sizeof(TreeBlockHeader))) {
-                    return { };
-                }
-
-                if (!header.valid()) {
-                    return found;
-                }
-
-                iter.add(SectorSize);
+            if (deserialize(address, &node, &head)) {
+                return true;
             }
-            else {
-                if (deserialize(iter, &node, &head)) {
-                    found = iter;
-                    iter.add(required);
-                }
-                else {
-                    break;
-                }
-            }
-        }
 
-        return found;
-    }
+            return false;
+        };
 
-private:
-    BlockAddress initialize_block(block_index_t block, BlockType type) {
-        TreeBlockHeader header(type);
-
-        header.fill();
-
-        if (!storage_->erase(block)) {
+        if (!layout.find_end(block, required, fn)) {
             return { };
         }
 
-        if (!storage_->write({ block, 0 }, &header, sizeof(TreeBlockHeader))) {
-            return { };
-        }
+        auto address = layout.address();
 
-        return BlockAddress { block, SectorSize };
+        // TODO: Get rid of this.
+        address.add(-required);
+
+        return address;
     }
 
 };
