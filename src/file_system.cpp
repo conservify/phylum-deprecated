@@ -74,7 +74,7 @@ public:
 };
 
 FileSystem::FileSystem(StorageBackend &storage, BlockAllocator &allocator) :
-    storage_(&storage), allocator_(&allocator), sbm_{ storage, allocator }, nodes_{ storage, allocator } {
+    storage_(&storage), allocator_(&allocator), sbm_{ storage, allocator }, nodes_{ storage, allocator }, journal_(storage, allocator) {
 }
 
 void FileSystem::prepare(SuperBlock &sb) {
@@ -99,10 +99,13 @@ bool FileSystem::open(bool wipe) {
             return false;
         }
 
-        Journal journal{ *storage_ };
-        if (!journal.format(sbm_.block().journal)) {
+        if (!journal_.format(sbm_.block().journal)) {
             return false;
         }
+    }
+
+    if (!journal_.locate(sbm_.block().journal)) {
+        return false;
     }
 
     tree_addr_ = nodes_.find_head(sbm_.tree_block());

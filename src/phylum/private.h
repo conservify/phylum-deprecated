@@ -212,6 +212,17 @@ public:
         return true;
     }
 
+    bool can_write_entry_before_tail(const Geometry &g, uint32_t entry_size, uint32_t tail_size) {
+        assert(entry_size + tail_size <= g.sector_size);
+
+        auto block_remaining = remaining_in_block(g);
+        if (block_remaining >= entry_size + tail_size) {
+            return true;
+        }
+
+        return false;
+    }
+
     bool tail_sector(const Geometry &g) const {
         return position >= g.block_size() - g.sector_size;
     }
