@@ -8,7 +8,7 @@
 namespace phylum {
 
 struct SuperBlockLink {
-    BlockAllocSector header;
+    BlockHead header;
     sector_index_t sector{ 0 };
     block_index_t chained_block{ 0 };
 

@@ -52,14 +52,14 @@ enum class BlockType {
     Unallocated
 };
 
-struct BlockAllocSector {
+struct BlockHead {
     BlockMagic magic;
     BlockType type;
     block_age_t age{ BLOCK_AGE_INVALID };
     timestamp_t timestamp{ TIMESTAMP_INVALID };
     block_index_t linked_block{ BLOCK_INDEX_INVALID };
 
-    BlockAllocSector(BlockType type = BlockType::Error) : type(type) {
+    BlockHead(BlockType type = BlockType::Error) : type(type) {
     }
 
     void fill() {
@@ -288,7 +288,7 @@ inline std::ostream& operator<<(std::ostream& os, const BlockType &t) {
     }
 }
 
-inline std::ostream& operator<<(std::ostream& os, const BlockAllocSector &h) {
+inline std::ostream& operator<<(std::ostream& os, const BlockHead &h) {
     return os << "BAS<type=" << h.type << " age=" << h.age << " ts=" << h.timestamp << " link=" << h.linked_block << ">";
 }
 

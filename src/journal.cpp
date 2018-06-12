@@ -4,7 +4,7 @@
 namespace phylum {
 
 struct JournalBlockHead {
-    BlockAllocSector header;
+    BlockHead header;
 
     JournalBlockHead(BlockType type = BlockType::Journal) : header(type) {
     }

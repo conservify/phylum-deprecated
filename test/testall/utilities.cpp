@@ -19,17 +19,17 @@ std::map<uint64_t, uint64_t> random_data() {
 namespace phylum {
 
 bool BlockHelper::is_type(block_index_t block, BlockType type) {
-    BlockAllocSector header;
+    BlockHead head;
 
-    if (!storage_->read({ block, 0 }, &header, sizeof(BlockAllocSector))) {
+    if (!storage_->read({ block, 0 }, &head, sizeof(BlockHead))) {
         return false;
     }
 
-    if (!header.valid()) {
+    if (!head.valid()) {
         return false;
     }
 
-    return header.type == type;
+    return head.type == type;
 }
 
 }

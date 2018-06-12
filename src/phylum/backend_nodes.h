@@ -8,7 +8,7 @@
 namespace phylum {
 
 struct TreeBlockHead {
-    BlockAllocSector header;
+    BlockHead header;
 
     TreeBlockHead(BlockType type) : header(type) {
     }

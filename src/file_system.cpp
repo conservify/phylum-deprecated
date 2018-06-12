@@ -4,7 +4,7 @@
 namespace phylum {
 
 struct FileBlockHeader {
-    BlockAllocSector header;
+    BlockHead header;
     file_id_t file_id{ FILE_ID_INVALID };
 
     FileBlockHeader() : header(BlockType::File) {

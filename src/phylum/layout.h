@@ -25,10 +25,6 @@ public:
     }
 
 public:
-    bool need_new_block()  {
-        return !address_.valid();
-    }
-
     template<typename TEntry>
     bool append(TEntry entry) {
         auto address = find_available(sizeof(TEntry));
@@ -46,6 +42,7 @@ public:
 
     BlockAddress find_available(size_t required) {
         if (need_new_block() || should_write_tail(required)) {
+            assert(type_ != BlockType::Error);
             auto new_block = allocator_.allocate(type_);
             if (!write_head(new_block)) {
                 return { };
@@ -115,7 +112,7 @@ public:
                     }
                 }
 
-                auto tl = BlockAddress::tail_data_of( location.block, g_, sizeof(TTail));
+                auto tl = BlockAddress::tail_data_of(location.block, g_, sizeof(TTail));
                 TTail tail;
 
                 if (!storage_.read(tl, &tail, sizeof(TTail))) {
@@ -143,22 +140,10 @@ public:
         return false;
     }
 
-    bool write_tail(block_index_t block, block_index_t linked) {
-        auto tl = BlockAddress::tail_data_of( block, g_, sizeof(TTail));
-
-        TTail tail;
-        tail.linked_block = linked;
-
-        if (!storage_.write(tl, &tail, sizeof(TTail))) {
-            return false;
-        }
-
-        return true;
-    }
-
     bool write_head(block_index_t block, block_index_t linked = BLOCK_INDEX_INVALID) {
-        THead head(type_);
+        assert(type_ != BlockType::Error);
 
+        THead head(type_);
         head.fill();
         head.header.linked_block = linked;
 
@@ -167,6 +152,20 @@ public:
         }
 
         if (!storage_.write({ block, 0 }, &head, sizeof(THead))) {
+            return false;
+        }
+
+        return true;
+    }
+
+private:
+    bool write_tail(block_index_t block, block_index_t linked) {
+        auto tl = BlockAddress::tail_data_of(block, g_, sizeof(TTail));
+
+        TTail tail;
+        tail.linked_block = linked;
+
+        if (!storage_.write(tl, &tail, sizeof(TTail))) {
             return false;
         }
 
@@ -186,6 +185,11 @@ public:
 
         return true;
     }
+
+    bool need_new_block()  {
+        return !address_.valid();
+    }
+
 };
 
 }
