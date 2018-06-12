@@ -9,7 +9,7 @@ namespace phylum {
 struct TreeBlockHeader {
     BlockAllocSector header;
 
-    TreeBlockHeader() : header(BlockType::Tree) {
+    TreeBlockHeader(BlockType type) : header(type) {
     }
 
     void fill() {
@@ -36,7 +36,8 @@ public:
 private:
     StorageBackend *storage_;
     BlockAllocator *allocator_;
-    BlockAddress location_;
+    BlockAddress index_;
+    BlockAddress leaf_;
 
 public:
     StorageBackendNodeStorage(StorageBackend &storage, BlockAllocator &allocator) : storage_(&storage), allocator_(&allocator) {
@@ -68,25 +69,26 @@ public:
         SerializerType serializer;
 
         auto &geometry = storage_->geometry();
-
+        auto &location = node->depth == 0 ? leaf_ : index_;
+        auto type = node->depth == 0 ? BlockType::Leaf : BlockType::Index;
         auto required = serializer.size(head != nullptr);
 
         // We always dicsard the incoming address. Our memory backend refuses
         // writes to unerased areas.
-        if (!location_.valid()) {
-            location_ = initialize_block(allocator_->allocate(BlockType::Tree));
+        if (!location.valid()) {
+            location = initialize_block(allocator_->allocate(type), type);
         }
         else {
             // Skip over the previous block.
-            location_.add(required);
+            location.add(required);
 
-            if (!location_.find_room(geometry, required)) {
-                location_ = initialize_block(allocator_->allocate(BlockType::Tree));
+            if (!location.find_room(geometry, required)) {
+                location = initialize_block(allocator_->allocate(type), type);
             }
         }
 
-        auto sector = location_.sector(geometry);
-        auto offset = location_.sector_offset(geometry);
+        auto sector = location.sector(geometry);
+        auto offset = location.sector_offset(geometry);
 
         uint8_t buffer[SerializerType::HeadNodeSize];
         if (!serializer.serialize(buffer, node, head)) {
@@ -97,7 +99,7 @@ public:
             return { };
         }
 
-        return location_;
+        return location;
     }
 
     BlockAddress find_head(block_index_t block) {
@@ -116,7 +118,7 @@ public:
             NodeType node;
 
             if (iter.beginning_of_block()) {
-                TreeBlockHeader header;
+                TreeBlockHeader header(BlockType::Error);
                 if (!storage_->read(iter, &header, sizeof(TreeBlockHeader))) {
                     return { };
                 }
@@ -142,8 +144,8 @@ public:
     }
 
 private:
-    BlockAddress initialize_block(block_index_t block) {
-        TreeBlockHeader header;
+    BlockAddress initialize_block(block_index_t block, BlockType type) {
+        TreeBlockHeader header(type);
 
         header.fill();
 

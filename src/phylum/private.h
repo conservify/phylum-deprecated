@@ -46,7 +46,8 @@ enum class BlockType {
     SuperBlock,
     Journal,
     File,
-    Tree,
+    Leaf,
+    Index,
     Error,
     Unallocated
 };
@@ -278,7 +279,8 @@ inline std::ostream& operator<<(std::ostream& os, const BlockType &t) {
     case BlockType::SuperBlockLink: return os << "SuperBlockLink";
     case BlockType::SuperBlock: return os << "SuperBlock";
     case BlockType::File: return os << "File";
-    case BlockType::Tree: return os << "Tree";
+    case BlockType::Leaf: return os << "Leaf";
+    case BlockType::Index: return os << "Index";
     case BlockType::Error: return os << "Error";
     default: {
         return os << "<unknown>";

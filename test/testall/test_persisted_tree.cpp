@@ -213,13 +213,14 @@ TYPED_TEST(PersistedTreeSuite, WalkSmallTree) {
     ASSERT_EQ(visitor.calls, 3);
 }
 
-
 TYPED_TEST(PersistedTreeSuite, WalkLargeTree) {
     PersistedTree<typename TypeParam::NodeType> tree{ this->cfg_.cache_ };
 
     std::map<typename TypeParam::NodeType::KeyType, typename TypeParam::NodeType::ValueType> map;
     std::map<uint32_t, uint32_t> last_offsets;
     std::vector<uint32_t> inodes;
+
+    srand(1);
 
     for (auto i = 0; i < 8; ++i) {
         auto inode = (uint32_t)(random() % 2048 + 1024);
