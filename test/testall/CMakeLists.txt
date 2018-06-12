@@ -11,20 +11,20 @@ set(PROJECT_INCLUDES
   ${PHYLUM_LINUX_MEMORY_BACKEND_SRCS}
 )
 
-set(PNGPP_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/png++)
-ExternalProject_Add(
-    png++
-    URL http://download.savannah.nongnu.org/releases/pngpp/png++-0.2.9.tar.gz
-    PREFIX ${PNGPP_SOURCE_DIR}
-    INSTALL_COMMAND ""
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND ""
-)
+#set(PNGPP_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/png++)
+#ExternalProject_Add(
+#   png++
+#   URL http://download.savannah.nongnu.org/releases/pngpp/png++-0.2.9.tar.gz
+#   PREFIX ${PNGPP_SOURCE_DIR}
+#   INSTALL_COMMAND ""
+#   CONFIGURE_COMMAND ""
+#   BUILD_COMMAND ""
+#)
 
-ExternalProject_Get_Property(png++ source_dir)
-set(PNGPP_INCLUDE_DIR "${source_dir}/../")
+# ExternalProject_Get_Property(png++ source_dir)
+# set(PNGPP_INCLUDE_DIR "${source_dir}/../")
 
-find_package(PNG REQUIRED)
+# find_package(PNG REQUIRED)
 
 add_executable(testall ${SRCS})
 target_include_directories(testall PUBLIC "${PROJECT_INCLUDES}")
@@ -35,5 +35,5 @@ set_target_properties(testall PROPERTIES CXX_STANDARD 11)
 add_test(NAME testall-ff COMMAND testall --ff)
 add_test(NAME testall-00 COMMAND testall --00)
 
-target_include_directories(testall PUBLIC ${PNG_INCLUDE_DIR} ${PNGPP_INCLUDE_DIR})
-target_link_libraries(testall ${PNG_LIBRARY})
+# target_include_directories(testall PUBLIC ${PNG_INCLUDE_DIR} ${PNGPP_INCLUDE_DIR})
+# target_link_libraries(testall ${PNG_LIBRARY})
