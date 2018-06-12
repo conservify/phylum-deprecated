@@ -15,3 +15,21 @@ std::map<uint64_t, uint64_t> random_data() {
 
     return data;
 }
+
+namespace phylum {
+
+bool BlockHelper::is_type(block_index_t block, BlockType type) {
+    BlockAllocSector header;
+
+    if (!storage_->read({ block, 0 }, &header, sizeof(BlockAllocSector))) {
+        return false;
+    }
+
+    if (!header.valid()) {
+        return false;
+    }
+
+    return header.type == type;
+}
+
+}

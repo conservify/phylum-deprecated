@@ -86,6 +86,10 @@ public:
         return *storage_;
     }
 
+    SuperBlock &sb() {
+        return sbm_.block();
+    }
+
 public:
     bool initialize(bool wipe = false);
     bool open(bool wipe = false);
