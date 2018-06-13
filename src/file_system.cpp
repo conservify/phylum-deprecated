@@ -229,11 +229,12 @@ OpenFile::SeekStatistics OpenFile::seek(BlockAddress starting, uint32_t max) {
         // Check to see if our desired location is in this block, otherwise we
         // can just skip this one entirely.
         if (addr.tail_sector(g)) {
-            auto tail = tail_info<BlockTail>(buffer_);
-            if (is_valid_block(tail->linked_block) && max > tail->bytes_in_block) {
-                addr = BlockAddress::tail_sector_of(tail->linked_block, g);
-                bytes += tail->bytes_in_block;
-                max -= tail->bytes_in_block;
+            BlockTail tail;
+            memcpy(&tail, tail_info<BlockTail>(buffer_), sizeof(BlockTail));
+            if (is_valid_block(tail.linked_block) && max > tail.bytes_in_block) {
+                addr = BlockAddress::tail_sector_of(tail.linked_block, g);
+                bytes += tail.bytes_in_block;
+                max -= tail.bytes_in_block;
                 blocks++;
             }
             else {
@@ -241,13 +242,15 @@ OpenFile::SeekStatistics OpenFile::seek(BlockAddress starting, uint32_t max) {
             }
         }
         else {
-            auto tail = tail_info<SectorTail>(buffer_);
-            if (tail->bytes == 0 || tail->bytes == SECTOR_INDEX_INVALID) {
+            SectorTail tail;
+            memcpy(&tail, tail_info<SectorTail>(buffer_), sizeof(SectorTail));
+
+            if (tail.bytes == 0 || tail.bytes == SECTOR_INDEX_INVALID) {
                 break;
             }
-            if (max > tail->bytes) {
-                bytes += tail->bytes;
-                max -= tail->bytes;
+            if (max > tail.bytes) {
+                bytes += tail.bytes;
+                max -= tail.bytes;
                 addr.add(SectorSize);
             }
             else {
@@ -404,18 +407,20 @@ int32_t OpenFile::read(void *ptr, size_t size) {
         // See how much data we have in this sector and/or if we have a block we
         // should be moving onto after this sector is read.
         if (tail_sector()) {
-            auto tail = tail_info<BlockTail>(buffer_);
-            available_ = tail->sector.bytes;
-            if (tail->linked_block != BLOCK_INDEX_INVALID) {
-                head_ = BlockAddress{ tail->linked_block, SectorSize };
+            BlockTail tail;
+            memcpy(&tail, tail_info<BlockTail>(buffer_), sizeof(BlockTail));
+            available_ = tail.sector.bytes;
+            if (tail.linked_block != BLOCK_INDEX_INVALID) {
+                head_ = BlockAddress{ tail.linked_block, SectorSize };
             }
             else {
                 assert(false);
             }
         }
         else {
-            auto tail = tail_info<SectorTail>(buffer_);
-            available_ = tail->bytes;
+            SectorTail tail;
+            memcpy(&tail, tail_info<SectorTail>(buffer_), sizeof(SectorTail));
+            available_ = tail.bytes;
             head_.add(SectorSize);
         }
 
