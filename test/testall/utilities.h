@@ -21,6 +21,11 @@ namespace phylum {
 
 class BlockHelper {
 private:
+    struct BlockInfo {
+        std::vector<BlockAddress> live;
+    };
+
+    std::map<block_index_t, BlockInfo> blocks;
     StorageBackend *storage_;
     BlockAllocator *allocator_;
 
@@ -35,6 +40,7 @@ public:
 
     void dump(block_index_t block);
 
+    void live(std::map<block_index_t, std::vector<BlockAddress>> &live);
 };
 
 }

@@ -186,19 +186,21 @@ TYPED_TEST(PersistedTreeSuite, FindLessThanLookup) {
 
 template<typename NodeType, typename NodeRefType>
 struct SimpleVisitor : PersistedTreeVisitor<NodeRefType, NodeType> {
-    std::map<block_index_t, size_t> blocks_visited;
+    std::map<block_index_t, std::vector<BlockAddress>> live;
+    std::map<block_index_t, size_t> visitations;
     int32_t calls = 0;
 
     std::set<block_index_t> blocks() {
         std::set<block_index_t> b;
-        for (auto &pair : blocks_visited) {
+        for (auto &pair : visitations) {
             b.insert(pair.first);
         }
         return b;
     }
 
     virtual void visit(NodeRefType nref, NodeType *node) override {
-        blocks_visited[nref.address().block]++;
+        visitations[nref.address().block]++;
+        live[nref.address().block].push_back(nref.address());
         calls++;
     }
 };
@@ -253,6 +255,6 @@ TYPED_TEST(PersistedTreeSuite, WalkLargeTree) {
     ASSERT_EQ(visitor.calls, 493);
 
     BlockHelper helper{ this->cfg_.backend_, this->cfg_.allocator_ };
-
+    helper.live(visitor.live);
     helper.dump(3, this->cfg_.allocator_.state().head);
 }

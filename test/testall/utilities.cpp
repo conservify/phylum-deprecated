@@ -3,6 +3,7 @@
 #include "phylum/persisted_tree.h"
 #include "phylum/node_serializer.h"
 #include "phylum/backend_nodes.h"
+#include "phylum/journal.h"
 #include "phylum/layout.h"
 
 std::map<uint64_t, uint64_t> random_data() {
@@ -43,6 +44,17 @@ void BlockHelper::dump(block_index_t first, block_index_t last) {
     }
 }
 
+void BlockHelper::live(std::map<block_index_t, std::vector<BlockAddress>> &live) {
+    for (auto &p : live) {
+        if (blocks.find(p.first) == blocks.end()) {
+            blocks[p.first] = {};
+        }
+        for (auto &a : p.second) {
+            blocks[p.first].live.push_back(a);
+        }
+    }
+}
+
 static inline BlockLayout<TreeBlockHead, TreeBlockTail> get_journal_layout(StorageBackend &storage,
               BlockAllocator &allocator, BlockAddress address) {
     return { storage, allocator, address, BlockType::Error };
@@ -68,9 +80,13 @@ void BlockHelper::dump(block_index_t block) {
     storage_->read(head_addr, &head, sizeof(BlockHead));
     storage_->read(tail_addr, &tail, sizeof(BlockTail));
 
-    sdebug() << block << ": " << head.type
+    auto &info = blocks[block];
+    auto &live = info.live;
+
+    sdebug() << block << ": " << " " << head.type
              << " (p=" << head.linked_block << ")"
              << " (n=" << tail.linked_block << ")"
+             << " (live=" << live.size() << ")"
              << " ";
 
     switch (head.type) {
@@ -84,6 +100,19 @@ void BlockHelper::dump(block_index_t block) {
         break;
     }
     case BlockType::Journal: {
+        auto layout = get_journal_layout(*storage_, *allocator_, BlockAddress{ block, SectorSize });
+        while (layout.walk_block(sizeof(JournalEntry))) {
+            JournalEntry entry;
+            storage_->read(layout.address(), &entry, sizeof(entry));
+            if (!entry.valid()) {
+                break;
+            }
+
+            sdebug() << "  " << (int32_t)entry.type;
+
+            layout.add(sizeof(JournalEntry));
+        }
+        sdebug() << std::endl;
         break;
     }
     case BlockType::Leaf: {
@@ -95,7 +124,8 @@ void BlockHelper::dump(block_index_t block) {
                 break;
             }
 
-            sdebug() << "  " << (int32_t)node.level;
+            auto live = std::find(info.live.begin(), info.live.end(), layout.address()) != info.live.end();
+            sdebug() << "  " << (live ? "L" : "") << (int32_t)node.level;
 
             layout.add(SerializerType::HeadNodeSize);
         }
@@ -111,7 +141,8 @@ void BlockHelper::dump(block_index_t block) {
                 break;
             }
 
-            sdebug() << "  " << (int32_t)node.level;
+            auto live = std::find(info.live.begin(), info.live.end(), layout.address()) != info.live.end();
+            sdebug() << "  " << (live ? "L" : "") << (int32_t)node.level;
 
             layout.add(SerializerType::HeadNodeSize);
         }
