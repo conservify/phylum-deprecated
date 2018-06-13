@@ -3,27 +3,6 @@
 
 namespace phylum {
 
-struct JournalBlockHead {
-    BlockHead header;
-
-    JournalBlockHead(BlockType type = BlockType::Journal) : header(type) {
-    }
-
-    void fill() {
-        header.magic.fill();
-        header.age = 0;
-        header.timestamp = 0;
-    }
-
-    bool valid() const {
-        return header.valid();
-    }
-};
-
-struct JournalBlockTail {
-    block_index_t linked_block{ BLOCK_INDEX_INVALID };
-};
-
 static inline BlockLayout<JournalBlockHead, JournalBlockTail> get_layout(StorageBackend &storage,
               BlockAllocator &allocator, BlockAddress address) {
     return { storage, allocator, address, BlockType::Journal };

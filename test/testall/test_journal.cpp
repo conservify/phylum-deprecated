@@ -13,7 +13,7 @@ protected:
     LinuxMemoryBackend storage_;
     DebuggingBlockAllocator allocator_{ geometry_ };
     FileSystem fs_{ storage_, allocator_ };
-    BlockHelper helper_{ storage_ };
+    BlockHelper helper_{ storage_, allocator_ };
 
 protected:
     void SetUp() override {

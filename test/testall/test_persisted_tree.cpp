@@ -251,4 +251,8 @@ TYPED_TEST(PersistedTreeSuite, WalkLargeTree) {
     tree.accept(visitor);
 
     ASSERT_EQ(visitor.calls, 493);
+
+    BlockHelper helper{ this->cfg_.backend_, this->cfg_.allocator_ };
+
+    helper.dump(3, this->cfg_.allocator_.state().head);
 }

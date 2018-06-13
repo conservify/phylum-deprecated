@@ -13,6 +13,7 @@
 #include <phylum/tree.h>
 #include <phylum/private.h>
 #include <phylum/backend.h>
+#include <phylum/block_alloc.h>
 
 std::map<uint64_t, uint64_t> random_data();
 
@@ -21,13 +22,18 @@ namespace phylum {
 class BlockHelper {
 private:
     StorageBackend *storage_;
+    BlockAllocator *allocator_;
 
 public:
-    BlockHelper(StorageBackend &storage) : storage_(&storage) {
+    BlockHelper(StorageBackend &storage, BlockAllocator &allocator) : storage_(&storage), allocator_(&allocator) {
     }
 
 public:
     bool is_type(block_index_t block, BlockType type);
+
+    void dump(block_index_t first, block_index_t last);
+
+    void dump(block_index_t block);
 
 };
 

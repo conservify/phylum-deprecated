@@ -11,7 +11,7 @@ public:
     using VALUE = typename NODE::ValueType;
     using ADDRESS = typename NODE::AddressType;
 
-private:
+public:
     struct serialized_inner_node_t {
         DepthType level;
         uint16_t size;
@@ -32,12 +32,27 @@ private:
         DepthType level;
         serialized_inner_node_t inner;
         serialized_leaf_node_t leaf;
+
+        serialized_node_t() {
+        }
+
+        bool valid() {
+            if (level == 0xff) {
+                return false;
+            }
+            if (level == 0) {
+                return leaf.size > 0;
+            }
+            else {
+                return inner.size > 0;
+            }
+        }
     };
 
     struct serialized_head_t {
-        BlockMagic magic;
-        timestamp_t timestamp;
         serialized_node_t node;
+        timestamp_t timestamp;
+        BlockMagic magic;
     };
 
 public:

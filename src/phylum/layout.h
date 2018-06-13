@@ -1,6 +1,7 @@
 #ifndef __PHYLUM_LAYOUT_H_INCLUDED
 #define __PHYLUM_LAYOUT_H_INCLUDED
 
+#include "phylum/block_alloc.h"
 #include "phylum/private.h"
 
 namespace phylum {
@@ -16,6 +17,11 @@ private:
 
 public:
     BlockAddress address() {
+        return address_;
+    }
+
+    BlockAddress add(uint32_t delta) {
+        address_.add(delta);
         return address_;
     }
 
@@ -40,11 +46,21 @@ public:
         return true;
     }
 
+    bool walk_block(size_t required) {
+        if (need_new_block() || should_write_tail(required)) {
+            return false;
+        }
+
+        assert(address_.find_room(g_, required));
+
+        return true;
+    }
+
     BlockAddress find_available(size_t required) {
         if (need_new_block() || should_write_tail(required)) {
             assert(type_ != BlockType::Error);
             auto new_block = allocator_.allocate(type_);
-            if (!write_head(new_block)) {
+            if (!write_head(new_block, address_.block)) {
                 return { };
             }
 

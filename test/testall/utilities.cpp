@@ -1,5 +1,10 @@
 #include "utilities.h"
 
+#include "phylum/persisted_tree.h"
+#include "phylum/node_serializer.h"
+#include "phylum/backend_nodes.h"
+#include "phylum/layout.h"
+
 std::map<uint64_t, uint64_t> random_data() {
     std::map<uint64_t, uint64_t> data;
 
@@ -30,6 +35,96 @@ bool BlockHelper::is_type(block_index_t block, BlockType type) {
     }
 
     return head.type == type;
+}
+
+void BlockHelper::dump(block_index_t first, block_index_t last) {
+    for (auto block = first; block < last; ++block) {
+        dump(block);
+    }
+}
+
+static inline BlockLayout<TreeBlockHead, TreeBlockTail> get_journal_layout(StorageBackend &storage,
+              BlockAllocator &allocator, BlockAddress address) {
+    return { storage, allocator, address, BlockType::Error };
+}
+
+static inline BlockLayout<TreeBlockHead, TreeBlockTail> get_tree_layout(StorageBackend &storage,
+              BlockAllocator &allocator, BlockAddress address) {
+    return { storage, allocator, address, BlockType::Error };
+}
+
+void BlockHelper::dump(block_index_t block) {
+    using NodeType = Node<uint64_t, int32_t, BlockAddress, 6, 6>;
+    using SerializerType = NodeSerializer<NodeType>;
+
+    auto &g = storage_->geometry();
+
+    BlockHead head;
+    BlockTail tail;
+
+    auto head_addr = BlockAddress{ block, 0 };
+    auto tail_addr = BlockAddress::tail_data_of(block, g, sizeof(BlockTail));
+
+    storage_->read(head_addr, &head, sizeof(BlockHead));
+    storage_->read(tail_addr, &tail, sizeof(BlockTail));
+
+    sdebug() << block << ": " << head.type
+             << " (p=" << head.linked_block << ")"
+             << " (n=" << tail.linked_block << ")"
+             << " ";
+
+    switch (head.type) {
+    case BlockType::Anchor: {
+        break;
+    }
+    case BlockType::SuperBlockLink: {
+        break;
+    }
+    case BlockType::SuperBlock: {
+        break;
+    }
+    case BlockType::Journal: {
+        break;
+    }
+    case BlockType::Leaf: {
+        auto layout = get_tree_layout(*storage_, *allocator_, BlockAddress{ block, SectorSize });
+        while (layout.walk_block(SerializerType::HeadNodeSize)) {
+            SerializerType::serialized_node_t node;
+            storage_->read(layout.address(), &node, sizeof(node));
+            if (!node.valid()) {
+                break;
+            }
+
+            sdebug() << "  " << (int32_t)node.level;
+
+            layout.add(SerializerType::HeadNodeSize);
+        }
+        sdebug() << std::endl;
+        break;
+    }
+    case BlockType::Index: {
+        auto layout = get_tree_layout(*storage_, *allocator_, BlockAddress{ block, SectorSize });
+        while (layout.walk_block(SerializerType::HeadNodeSize)) {
+            SerializerType::serialized_node_t node;
+            storage_->read(layout.address(), &node, sizeof(node));
+            if (!node.valid()) {
+                break;
+            }
+
+            sdebug() << "  " << (int32_t)node.level;
+
+            layout.add(SerializerType::HeadNodeSize);
+        }
+        sdebug() << std::endl;
+        break;
+    }
+    case BlockType::File: {
+        break;
+    }
+    default: {
+        break;
+    }
+    }
 }
 
 }
