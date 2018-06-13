@@ -113,31 +113,22 @@ void setup() {
         fail();
     }
 
-    sdebug() << "Creating small file..." << std::endl;
-    {
-        auto file = fs.open("small.bin");
-        if (!file.write("Jacob", 5)) {
-            fail();
-        }
+    sdebug() << std::endl << "Creating small file..." << std::endl;
+    write_file<128>(fs, "small.bin");
 
-        sdebug() << "Bytes: " << file.size() << std::endl;
-
-        file.close();
-    }
-
-    sdebug() << "Creating file..." << std::endl;
+    sdebug() << std::endl << "Creating file..." << std::endl;
     write_file<1024 * 1024>(fs, "large.bin");
 
-    sdebug() << "Reading file (256)..." << std::endl;
+    sdebug() << std::endl << "Reading file (256)..." << std::endl;
     read_file<256>(fs, "large.bin");
 
-    sdebug() << "Reading file (512)..." << std::endl;
+    sdebug() << std::endl << "Reading file (512)..." << std::endl;
     read_file<512>(fs, "large.bin");
 
-    sdebug() << "Seek end of file..." << std::endl;
+    sdebug() << std::endl << "Seek end of file..." << std::endl;
     seek_end_file(fs, "large.bin");
 
-    sdebug() << "Done: " << free_memory() << std::endl;
+    sdebug() << std::endl << "Done: " << free_memory() << std::endl;
 
     while (true) {
         delay(10);
