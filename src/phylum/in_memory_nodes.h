@@ -30,6 +30,10 @@ public:
     }
 
 public:
+    bool recreate() {
+        return true;
+    }
+
     virtual bool deserialize(ADDRESS addr, NodeType *node, TreeHead *head) override {
         SerializerType serializer;
         return serializer.deserialize(lookup(addr), node, head);

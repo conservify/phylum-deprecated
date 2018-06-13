@@ -9,6 +9,10 @@ namespace phylum {
 using DepthType = uint8_t;
 using IndexType = uint8_t;
 
+struct TreeHead {
+    timestamp_t timestamp;
+};
+
 template<typename KEY, typename VALUE, typename ADDRESS, size_t N, size_t M>
 class Node;
 
@@ -25,13 +29,10 @@ struct PersistedTreeSchema {
     static constexpr size_t Children = N + 1;
 };
 
-struct TreeHead {
-    timestamp_t timestamp;
-};
-
 template<typename NODE, typename ADDRESS>
 class NodeStorage {
 public:
+    virtual bool recreate() = 0;
     virtual bool deserialize(ADDRESS addr, NODE *node, TreeHead *head) = 0;
     virtual ADDRESS serialize(ADDRESS addr, const NODE *node, const TreeHead *head) = 0;
 
@@ -44,28 +45,13 @@ private:
     ADDRESS address_;
 
 public:
+    NodeRef() {
+    }
+
     NodeRef(uint8_t index) : index_(index) {
     }
 
     NodeRef(ADDRESS address) : address_(address) {
-    }
-
-public:
-    void address(ADDRESS address) {
-        address_ = address;
-        assert(address_.valid());
-    }
-
-    IndexType index() const {
-        return index_;
-    }
-
-    void index(IndexType index) {
-        index_ = index;
-    }
-
-public:
-    NodeRef() {
     }
 
     NodeRef(const NodeRef &ref) : index_(ref.index_), address_(ref.address_) {
@@ -84,12 +70,25 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const Node<KEY, VALUE, NADDRESS, N, M> &n);
 
 public:
-    bool valid() const {
-        return address_.valid();
-    }
-
     ADDRESS address() const {
         return address_;
+    }
+
+    void address(ADDRESS address) {
+        address_ = address;
+        assert(address_.valid());
+    }
+
+    IndexType index() const {
+        return index_;
+    }
+
+    void index(IndexType index) {
+        index_ = index;
+    }
+
+    bool valid() const {
+        return address_.valid();
     }
 
     void clear() {
@@ -123,9 +122,11 @@ public:
 
     data_t d;
 
+public:
     Node() {
     }
 
+public:
     void clear() {
         depth = 0;
         number_keys = 0;
@@ -145,29 +146,7 @@ public:
 };
 
 template<typename KEY, typename VALUE, typename ADDRESS, size_t N, size_t M>
-std::ostream& operator<<(std::ostream& os, const Node<KEY, VALUE, ADDRESS, N, M> &n) {
-    os << "NODE<" << (size_t)n.depth << " " << (size_t)n.number_keys << "";
-
-    if (n.depth == 0) {
-        for (auto i = 0; i < n.number_keys; ++i) {
-            os << " " << n.keys[i] << "=" << n.d.values[i];
-        }
-    }
-    else {
-        for (auto i = 0; i < n.number_keys + 1; ++i) {
-            os << " " << n.keys[i] << "=Child(#" << (size_t)n.d.children[i].index() << " " << n.d.children[i].address() << ")";
-        }
-    }
-
-    os << ">";
-
-    return os;
-}
-
-template<typename ADDRESS>
-std::ostream& operator<<(std::ostream& os, const NodeRef<ADDRESS> &n) {
-    return os << "Ref<#" << (size_t)n.index_ << " addr=" << n.address() << ">";
-}
+std::ostream& operator<<(std::ostream& os, const Node<KEY, VALUE, ADDRESS, N, M> &n);
 
 template<typename NODE>
 class NodeCache {
@@ -183,131 +162,13 @@ public:
     virtual NodeRefType flush() = 0;
     virtual NodeRefType flush(NodeRefType ref, bool head) = 0;
     virtual void clear() = 0;
-
+    virtual void recreate() = 0;
 };
 
 template<typename NodeRefType, typename NodeType>
 class PersistedTreeVisitor {
 public:
     virtual void visit(NodeRefType nref, NodeType *node) = 0;
-
-};
-
-template<typename NODE, size_t SIZE>
-class MemoryConstrainedNodeCache : public NodeCache<NODE> {
-public:
-    using NodeType = NODE;
-    using NodeRefType = NodeRef<typename NODE::AddressType>;
-    using NodeStorageType = NodeStorage<NodeType, typename NODE::AddressType>;
-
-private:
-    NodeStorageType *storage_;
-    NodeType nodes_[SIZE];
-    NodeRefType pending_[SIZE];
-    IndexType index_{ 0 };
-    TreeHead information_{ 0 };
-
-public:
-    MemoryConstrainedNodeCache(NodeStorageType &storage) : storage_(&storage) {
-        clear();
-    }
-
-public:
-    virtual NodeType *resolve(NodeRefType ref) override {
-        assert(ref.index() != 0xff);
-        return &nodes_[ref.index()];
-    }
-
-    virtual NodeRefType allocate() override {
-        assert(index_ != SIZE);
-        auto i = index_++;
-        auto ref = NodeRefType { i };
-        pending_[i] = ref;
-        return ref;
-    }
-
-    virtual NodeRefType load(NodeRefType ref, bool head = false) override {
-        assert(ref.address().valid());
-
-        auto new_ref = allocate();
-        ref.index(new_ref.index());
-        pending_[ref.index()] = ref;
-
-        auto node = &nodes_[ref.index()];
-
-        storage_->deserialize(ref.address(), node, head ? &information_ : nullptr);
-
-        #ifdef PHYLUM_PERSISTED_TREE_LOGGING
-        sdebug() << "Load: " << ref.address() << " " << *node << std::endl;
-        #endif
-
-        return ref;
-    }
-
-    virtual void unload(NodeRefType ref) override {
-        assert(ref.address().valid());
-        assert(index_ - 1 == ref.index());
-
-        index_--;
-
-        nodes_[ref.index()].clear();
-    }
-
-    virtual NodeRefType flush() override {
-        #ifdef PHYLUM_PERSISTED_TREE_LOGGING
-        sdebug() << "Flushing Node Cache: " << (size_t)index_ << std::endl;
-        #endif
-
-        if (index_ == 0) {
-            return NodeRefType{ };
-        }
-
-        IndexType head_index = 0;
-        DepthType head_depth = nodes_[pending_[head_index].index()].depth;
-
-        for (auto i = (IndexType)1; i < index_; ++i) {
-            if (nodes_[pending_[i].index()].depth > head_depth) {
-                head_depth = nodes_[pending_[i].index()].depth;
-                head_index = pending_[i].index();
-            }
-        }
-
-        information_.timestamp++;
-
-        auto head = flush(pending_[head_index], true);
-
-        clear();
-
-        return head;
-    }
-
-    virtual NodeRefType flush(NodeRefType ref, bool head = false) override {
-        assert(ref.index() != 0xff);
-
-        auto node = &nodes_[ref.index()];
-        if (node->depth > 0) {
-            for (auto i = 0; i <= node->number_keys; ++i) {
-                if (node->d.children[i].index() != 0xff) {
-                    node->d.children[i] = flush(node->d.children[i]);
-                }
-            }
-        }
-
-        ref.address(storage_->serialize(ref.address(), node, head ? &information_ : nullptr));
-
-        #ifdef PHYLUM_PERSISTED_TREE_LOGGING
-        sdebug() << "   " << " W(#" << (int32_t)ref.index() << " " << ref.address() << " = " << *node << ")" << std::endl;
-        #endif
-
-        return ref;
-    }
-
-    virtual void clear() override {
-        index_ = 0;
-        for (auto &node : nodes_) {
-            node.clear();
-        }
-    }
 
 };
 
@@ -553,6 +414,8 @@ public:
     ADDRESS recreate() {
         create_if_necessary();
 
+        nodes_->recreate();
+
         auto new_head = recreate(ref_, true);
 
         ref_.address(new_head);
@@ -719,6 +582,31 @@ private:
     }
 
 };
+
+template<typename KEY, typename VALUE, typename ADDRESS, size_t N, size_t M>
+std::ostream& operator<<(std::ostream& os, const Node<KEY, VALUE, ADDRESS, N, M> &n) {
+    os << "NODE<" << (size_t)n.depth << " " << (size_t)n.number_keys << "";
+
+    if (n.depth == 0) {
+        for (auto i = 0; i < n.number_keys; ++i) {
+            os << " " << n.keys[i] << "=" << n.d.values[i];
+        }
+    }
+    else {
+        for (auto i = 0; i < n.number_keys + 1; ++i) {
+            os << " " << n.keys[i] << "=Child(#" << (size_t)n.d.children[i].index() << " " << n.d.children[i].address() << ")";
+        }
+    }
+
+    os << ">";
+
+    return os;
+}
+
+template<typename ADDRESS>
+std::ostream& operator<<(std::ostream& os, const NodeRef<ADDRESS> &n) {
+    return os << "Ref<#" << (size_t)n.index_ << " addr=" << n.address() << ">";
+}
 
 }
 

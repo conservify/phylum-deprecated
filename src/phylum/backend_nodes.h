@@ -55,6 +55,12 @@ public:
     }
 
 public:
+    bool recreate() {
+        leaf_ = BlockAddress{ };
+        index_ = BlockAddress{ };
+        return true;
+    }
+
     bool deserialize(BlockAddress addr, NodeType *node, TreeHead *head) {
         SerializerType serializer;
 

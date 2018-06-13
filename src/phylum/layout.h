@@ -20,6 +20,10 @@ public:
         return address_;
     }
 
+    void address(BlockAddress address) {
+        address_ = address;
+    }
+
     BlockAddress add(uint32_t delta) {
         address_.add(delta);
         return address_;

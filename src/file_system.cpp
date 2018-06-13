@@ -1,5 +1,6 @@
 #include "phylum/file_system.h"
 #include "phylum/journal.h"
+#include "phylum/stack_node_cache.h"
 
 namespace phylum {
 
