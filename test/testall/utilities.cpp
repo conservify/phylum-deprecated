@@ -125,7 +125,7 @@ void BlockHelper::dump(block_index_t block) {
             }
 
             auto live = std::find(info.live.begin(), info.live.end(), layout.address()) != info.live.end();
-            sdebug() << "  " << (live ? "L" : "") << (int32_t)node.level;
+            sdebug() << "  " << (live ? "L" : " ") << (int32_t)node.level;
 
             layout.add(SerializerType::HeadNodeSize);
         }
@@ -142,7 +142,7 @@ void BlockHelper::dump(block_index_t block) {
             }
 
             auto live = std::find(info.live.begin(), info.live.end(), layout.address()) != info.live.end();
-            sdebug() << "  " << (live ? "L" : "") << (int32_t)node.level;
+            sdebug() << "  " << (live ? "L" : " ") << (int32_t)node.level;
 
             layout.add(SerializerType::HeadNodeSize);
         }

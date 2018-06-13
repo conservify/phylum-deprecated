@@ -253,8 +253,66 @@ TYPED_TEST(PersistedTreeSuite, WalkLargeTree) {
     tree.accept(visitor);
 
     ASSERT_EQ(visitor.calls, 493);
+}
 
-    BlockHelper helper{ this->cfg_.backend_, this->cfg_.allocator_ };
-    helper.live(visitor.live);
-    helper.dump(3, this->cfg_.allocator_.state().head);
+TYPED_TEST(PersistedTreeSuite, RecreateSmallTree) {
+    PersistedTree<typename TypeParam::NodeType> tree{ this->cfg_.cache_ };
+
+    tree.add(100, 5738);
+    tree.add(10, 1);
+    tree.add(22, 2);
+    tree.add(8, 3);
+    tree.add(3, 4);
+    tree.add(17, 5);
+    tree.add(9, 6);
+    tree.add(30, 7);
+
+    tree.recreate();
+}
+
+TYPED_TEST(PersistedTreeSuite, RecreateLargeTree) {
+    PersistedTree<typename TypeParam::NodeType> tree{ this->cfg_.cache_ };
+
+    std::map<typename TypeParam::NodeType::KeyType, typename TypeParam::NodeType::ValueType> map;
+    std::map<uint32_t, uint32_t> last_offsets;
+    std::vector<uint32_t> inodes;
+
+    srandom(1);
+
+    for (auto i = 0; i < 8; ++i) {
+        auto inode = (uint32_t)(random() % 2048 + 1024);
+        inodes.push_back(inode);
+
+        auto offset = 512;
+
+        for (auto j = 0; j < 128; ++j) {
+            auto key = INodeKey(inode, offset);
+            tree.add(key, inode);
+            last_offsets[inode] = offset;
+            map[key] = inode;
+            offset += random() % 4096;
+        }
+    }
+
+    {
+        SimpleVisitor<typename TypeParam::NodeType, typename TypeParam::NodeRefType> visitor;
+        tree.accept(visitor);
+        ASSERT_EQ(visitor.calls, 493);
+
+        // BlockHelper helper{ this->cfg_.backend_, this->cfg_.allocator_ };
+        // helper.live(visitor.live);
+        // helper.dump(3, this->cfg_.allocator_.state().head);
+    }
+
+    tree.recreate();
+
+    {
+        SimpleVisitor<typename TypeParam::NodeType, typename TypeParam::NodeRefType> visitor;
+        tree.accept(visitor);
+        ASSERT_EQ(visitor.calls, 493);
+
+        // BlockHelper helper{ this->cfg_.backend_, this->cfg_.allocator_ };
+        // helper.live(visitor.live);
+        // helper.dump(3, this->cfg_.allocator_.state().head);
+    }
 }

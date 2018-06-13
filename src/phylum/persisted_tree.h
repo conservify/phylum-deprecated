@@ -181,6 +181,7 @@ public:
     virtual void unload(NodeRefType ref) = 0;
     virtual NodeType *resolve(NodeRefType ref) = 0;
     virtual NodeRefType flush() = 0;
+    virtual NodeRefType flush(NodeRefType ref, bool head) = 0;
     virtual void clear() = 0;
 
 };
@@ -280,15 +281,7 @@ public:
         return head;
     }
 
-    virtual void clear() override {
-        index_ = 0;
-        for (auto &node : nodes_) {
-            node.clear();
-        }
-    }
-
-private:
-    NodeRefType flush(NodeRefType ref, bool head = false) {
+    virtual NodeRefType flush(NodeRefType ref, bool head = false) override {
         assert(ref.index() != 0xff);
 
         auto node = &nodes_[ref.index()];
@@ -307,6 +300,13 @@ private:
         #endif
 
         return ref;
+    }
+
+    virtual void clear() override {
+        index_ = 0;
+        for (auto &node : nodes_) {
+            node.clear();
+        }
     }
 
 };
@@ -529,6 +529,35 @@ public:
         create_if_necessary();
 
         accept(ref_, visitor, true);
+    }
+
+    ADDRESS recreate(NodeRefType ref, bool head = false) {
+        auto nref = nodes_->load(ref, head);
+        auto node = nodes_->resolve(nref);
+
+        if (node->depth > 0) {
+            for (auto i = 0; i < node->number_keys + 1; ++i) {
+                if (node->d.children[i].valid()) {
+                    node->d.children[i] = recreate(node->d.children[i]);
+                }
+            }
+        }
+
+        auto new_ref = nodes_->flush(nref, head);
+
+        nodes_->unload(nref);
+
+        return new_ref.address();
+    }
+
+    ADDRESS recreate() {
+        create_if_necessary();
+
+        auto new_head = recreate(ref_, true);
+
+        ref_.address(new_head);
+
+        return new_head;
     }
 
 private:
