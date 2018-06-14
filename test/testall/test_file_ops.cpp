@@ -18,7 +18,7 @@ class FileOpsSuite : public ::testing::Test {
 protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend storage_;
-    DebuggingBlockAllocator allocator_{ geometry_ };
+    DebuggingBlockAllocator allocator_;
     FileSystem fs_{ storage_, allocator_ };
 
 protected:
@@ -356,7 +356,7 @@ TEST_F(FileOpsSuite, MountingFindsPreviousTreeBlocks) {
     // BlockHelper helper1{ storage_, allocator_ };
     // helper1.dump(0, allocator_.state().head);
 
-    DebuggingBlockAllocator second_allocator{ geometry_ };
+    DebuggingBlockAllocator second_allocator;
     FileSystem second_fs{ storage_, second_allocator };
 
     ASSERT_TRUE(second_fs.mount());

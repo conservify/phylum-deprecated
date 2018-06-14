@@ -2,10 +2,12 @@
 
 namespace phylum {
 
-SequentialBlockAllocator::SequentialBlockAllocator(Geometry &geometry) : geometry_(&geometry) {
+SequentialBlockAllocator::SequentialBlockAllocator() {
 }
 
 bool SequentialBlockAllocator::initialize(Geometry &geometry) {
+    geometry_ = &geometry;
+
     return true;
 }
 
@@ -18,6 +20,7 @@ void SequentialBlockAllocator::state(AllocatorState state) {
 }
 
 block_index_t SequentialBlockAllocator::allocate(BlockType type) {
+    assert(geometry_ != nullptr);
     assert(block_ < geometry_->number_of_blocks);
     return block_++;
 }
@@ -27,7 +30,7 @@ void SequentialBlockAllocator::free(block_index_t block) {
 
 #ifndef ARDUINO
 
-DebuggingBlockAllocator::DebuggingBlockAllocator(Geometry &geometry) : SequentialBlockAllocator(geometry) {
+DebuggingBlockAllocator::DebuggingBlockAllocator() {
 }
 
 block_index_t DebuggingBlockAllocator::allocate(BlockType type) {
@@ -36,10 +39,12 @@ block_index_t DebuggingBlockAllocator::allocate(BlockType type) {
     return block;
 }
 
-QueueBlockAllocator::QueueBlockAllocator(Geometry &geometry) : geometry_(&geometry) {
+QueueBlockAllocator::QueueBlockAllocator() {
 }
 
 bool QueueBlockAllocator::initialize(Geometry &geometry) {
+    geometry_ = &geometry;
+
     return true;
 }
 
@@ -51,6 +56,8 @@ void QueueBlockAllocator::state(AllocatorState state) {
 }
 
 block_index_t QueueBlockAllocator::allocate(BlockType type) {
+    assert(geometry_ != nullptr);
+
     if (!initialized_) {
         for (auto i = 3; i < (int32_t)geometry_->number_of_blocks; ++i) {
             free(i);

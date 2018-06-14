@@ -14,13 +14,14 @@ protected:
 protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend storage_;
-    QueueBlockAllocator allocator_{ geometry_ };
+    QueueBlockAllocator allocator_;
     SuperBlockManager sbm_{ storage_, allocator_ };
 
 protected:
     void SetUp() override {
         ASSERT_TRUE(storage_.initialize(geometry_));
         ASSERT_TRUE(storage_.open());
+        ASSERT_TRUE(allocator_.initialize(geometry_));
     }
 
     void TearDown() override {
@@ -103,13 +104,14 @@ class SuperBlockSequentialAllocatorSuite : public ::testing::Test {
 protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend storage_;
-    SequentialBlockAllocator allocator_{ geometry_ };
+    SequentialBlockAllocator allocator_;
     SuperBlockManager sbm_{ storage_, allocator_ };
 
 protected:
     void SetUp() override {
         ASSERT_TRUE(storage_.initialize(geometry_));
         ASSERT_TRUE(storage_.open());
+        ASSERT_TRUE(allocator_.initialize(geometry_));
     }
 
     void TearDown() override {

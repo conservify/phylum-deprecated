@@ -18,7 +18,7 @@ struct InMemoryTreeConfiguration {
 
     Geometry geometry_{ 128, 4, 4, 512 };
     LinuxMemoryBackend backend_;
-    DebuggingBlockAllocator allocator_{ geometry_ };
+    DebuggingBlockAllocator allocator_;
     InMemoryNodeStorage<NodeType> nodes_{ 128 * 1024 };
     MemoryConstrainedNodeCache<NodeType, 8> cache_{ nodes_ };
 };
@@ -30,7 +30,7 @@ struct StorageBackendTreeConfiguration {
 
     Geometry geometry_{ 128, 4, 4, 512 };
     LinuxMemoryBackend backend_;
-    DebuggingBlockAllocator allocator_{ geometry_ };
+    DebuggingBlockAllocator allocator_;
     StorageBackendNodeStorage<NodeType> nodes_{ backend_, allocator_ };
     MemoryConstrainedNodeCache<NodeType, 8> cache_{ nodes_ };
 };
@@ -44,6 +44,7 @@ protected:
     void SetUp() override {
         ASSERT_TRUE(cfg_.backend_.initialize(cfg_.geometry_));
         ASSERT_TRUE(cfg_.backend_.open());
+        ASSERT_TRUE(cfg_.allocator_.initialize(cfg_.geometry_));
     }
 
     void TearDown() override {

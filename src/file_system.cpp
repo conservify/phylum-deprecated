@@ -144,6 +144,8 @@ bool FileSystem::format() {
 }
 
 bool FileSystem::mount(bool wipe) {
+    allocator_->initialize(storage_->geometry());
+
     if (wipe || !sbm_.locate()) {
         if (!format()) {
             return false;

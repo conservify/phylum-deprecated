@@ -33,11 +33,11 @@ public:
 
 class SequentialBlockAllocator : public BlockAllocator {
 private:
-    Geometry *geometry_;
+    Geometry *geometry_{ nullptr };
     uint32_t block_{ 3 };
 
 public:
-    SequentialBlockAllocator(Geometry &geometry);
+    SequentialBlockAllocator();
 
 public:
     virtual bool initialize(Geometry &geometry) override;
@@ -55,7 +55,7 @@ private:
     std::map<block_index_t, BlockType> allocations_;
 
 public:
-    DebuggingBlockAllocator(Geometry &geometry);
+    DebuggingBlockAllocator();
 
 public:
     std::map<block_index_t, BlockType> &allocations() {
@@ -79,12 +79,12 @@ public:
 
 class QueueBlockAllocator : public BlockAllocator {
 private:
-    Geometry *geometry_;
+    Geometry *geometry_{ nullptr };
     bool initialized_{ false };
     std::queue<block_index_t> free_;
 
 public:
-    QueueBlockAllocator(Geometry &geometry);
+    QueueBlockAllocator();
 
 public:
     virtual bool initialize(Geometry &geometry) override;

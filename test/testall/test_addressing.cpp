@@ -78,14 +78,17 @@ TEST_F(AddressingSuite, FindEndAfterFillingBlockAndBeforeStartingNext) {
     uint8_t pattern[128];
     Geometry g{ 1024, 4, 4, 512 };
     LinuxMemoryBackend storage;
-    DebuggingBlockAllocator allocator{ g };
+    DebuggingBlockAllocator allocator;
 
     ASSERT_TRUE(storage.initialize(g));
     ASSERT_TRUE(storage.open());
+    ASSERT_TRUE(allocator.initialize(g));
 
     auto first_block = allocator.allocate(BlockType::File);
 
-    auto layout = BlockLayout<TreeBlockHead, TreeBlockTail>{ storage, allocator, BlockAddress{ first_block, 0 }, BlockType::File };
+    auto layout = BlockLayout<TreeBlockHead, TreeBlockTail>{ storage, allocator,
+                                                             BlockAddress{ first_block, 0 },
+                                                             BlockType::File };
 
     for (auto i = 0; i < ((512 * (4 * 4 - 1)) / 128) - 1; i++) {
         auto address = layout.find_available(sizeof(pattern));

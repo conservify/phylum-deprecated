@@ -12,7 +12,7 @@ class ResilienceSuite : public ::testing::Test {
 protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend storage_;
-    DebuggingBlockAllocator allocator_{ geometry_ };
+    DebuggingBlockAllocator allocator_;
     FileSystem fs_{ storage_, allocator_ };
 
 protected:

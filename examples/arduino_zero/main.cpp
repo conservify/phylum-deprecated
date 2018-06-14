@@ -111,7 +111,7 @@ void setup() {
 
     sdebug() << "Initialize FS" << std::endl;
 
-    SequentialBlockAllocator allocator{ storage.geometry() };
+    SequentialBlockAllocator allocator;
     FileSystem fs{ storage, allocator };
     if (!fs.mount(true)) {
         fail();
