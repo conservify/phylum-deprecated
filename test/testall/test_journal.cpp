@@ -18,11 +18,12 @@ protected:
 protected:
     void SetUp() override {
         ASSERT_TRUE(storage_.initialize(geometry_));
-        ASSERT_TRUE(fs_.initialize(true));
+        ASSERT_TRUE(storage_.open());
+        ASSERT_TRUE(fs_.mount(true));
     }
 
     void TearDown() override {
-        ASSERT_TRUE(fs_.close());
+        ASSERT_TRUE(fs_.unmount());
     }
 
 };

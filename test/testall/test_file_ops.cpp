@@ -21,11 +21,12 @@ protected:
 protected:
     void SetUp() override {
         ASSERT_TRUE(storage_.initialize(geometry_));
-        ASSERT_TRUE(fs_.initialize(true));
+        ASSERT_TRUE(storage_.open());
+        ASSERT_TRUE(fs_.mount(true));
     }
 
     void TearDown() override {
-        ASSERT_TRUE(fs_.close());
+        ASSERT_TRUE(fs_.unmount());
     }
 
 };
@@ -45,7 +46,7 @@ TEST_F(FileOpsSuite, MountingFindsPreviousTree) {
     auto file = fs_.open("test.bin");
     file.close();
 
-    ASSERT_TRUE(fs_.open());
+    ASSERT_TRUE(fs_.mount());
 
     ASSERT_TRUE(fs_.exists("test.bin"));
 }
@@ -355,7 +356,7 @@ TEST_F(FileOpsSuite, MountingFindsPreviousTreeBlocks) {
     DebuggingBlockAllocator second_allocator{ geometry_ };
     FileSystem second_fs{ storage_, second_allocator };
 
-    ASSERT_TRUE(second_fs.open());
+    ASSERT_TRUE(second_fs.mount());
 
     ASSERT_TRUE(second_fs.exists("test-1.bin"));
 

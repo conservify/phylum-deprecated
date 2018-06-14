@@ -105,11 +105,15 @@ void setup() {
         fail();
     }
 
+    if (!storage.open()) {
+        fail();
+    }
+
     sdebug() << "Initialize FS" << std::endl;
 
     SequentialBlockAllocator allocator{ storage.geometry() };
     FileSystem fs{ storage, allocator };
-    if (!fs.initialize(true)) {
+    if (!fs.mount(true)) {
         fail();
     }
 

@@ -90,19 +90,7 @@ void FileSystem::prepare(SuperBlock &sb) {
     sb.tree = tree_addr_.block;
 }
 
-bool FileSystem::initialize(bool wipe) {
-    if (!storage_->open()) {
-        return false;
-    }
-
-    #ifdef PHYLUM_ARDUINO_DEBUG
-    sdebug() << "sizeof(TreeContext<NodeType>): " << sizeof(TreeContext<NodeType>) << std::endl;
-    #endif
-
-    return open(wipe);
-}
-
-bool FileSystem::open(bool wipe) {
+bool FileSystem::mount(bool wipe) {
     if (wipe || !sbm_.locate()) {
         if (!format()) {
             return false;
@@ -180,7 +168,7 @@ bool FileSystem::format() {
     return touch();
 }
 
-bool FileSystem::close() {
+bool FileSystem::unmount() {
     return storage_->close();
 }
 

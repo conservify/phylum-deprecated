@@ -103,11 +103,10 @@ public:
     }
 
 public:
-    bool initialize(bool wipe = false);
-    bool open(bool wipe = false);
+    bool mount(bool wipe = false);
     bool exists(const char *name);
     OpenFile open(const char *name, bool readonly = false);
-    bool close();
+    bool unmount();
 
 private:
     bool touch();
