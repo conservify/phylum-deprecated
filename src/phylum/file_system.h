@@ -112,6 +112,7 @@ public:
     bool mount(bool wipe = false);
     bool exists(const char *name);
     OpenFile open(const char *name, bool readonly = false);
+    bool gc();
     bool unmount();
 
 private:

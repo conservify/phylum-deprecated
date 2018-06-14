@@ -8,8 +8,11 @@
 
 using namespace phylum;
 
-static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t total_to_write, int32_t &wrote);
-static void read_and_verify_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t &read);
+static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length,
+                          int32_t total_to_write, int32_t &wrote);
+
+static void read_and_verify_pattern(OpenFile &file, uint8_t *pattern,
+                                    int32_t pattern_length, int32_t &read);
 
 class FileOpsSuite : public ::testing::Test {
 protected:
@@ -372,15 +375,16 @@ TEST_F(FileOpsSuite, MountingFindsPreviousTreeBlocks) {
     BlockHelper helper{ storage_, second_allocator };
     // helper.dump(0, last_block);
 
-    ASSERT_EQ(helper.number_of_chains(0, last_block, BlockType::Leaf), 1);
-    ASSERT_EQ(helper.number_of_chains(0, last_block, BlockType::Index), 1);
-    ASSERT_EQ(helper.number_of_chains(0, last_block, BlockType::File), 4);
+    ASSERT_EQ(helper.number_of_chains(BlockType::Leaf, 0, last_block), 1);
+    ASSERT_EQ(helper.number_of_chains(BlockType::Index, 0, last_block), 1);
+    ASSERT_EQ(helper.number_of_chains(BlockType::File, 0, last_block), 4);
 
-    ASSERT_GT(helper.number_of_blocks(0, last_block, BlockType::Leaf), 1);
-    ASSERT_GT(helper.number_of_blocks(0, last_block, BlockType::Index), 1);
+    ASSERT_GT(helper.number_of_blocks(BlockType::Leaf, 0, last_block), 1);
+    ASSERT_GT(helper.number_of_blocks(BlockType::Index, 0, last_block), 1);
 }
 
-static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t total_to_write, int32_t &wrote) {
+static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length,
+                          int32_t total_to_write, int32_t &wrote) {
     auto written = 0;
 
     while (written < total_to_write) {
@@ -393,7 +397,8 @@ static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_leng
     }
 }
 
-static void read_and_verify_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t &read) {
+static void read_and_verify_pattern(OpenFile &file, uint8_t *pattern,
+                                    int32_t pattern_length, int32_t &read) {
     uint8_t buffer[8];
 
     ASSERT_EQ(sizeof(buffer) % pattern_length, (size_t) 0);

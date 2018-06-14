@@ -69,6 +69,12 @@ public:
         new_head = tree.create_if_necessary();
     }
 
+    bool recreate() {
+        new_head = tree.recreate();
+
+        return new_head.valid();
+    }
+
     bool flush() {
         if (new_head.valid()) {
             // Fill SuperBlock with useful details, save and then kill our
@@ -98,6 +104,28 @@ void FileSystem::prepare(SuperBlock &sb) {
     sb.index = tree_state.index;
     sb.leaf = tree_state.leaf;
     sb.tree = tree_addr_.block;
+}
+
+bool FileSystem::format() {
+    if (!sbm_.create()) {
+        return false;
+    }
+
+    if (!sbm_.locate()) {
+        return false;
+    }
+
+    auto &sb = sbm_.block();
+
+    if (!journal_.format(sb.journal)) {
+        return false;
+    }
+
+    if (!fpm_.format(sb.free)) {
+        return false;
+    }
+
+    return touch();
 }
 
 bool FileSystem::mount(bool wipe) {
@@ -148,26 +176,14 @@ bool FileSystem::touch() {
     return true;
 }
 
-bool FileSystem::format() {
-    if (!sbm_.create()) {
-        return false;
-    }
-
-    if (!sbm_.locate()) {
-        return false;
-    }
+bool FileSystem::gc() {
+    TreeContext<NodeType> tc{ *this };
+    tc.recreate();
 
     auto &sb = sbm_.block();
+    sb.last_gc = sbm_.timestamp();
 
-    if (!journal_.format(sb.journal)) {
-        return false;
-    }
-
-    if (!fpm_.format(sb.free)) {
-        return false;
-    }
-
-    return touch();
+    return true;
 }
 
 bool FileSystem::unmount() {

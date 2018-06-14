@@ -14,6 +14,7 @@
 #include <phylum/private.h>
 #include <phylum/backend.h>
 #include <phylum/block_alloc.h>
+#include <phylum/file_system.h>
 
 std::map<uint64_t, uint64_t> random_data();
 
@@ -42,9 +43,21 @@ public:
 
     void live(std::map<block_index_t, std::vector<BlockAddress>> &live);
 
-    int32_t number_of_chains(block_index_t first, block_index_t last, BlockType type);
+    int32_t number_of_chains(BlockType type, block_index_t first = 0, block_index_t last = BLOCK_INDEX_INVALID);
 
-    int32_t number_of_blocks(block_index_t first, block_index_t last, BlockType type);
+    int32_t number_of_blocks(BlockType type, block_index_t first = 0, block_index_t last = BLOCK_INDEX_INVALID);
+};
+
+class DataHelper {
+private:
+    FileSystem *fs_;
+
+public:
+    DataHelper(FileSystem &fs);
+
+public:
+    bool write_file(const char *name, size_t size);
+
 };
 
 }

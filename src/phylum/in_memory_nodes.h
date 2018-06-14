@@ -30,7 +30,7 @@ public:
     }
 
 public:
-    bool recreate() {
+    bool recreate() override {
         return true;
     }
 

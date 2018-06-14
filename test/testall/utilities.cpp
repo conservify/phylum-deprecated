@@ -55,9 +55,13 @@ void BlockHelper::live(std::map<block_index_t, std::vector<BlockAddress>> &live)
     }
 }
 
-int32_t BlockHelper::number_of_chains(block_index_t first, block_index_t last, BlockType type) {
+int32_t BlockHelper::number_of_chains(BlockType type, block_index_t first, block_index_t last) {
     auto &g = storage_->geometry();
     size_t c = 0;
+
+    if (last == BLOCK_INDEX_INVALID) {
+        last = allocator_->state().head;
+    }
 
     for (auto block = first; block < last; ++block) {
         BlockHead head;
@@ -79,9 +83,13 @@ int32_t BlockHelper::number_of_chains(block_index_t first, block_index_t last, B
     return c;
 }
 
-int32_t BlockHelper::number_of_blocks(block_index_t first, block_index_t last, BlockType type) {
+int32_t BlockHelper::number_of_blocks(BlockType type, block_index_t first, block_index_t last) {
     auto &g = storage_->geometry();
     size_t c = 0;
+
+    if (last == BLOCK_INDEX_INVALID) {
+        last = allocator_->state().head;
+    }
 
     for (auto block = first; block < last; ++block) {
         BlockHead head;
@@ -201,6 +209,31 @@ void BlockHelper::dump(block_index_t block) {
     }
 
     sdebug() << std::endl;
+}
+
+DataHelper::DataHelper(FileSystem &fs) : fs_(&fs) {
+}
+
+bool DataHelper::write_file(const char *name, size_t size) {
+    uint8_t pattern[] = { 'd', 'e', 't', 'u', 'g', 'o', 'l', 'p' };
+
+    auto file = fs_->open(name);
+    if (!file) {
+        return false;
+    }
+
+    auto written = 0;
+    while (written < size) {
+        if (file.write(pattern, sizeof(pattern)) != sizeof(pattern)) {
+            break;
+        }
+
+        written += sizeof(pattern);
+    }
+
+    file.close();
+
+    return true;
 }
 
 }
