@@ -40,7 +40,8 @@ struct BlockMagic {
     bool valid() const;
 };
 
-enum class BlockType {
+enum class BlockType : uint8_t {
+    Zero,
     Anchor,
     SuperBlockLink,
     SuperBlock,
@@ -279,9 +280,11 @@ inline std::ostream& operator<<(std::ostream& os, const BlockType &t) {
     case BlockType::Anchor: return os << "Anchor";
     case BlockType::SuperBlockLink: return os << "SuperBlockLink";
     case BlockType::SuperBlock: return os << "SuperBlock";
+    case BlockType::Journal: return os << "Journal";
     case BlockType::File: return os << "File";
     case BlockType::Leaf: return os << "Leaf";
     case BlockType::Index: return os << "Index";
+    case BlockType::Free: return os << "Free";
     case BlockType::Error: return os << "Error";
     default: {
         return os << "<unknown>";

@@ -55,6 +55,30 @@ void BlockHelper::live(std::map<block_index_t, std::vector<BlockAddress>> &live)
     }
 }
 
+int32_t BlockHelper::number_of_chains(block_index_t first, block_index_t last, BlockType type) {
+    auto &g = storage_->geometry();
+    size_t c = 0;
+
+    for (auto block = first; block < last; ++block) {
+        BlockHead head;
+        BlockTail tail;
+
+        auto head_addr = BlockAddress{ block, 0 };
+        auto tail_addr = BlockAddress::tail_data_of(block, g, sizeof(BlockTail));
+
+        storage_->read(head_addr, &head, sizeof(BlockHead));
+        storage_->read(tail_addr, &tail, sizeof(BlockTail));
+
+        if (head.type == type) {
+            if (head.linked_block == BLOCK_INDEX_INVALID) {
+                c++;
+            }
+        }
+    }
+
+    return c;
+}
+
 static inline BlockLayout<TreeBlockHead, TreeBlockTail> get_journal_layout(StorageBackend &storage,
               BlockAllocator &allocator, BlockAddress address) {
     return { storage, allocator, address, BlockType::Error };
@@ -112,7 +136,6 @@ void BlockHelper::dump(block_index_t block) {
 
             layout.add(sizeof(JournalEntry));
         }
-        sdebug() << std::endl;
         break;
     }
     case BlockType::Leaf: {
@@ -129,7 +152,6 @@ void BlockHelper::dump(block_index_t block) {
 
             layout.add(SerializerType::HeadNodeSize);
         }
-        sdebug() << std::endl;
         break;
     }
     case BlockType::Index: {
@@ -146,7 +168,6 @@ void BlockHelper::dump(block_index_t block) {
 
             layout.add(SerializerType::HeadNodeSize);
         }
-        sdebug() << std::endl;
         break;
     }
     case BlockType::File: {
@@ -156,6 +177,8 @@ void BlockHelper::dump(block_index_t block) {
         break;
     }
     }
+
+    sdebug() << std::endl;
 }
 
 }

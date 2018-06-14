@@ -41,6 +41,9 @@ public:
     void dump(block_index_t block);
 
     void live(std::map<block_index_t, std::vector<BlockAddress>> &live);
+
+    int32_t number_of_chains(block_index_t first, block_index_t last, BlockType type);
+
 };
 
 }
