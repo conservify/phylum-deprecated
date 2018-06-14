@@ -27,7 +27,7 @@ bool FreePileManager::format(block_index_t block) {
 bool FreePileManager::locate(block_index_t block) {
     auto layout = get_layout(*storage_, *allocator_, BlockAddress{ block, 0 });
 
-    if (!layout.find_end<FreePileEntry>(block)) {
+    if (!layout.find_append_location<FreePileEntry>(block)) {
         return false;
     }
 

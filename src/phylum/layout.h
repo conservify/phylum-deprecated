@@ -97,7 +97,7 @@ public:
     }
 
     template<typename TEntry>
-    bool find_end(block_index_t block) {
+    bool find_append_location(block_index_t block) {
         auto fn = [](StorageBackend &storage, BlockAddress &address) -> bool {
             TEntry entry;
 
@@ -112,31 +112,110 @@ public:
             return true;
         };
 
-        return find_end(block, sizeof(TEntry), fn);
+        auto end = walk_to_end(block, sizeof(TEntry), fn);
+        if (!end.available.valid()) {
+            return false;
+        }
+
+        address_ = end.available;
+
+        return true;
+    }
+
+    template<typename TEntry>
+    bool find_tail_entry(block_index_t block) {
+        auto fn = [](StorageBackend &storage, BlockAddress &address) -> bool {
+            TEntry entry;
+
+            if (!storage.read(address, &entry, sizeof(TEntry))) {
+                return false;
+            }
+
+            if (!entry.valid()) {
+                return false;
+            }
+
+            return true;
+        };
+
+        return find_tail_entry(block, sizeof(TEntry), fn);
     }
 
     template<typename TRead>
-    bool find_end(block_index_t block, size_t required, TRead fn) {
+    bool find_tail_entry(block_index_t block, size_t required, TRead fn) {
+        auto end = walk_to_end<TRead>(block, required, fn);
+        if (!end.entry.valid()) {
+            return false;
+        }
+
+        address_ = end.entry;
+
+        return true;
+    }
+
+    bool write_head(block_index_t block, block_index_t linked = BLOCK_INDEX_INVALID) {
+        auto address = BlockAddress{ block, 0 };
+
+        assert(type_ != BlockType::Error);
+
+        THead head(type_);
+        head.fill();
+        head.header.linked_block = linked;
+
+        if (!storage_.erase(block)) {
+            return false;
+        }
+
+        #ifdef PHYLUM_LAYOUT_DEBUG
+        sdebug() << "layout: WriteHead: " << address << " " << sizeof(THead) << std::endl;
+        #endif
+        if (!storage_.write(address, &head, sizeof(THead))) {
+            return false;
+        }
+
+        return true;
+    }
+
+private:
+    struct EndOfChain {
+        BlockAddress available;
+        BlockAddress entry;
+
+        operator bool() {
+            return entry.valid() || available.valid();
+        }
+    };
+
+    template<typename TRead>
+    EndOfChain walk_to_end(block_index_t block, size_t required, TRead fn) {
+        auto verify_head = true;
         auto location = BlockAddress{ block, 0 };
-        while (location.remaining_in_block(g_) > required) {
+        auto found = BlockAddress{ };
+        while (location.remaining_in_block(g_) /* - sizeof(TTail)*/ >= required) {
             if (location.beginning_of_block()) {
-                if (true/*veriy head*/) {
+                if (verify_head) {
                     THead head(BlockType::Error);
+                    #ifdef PHYLUM_LAYOUT_DEBUG
+                    sdebug() << "layout: ReadHead: " << location << " " << sizeof(THead) << std::endl;
+                    #endif
                     if (!storage_.read(location, &head, sizeof(THead))) {
                         return { };
                     }
 
+                    // When we start a new block we always write the head.
                     if (!head.valid()) {
-                        address_ = location;
-                        return true;
+                        return { };
                     }
                 }
 
                 auto tl = BlockAddress::tail_data_of(location.block, g_, sizeof(TTail));
                 TTail tail;
 
+                #ifdef PHYLUM_LAYOUT_DEBUG
+                sdebug() << "layout: ReadTail: " << tl << " " << sizeof(TTail) << std::endl;
+                #endif
                 if (!storage_.read(tl, &tail, sizeof(TTail))) {
-                    return false;
+                    return { };
                 }
 
                 if (is_valid_block(tail.linked_block)) {
@@ -150,42 +229,29 @@ public:
                 assert(location.find_room(g_, required));
 
                 if (!fn(storage_, location)) {
-                    address_ = location;
-                    return true;
+                    return { location, found };
+                }
+                else {
+                    found = location;
                 }
 
                 location.add(required);
             }
         }
-        return false;
+
+        return { };
     }
 
-    bool write_head(block_index_t block, block_index_t linked = BLOCK_INDEX_INVALID) {
-        assert(type_ != BlockType::Error);
-
-        THead head(type_);
-        head.fill();
-        head.header.linked_block = linked;
-
-        if (!storage_.erase(block)) {
-            return false;
-        }
-
-        if (!storage_.write({ block, 0 }, &head, sizeof(THead))) {
-            return false;
-        }
-
-        return true;
-    }
-
-private:
     bool write_tail(block_index_t block, block_index_t linked) {
-        auto tl = BlockAddress::tail_data_of(block, g_, sizeof(TTail));
+        auto address = BlockAddress::tail_data_of(block, g_, sizeof(TTail));
 
         TTail tail;
         tail.linked_block = linked;
 
-        if (!storage_.write(tl, &tail, sizeof(TTail))) {
+        #ifdef PHYLUM_LAYOUT_DEBUG
+        sdebug() << "layout: WriteTail: " << address << " " << sizeof(TTail) << std::endl;
+        #endif
+        if (!storage_.write(address, &tail, sizeof(TTail))) {
             return false;
         }
 

@@ -60,7 +60,6 @@ TEST_F(AddressingSuite, AddressIterating) {
     ASSERT_TRUE(iter.find_room(g, 128));
 }
 
-
 TEST_F(AddressingSuite, FindRoomAtEndOfBlock) {
     Geometry g{ 1024, 4, 4, 512 };
     BlockAddress iter{ 0, 0 };
@@ -70,4 +69,41 @@ TEST_F(AddressingSuite, FindRoomAtEndOfBlock) {
     iter.add(iter.remaining_in_block(g));
 
     ASSERT_FALSE(iter.find_room(g, 128));
+}
+
+TEST_F(AddressingSuite, FindEndAfterFillingBlockAndBeforeStartingNext) {
+    uint8_t pattern[128];
+    Geometry g{ 1024, 4, 4, 512 };
+    LinuxMemoryBackend storage;
+    DebuggingBlockAllocator allocator{ g };
+
+    ASSERT_TRUE(storage.initialize(g));
+    ASSERT_TRUE(storage.open());
+
+    auto first_block = allocator.allocate(BlockType::File);
+
+    auto layout = BlockLayout<TreeBlockHead, TreeBlockTail>{ storage, allocator, BlockAddress{ first_block, 0 }, BlockType::File };
+
+    for (auto i = 0; i < ((512 * (4 * 4 - 1)) / 128) - 1; i++) {
+        auto address = layout.find_available(sizeof(pattern));
+        auto remaining = address.remaining_in_block(g) - sizeof(pattern);
+
+        ASSERT_TRUE(address.valid());
+        ASSERT_TRUE(storage.write(address, pattern, sizeof(pattern)));
+
+        if (remaining <= sizeof(pattern)) {
+            break;
+        }
+    }
+
+    ASSERT_LE(layout.address().remaining_in_block(g), sizeof(pattern));
+
+    auto fn = [&](StorageBackend &storage, BlockAddress& address) -> bool {
+        auto remaining = address.remaining_in_block(g) - sizeof(TreeBlockTail);
+        return remaining >= sizeof(pattern);
+    };
+
+    auto end = layout.find_tail_entry(first_block, sizeof(pattern), fn);
+
+    ASSERT_TRUE(end);
 }

@@ -139,14 +139,11 @@ public:
             return false;
         };
 
-        if (!layout.find_end(block, required, fn)) {
+        if (!layout.find_tail_entry(block, required, fn)) {
             return { };
         }
 
         auto address = layout.address();
-
-        // TODO: Get rid of this.
-        address.add(-required);
 
         return address;
     }

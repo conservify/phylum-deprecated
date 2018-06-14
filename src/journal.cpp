@@ -28,7 +28,7 @@ bool Journal::format(block_index_t block) {
 bool Journal::locate(block_index_t block) {
     auto layout = get_layout(*storage_, *allocator_, BlockAddress{ block, 0 });
 
-    if (!layout.find_end<JournalEntry>(block)) {
+    if (!layout.find_append_location<JournalEntry>(block)) {
         return false;
     }
 
