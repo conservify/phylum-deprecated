@@ -13,7 +13,7 @@ class LinuxMemoryBackend : public StorageBackend {
 private:
     StorageLog log_;
     Geometry geometry_;
-    size_t size_;
+    uint64_t size_;
     uint8_t *ptr_;
 
 public:
