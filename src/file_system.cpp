@@ -31,14 +31,14 @@ struct FileBlockTail {
     BlockTail block;
 };
 
-// NOTE: This is typically ~1700 bytes. With the union between children and
-// values in NodeType this weighs in around 1300 bytes.
+// NOTE: This is typically ~1700 bytes with 8 entries. With the union between
+// children and values in NodeType this weighs in around 1300 bytes.
 template<typename NodeType>
 struct TreeContext {
 public:
     FileSystem &fs;
     NodeSerializer<NodeType> serializer;
-    MemoryConstrainedNodeCache<NodeType, 8> cache;
+    MemoryConstrainedNodeCache<NodeType, 12> cache;
     PersistedTree<NodeType> tree;
     BlockAddress new_head;
 
