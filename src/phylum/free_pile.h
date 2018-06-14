@@ -1,5 +1,5 @@
-#ifndef __PHYLUM_JOURNAL_H_INCLUDED
-#define __PHYLUM_JOURNAL_H_INCLUDED
+#ifndef __PHYLUM_FREE_PILE_H_INCLUDED
+#define __PHYLUM_FREE_PILE_H_INCLUDED
 
 #include "phylum/backend.h"
 #include "phylum/block_alloc.h"
@@ -7,16 +7,10 @@
 
 namespace phylum {
 
-enum class JournalEntryType : uint8_t {
-    Zeros = 0,
-    Allocation,
-    Ones = 0xff
-};
-
-struct JournalBlockHead {
+struct FreePileBlockHead {
     BlockHead header;
 
-    JournalBlockHead(BlockType type = BlockType::Journal) : header(type) {
+    FreePileBlockHead(BlockType type = BlockType::Free) : header(type) {
     }
 
     void fill() {
@@ -30,29 +24,27 @@ struct JournalBlockHead {
     }
 };
 
-struct JournalEntry {
-    JournalEntryType type;
-    block_index_t block;
-    BlockType block_type;
+struct FreePileEntry {
+    block_index_t available;
+    block_index_t taken;
 
     bool valid() {
-        return type != JournalEntryType::Zeros && type != JournalEntryType::Ones;
+        return is_valid_block(available) || is_valid_block(taken);
     }
 };
 
-struct JournalBlockTail {
+struct FreePileBlockTail {
     block_index_t linked_block{ BLOCK_INDEX_INVALID };
 };
 
-
-class Journal {
+class FreePileManager {
 private:
     StorageBackend *storage_;
     BlockAllocator *allocator_;
     BlockAddress location_;
 
 public:
-    Journal(StorageBackend &storage, BlockAllocator &allocator);
+    FreePileManager(StorageBackend &storage, BlockAllocator &allocator);
 
 public:
     BlockAddress location() {
@@ -62,7 +54,7 @@ public:
 public:
     bool format(block_index_t block);
     bool locate(block_index_t block);
-    bool append(JournalEntry entry);
+    bool append(FreePileEntry entry);
 
 };
 

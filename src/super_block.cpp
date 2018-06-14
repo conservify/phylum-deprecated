@@ -140,6 +140,7 @@ bool SuperBlockManager::create() {
     // first state we write is correct.
     sb_.tree = allocator_->allocate(BlockType::Leaf);
     sb_.journal = allocator_->allocate(BlockType::Journal);
+    sb_.free = allocator_->allocate(BlockType::Free);
     sb_.allocator = allocator_->state();
 
     assert(sb_.tree != BLOCK_INDEX_INVALID);

@@ -8,6 +8,7 @@
 #include "phylum/inodes.h"
 #include "phylum/backend_nodes.h"
 #include "phylum/journal.h"
+#include "phylum/free_pile.h"
 
 namespace phylum {
 
@@ -75,6 +76,7 @@ private:
     StorageBackendNodeStorage<NodeType> nodes_;
     BlockAddress tree_addr_;
     Journal journal_;
+    FreePileManager fpm_;
 
 public:
     FileSystem(StorageBackend &storage, BlockAllocator &allocator);
@@ -94,6 +96,10 @@ public:
 
     Journal &journal() {
         return journal_;
+    }
+
+    FreePileManager &fpm() {
+        return fpm_;
     }
 
 public:

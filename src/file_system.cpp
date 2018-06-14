@@ -1,5 +1,4 @@
 #include "phylum/file_system.h"
-#include "phylum/journal.h"
 #include "phylum/stack_node_cache.h"
 
 namespace phylum {
@@ -76,7 +75,8 @@ public:
 
 FileSystem::FileSystem(StorageBackend &storage, BlockAllocator &allocator) :
     storage_(&storage), allocator_(&allocator), sbm_{ storage, allocator },
-    nodes_{ storage, allocator }, journal_(storage, allocator) {
+    nodes_{ storage, allocator }, journal_(storage, allocator),
+    fpm_(storage, allocator) {
 }
 
 void FileSystem::prepare(SuperBlock &sb) {
@@ -102,6 +102,10 @@ bool FileSystem::open(bool wipe) {
         }
 
         if (!journal_.format(sbm_.block().journal)) {
+            return false;
+        }
+
+        if (!fpm_.format(sbm_.block().free)) {
             return false;
         }
     }

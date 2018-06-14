@@ -4,7 +4,8 @@
 namespace phylum {
 
 static inline BlockLayout<JournalBlockHead, JournalBlockTail> get_layout(StorageBackend &storage,
-              BlockAllocator &allocator, BlockAddress address) {
+                                                                         BlockAllocator &allocator,
+                                                                         BlockAddress address) {
     return { storage, allocator, address, BlockType::Journal };
 }
 

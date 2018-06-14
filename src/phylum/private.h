@@ -45,10 +45,10 @@ enum class BlockType {
     SuperBlockLink,
     SuperBlock,
     Journal,
-    Tree,
     File,
     Leaf,
     Index,
+    Free,
     Error,
     Unallocated
 };

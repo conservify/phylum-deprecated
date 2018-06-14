@@ -7,7 +7,7 @@
 
 using namespace phylum;
 
-class JournalSuite : public ::testing::Test {
+class FreePileSuite : public ::testing::Test {
 protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend storage_;
@@ -27,51 +27,51 @@ protected:
 
 };
 
-TEST_F(JournalSuite, CreatesEmptyJournal) {
-    ASSERT_TRUE(helper_.is_type(fs_.sb().journal, BlockType::Journal));
+TEST_F(FreePileSuite, CreatesEmptyFreePile) {
+    ASSERT_TRUE(helper_.is_type(fs_.sb().free, BlockType::Free));
 }
 
-TEST_F(JournalSuite, AppendingAFewEntries) {
-    auto before = fs_.journal().location();
+TEST_F(FreePileSuite, AppendingAFewEntries) {
+    auto before = fs_.fpm().location();
 
     for (auto i = 0; i < 10; ++i) {
-        ASSERT_TRUE(fs_.journal().append({ JournalEntryType::Allocation, (block_index_t)(i + 10) }));
+        ASSERT_TRUE(fs_.fpm().append({ (block_index_t)(i + 10) }));
     }
 
-    auto after = fs_.journal().location();
+    auto after = fs_.fpm().location();
     ASSERT_EQ(before.block, after.block);
     ASSERT_NE(before.position, after.position);
 }
 
-TEST_F(JournalSuite, AppendingEntriesIntoFollowingBlock) {
-    auto entry_size = (int32_t)sizeof(JournalEntry);
+TEST_F(FreePileSuite, AppendingEntriesIntoFollowingBlock) {
+    auto entry_size = (int32_t)sizeof(FreePileEntry);
     auto entries_per_block = (int32_t)geometry_.block_size() / entry_size;
-    auto before = fs_.journal().location();
+    auto before = fs_.fpm().location();
 
     for (auto i = 0; i < entries_per_block + 6; ++i) {
-        ASSERT_TRUE(fs_.journal().append({ JournalEntryType::Allocation, (block_index_t)(i + 10) }));
+        ASSERT_TRUE(fs_.fpm().append({ (block_index_t)(i + 10) }));
     }
 
-    auto after = fs_.journal().location();
+    auto after = fs_.fpm().location();
     ASSERT_NE(before.block, after.block);
     ASSERT_NE(before.position, after.position);
 }
 
-TEST_F(JournalSuite, FindsEndOfJournalFromFirstBlock) {
-    auto entry_size = (int32_t)sizeof(JournalEntry);
+TEST_F(FreePileSuite, FindsEndOfFreePileFromFirstBlock) {
+    auto entry_size = (int32_t)sizeof(FreePileEntry);
     auto entries_per_block = (int32_t)geometry_.block_size() / entry_size;
-    auto before = fs_.journal().location();
+    auto before = fs_.fpm().location();
 
     for (auto i = 0; i < 2 * entries_per_block + 6; ++i) {
-        ASSERT_TRUE(fs_.journal().append({ JournalEntryType::Allocation, (block_index_t)(i + 10) }));
+        ASSERT_TRUE(fs_.fpm().append({ (block_index_t)(i + 10) }));
     }
 
-    auto after = fs_.journal().location();
+    auto after = fs_.fpm().location();
     ASSERT_NE(before.block, after.block);
     ASSERT_NE(before.position, after.position);
 
-    Journal journal{ storage_, allocator_ };
-    ASSERT_TRUE(journal.locate(before.block));
+    FreePileManager fpm{ storage_, allocator_ };
+    ASSERT_TRUE(fpm.locate(before.block));
 
-    ASSERT_EQ(journal.location(), after);
+    ASSERT_EQ(fpm.location(), after);
 }
