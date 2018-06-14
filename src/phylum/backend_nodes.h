@@ -37,6 +37,11 @@ static inline BlockLayout<TreeBlockHead, TreeBlockTail> get_layout(StorageBacken
     return { storage, allocator, address, type };
 }
 
+struct TreeStorageState {
+    BlockAddress index;
+    BlockAddress leaf;
+};
+
 template<typename NODE>
 class StorageBackendNodeStorage : public NodeStorage<NODE, BlockAddress> {
 public:
@@ -55,6 +60,15 @@ public:
     }
 
 public:
+    TreeStorageState state() {
+        return TreeStorageState{ index_, leaf_ };
+    }
+
+    void state(TreeStorageState state) {
+        index_ = state.index;
+        leaf_ = state.leaf;
+    }
+
     bool recreate() {
         leaf_ = BlockAddress{ };
         index_ = BlockAddress{ };

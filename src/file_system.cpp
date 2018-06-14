@@ -80,6 +80,13 @@ FileSystem::FileSystem(StorageBackend &storage, BlockAllocator &allocator) :
 }
 
 void FileSystem::prepare(SuperBlock &sb) {
+    // NOTE: This is done again in SuperBlockManager::save
+    auto allocator_state = allocator_->state();
+    sb.allocator = allocator_state;
+
+    auto tree_state = nodes_.state();
+    sb.index = tree_state.index;
+    sb.leaf = tree_state.leaf;
     sb.tree = tree_addr_.block;
 }
 
@@ -101,20 +108,26 @@ bool FileSystem::open(bool wipe) {
             return false;
         }
 
-        if (!journal_.format(sbm_.block().journal)) {
+        auto &sb = sbm_.block();
+
+        if (!journal_.format(sb.journal)) {
             return false;
         }
 
-        if (!fpm_.format(sbm_.block().free)) {
+        if (!fpm_.format(sb.free)) {
             return false;
         }
     }
 
-    if (!journal_.locate(sbm_.block().journal)) {
+    auto &sb = sbm_.block();
+
+    if (!journal_.locate(sb.journal)) {
         return false;
     }
 
-    tree_addr_ = nodes_.find_head(sbm_.tree());
+    nodes_.state({ sb.index, sb.leaf });
+
+    tree_addr_ = nodes_.find_head(sb.tree);
 
     return tree_addr_.valid();
 }

@@ -142,13 +142,12 @@ bool SuperBlockManager::create() {
 
     // We pull allocator state after doing the above allocations to ensure the
     // first state we write is correct.
-    sb_.tree = allocator_->allocate(BlockType::Leaf);
     sb_.journal = allocator_->allocate(BlockType::Journal);
     sb_.free = allocator_->allocate(BlockType::Free);
     sb_.allocator = allocator_->state();
 
-    assert(sb_.tree != BLOCK_INDEX_INVALID);
     assert(sb_.journal != BLOCK_INDEX_INVALID);
+    assert(sb_.free != BLOCK_INDEX_INVALID);
 
     if (!write({ super_block_block, SuperBlockStartSector }, sb_)) {
         return false;

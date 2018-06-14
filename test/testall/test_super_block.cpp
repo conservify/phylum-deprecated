@@ -47,11 +47,11 @@ TEST_F(SuperBlockSuite, SavingAFewRevisions) {
         ASSERT_TRUE(sbm_.save());
     }
 
-    ASSERT_EQ(sbm_.location().sector, 6);
+    ASSERT_EQ(sbm_.location().sector, 5);
 
     ASSERT_TRUE(sbm_.locate());
 
-    ASSERT_EQ(sbm_.location().sector, 6);
+    ASSERT_EQ(sbm_.location().sector, 5);
 }
 
 TEST_F(SuperBlockSuite, BlockRollover) {
@@ -66,7 +66,7 @@ TEST_F(SuperBlockSuite, BlockRollover) {
     ASSERT_TRUE(sbm_.locate());
 
     ASSERT_NE(sbm_.location().block, old.block);
-    ASSERT_EQ(sbm_.location().sector, 4);
+    ASSERT_EQ(sbm_.location().sector, 2);
 }
 
 TEST_F(SuperBlockSuite, AnchorAreaRollover) {
@@ -96,7 +96,7 @@ TEST_F(SuperBlockSuite, AnchorAreaRolloverTwice) {
     ASSERT_TRUE(sbm_.locate());
 
     ASSERT_NE(sbm_.location().block, old.block);
-    ASSERT_EQ(sbm_.location().sector, 13);
+    ASSERT_EQ(sbm_.location().sector, 14);
 }
 
 class SuperBlockSequentialAllocatorSuite : public ::testing::Test {
@@ -121,17 +121,17 @@ protected:
 TEST_F(SuperBlockSequentialAllocatorSuite, SaveAndLoadAllocatorState) {
     ASSERT_TRUE(sbm_.create());
 
-    ASSERT_EQ(allocator_.state().head, (block_index_t)9);
+    ASSERT_EQ(allocator_.state().head, (block_index_t)8);
 
     for (auto i = 0; i < 18; ++i) {
         ASSERT_TRUE(sbm_.save());
     }
 
-    ASSERT_EQ(allocator_.state().head, (block_index_t)10);
+    ASSERT_EQ(allocator_.state().head, (block_index_t)9);
 
     allocator_.state({ BLOCK_INDEX_INVALID });
 
     ASSERT_TRUE(sbm_.locate());
 
-    ASSERT_EQ(allocator_.state().head, (block_index_t)10);
+    ASSERT_EQ(allocator_.state().head, (block_index_t)9);
 }

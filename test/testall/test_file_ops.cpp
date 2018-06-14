@@ -336,6 +336,38 @@ TEST_F(FileOpsSuite, Write128BlocksAndSeekToMiddle) {
     reading.close();
 }
 
+TEST_F(FileOpsSuite, MountingFindsPreviousTreeBlocks) {
+    uint8_t pattern[] = { 'a', 's', 'd', 'f' };
+
+    auto total_writing = (int32_t)(geometry_.block_size() * 128);
+
+    auto wrote = 0;
+
+    auto writing1 = fs_.open("test-1.bin");
+    write_pattern(writing1, pattern, sizeof(pattern), total_writing, wrote);
+    writing1.close();
+
+    DebuggingBlockAllocator second_allocator{ geometry_ };
+    FileSystem second_fs{ storage_, second_allocator };
+
+    ASSERT_TRUE(second_fs.open());
+
+    ASSERT_TRUE(second_fs.exists("test-1.bin"));
+
+    auto writing2 = second_fs.open("test-2.bin");
+    write_pattern(writing2, pattern, sizeof(pattern), total_writing, wrote);
+    writing2.close();
+
+    ASSERT_TRUE(second_fs.exists("test-2.bin"));
+
+    auto last_block = std::max(allocator_.state().head, second_allocator.state().head);
+    BlockHelper helper{ storage_, second_allocator };
+    // helper.dump(0, last_block);
+
+    ASSERT_EQ(helper.number_of_chains(0, last_block, BlockType::Leaf), 1);
+    ASSERT_EQ(helper.number_of_chains(0, last_block, BlockType::Index), 1);
+}
+
 static void write_pattern(OpenFile &file, uint8_t *pattern, int32_t pattern_length, int32_t total_to_write, int32_t &wrote) {
     auto written = 0;
 

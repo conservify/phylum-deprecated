@@ -46,10 +46,6 @@ public:
         return location_;
     }
 
-    block_index_t tree() {
-        return sb_.tree;
-    }
-
     SuperBlock &block() {
         return sb_;
     }
