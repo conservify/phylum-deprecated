@@ -4,6 +4,7 @@
 
 namespace phylum {
 
+constexpr uint16_t SuperBlockStartSector = 0;
 constexpr block_index_t SuperBlockManager::AnchorBlocks[];
 
 SuperBlockManager::SuperBlockManager(StorageBackend &storage, BlockAllocator &allocator) :
@@ -71,7 +72,7 @@ bool SuperBlockManager::locate() {
 }
 
 bool SuperBlockManager::find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where) {
-    for (auto s = SECTOR_HEAD; s < storage_->geometry().sectors_per_block(); ++s) {
+    for (auto s = SuperBlockStartSector; s < storage_->geometry().sectors_per_block(); ++s) {
         SuperBlockLink link;
 
         if (!read({ block, s }, link)) {
@@ -112,9 +113,10 @@ bool SuperBlockManager::create() {
         if (i == 0) {
             super_block_block  = block;
             sb_.link = link;
+            sb_.link.header.type = BlockType::SuperBlock;
         }
         else {
-            if (!write({ block, SECTOR_HEAD }, link)) {
+            if (!write({ block, SuperBlockStartSector }, link)) {
                 return false;
             }
         }
@@ -125,11 +127,13 @@ bool SuperBlockManager::create() {
 
     // Overwrite both so an older one doesn't confuse us.
     for (auto anchor : AnchorBlocks) {
+        link.header.type = BlockType::Anchor;
+
         if (!storage_->erase(anchor)) {
             return false;
         }
 
-        if (!write({ anchor, SECTOR_HEAD }, link)) {
+        if (!write({ anchor, SuperBlockStartSector }, link)) {
             return false;
         }
 
@@ -146,7 +150,7 @@ bool SuperBlockManager::create() {
     assert(sb_.tree != BLOCK_INDEX_INVALID);
     assert(sb_.journal != BLOCK_INDEX_INVALID);
 
-    if (!write({ super_block_block, SECTOR_HEAD }, sb_)) {
+    if (!write({ super_block_block, SuperBlockStartSector }, sb_)) {
         return false;
     }
 
@@ -168,7 +172,7 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
         if (AnchorBlocks[i] == addr.block) {
             relocated = {
                 AnchorBlocks[(i + 1) % number_of_anchors],
-                SECTOR_HEAD
+                SuperBlockStartSector
             };
 
             if (!storage_->erase(relocated.block)) {
@@ -180,7 +184,7 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
     }
 
     auto block = allocator_->allocate(pending.type);
-    relocated = { block, SECTOR_HEAD };
+    relocated = { block, SuperBlockStartSector };
     if (!storage_->erase(block)) {
         return false;
     }

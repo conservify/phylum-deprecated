@@ -17,13 +17,15 @@ struct SuperBlockLink {
 };
 
 struct SuperBlock {
-    SuperBlockLink link;
+    SuperBlockLink link{ BlockType::SuperBlock };
     AllocatorState allocator;
     block_index_t tree{ 0 };
     block_index_t journal{ BLOCK_INDEX_INVALID };
     block_index_t free{ BLOCK_INDEX_INVALID };
+    block_index_t leaf{ BLOCK_INDEX_INVALID };
+    block_index_t index{ BLOCK_INDEX_INVALID };
 
-    SuperBlock() : link(BlockType::SuperBlock) {
+    SuperBlock() {
     }
 };
 

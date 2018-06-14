@@ -39,7 +39,7 @@ TEST_F(FileOpsSuite, CreateFile) {
     ASSERT_TRUE(fs_.exists("test.bin"));
 }
 
-TEST_F(FileOpsSuite, InitializeFindsPreviousTree) {
+TEST_F(FileOpsSuite, MountingFindsPreviousTree) {
     ASSERT_FALSE(fs_.exists("test.bin"));
 
     auto file = fs_.open("test.bin");
