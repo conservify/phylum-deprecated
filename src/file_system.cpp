@@ -226,7 +226,7 @@ bool OpenFile::open_or_create() {
                 return false;
             }
 
-            tc.add(INodeKey::file_beginning(id_), new_block);
+            tc.add(INodeKey::file_beginning(id_), new_block.value());
 
             head_ = new_block;
         }
@@ -435,7 +435,7 @@ int32_t OpenFile::flush() {
         if (blocks_since_save_ == PositionSaveFrequency) {
             TreeContext<FileSystem::NodeType> tc{ *fs_ };
             auto key = INodeKey::file_position(id_, length_);
-            tc.add(key, head_);
+            tc.add(key, head_.value());
             blocks_since_save_ = 0;
         }
 

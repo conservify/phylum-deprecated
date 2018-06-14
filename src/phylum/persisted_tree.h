@@ -392,11 +392,6 @@ public:
         accept(ref_, visitor, true);
     }
 
-    struct RecreateOutcome {
-        ADDRESS previous[2];
-        ADDRESS head;
-    };
-
     ADDRESS recreate(NodeRefType ref, bool head = false) {
         auto nref = nodes_->load(ref, head);
         auto node = nodes_->resolve(nref);

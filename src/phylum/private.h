@@ -235,8 +235,16 @@ public:
         return BlockAddress{ block, position };
     }
 
-    operator uint64_t() const {
+    uint64_t value() {
         return (((uint64_t)block) << 32) | position;
+    }
+
+    bool operator==(const BlockAddress &other) const {
+        return block == other.block && position == other.position;
+    }
+
+    bool operator!=(const BlockAddress &other) const {
+        return !(*this == other);
     }
 
 };
