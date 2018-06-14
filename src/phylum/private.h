@@ -73,17 +73,8 @@ struct BlockHead {
     }
 };
 
-struct SectorTail {
-    uint16_t bytes;
-};
-
 struct BlockTail {
-    SectorTail sector;
-    uint32_t bytes_in_block{ 0 };
     block_index_t linked_block{ BLOCK_INDEX_INVALID };
-
-    BlockTail() {
-    }
 };
 
 struct SectorAddress {
@@ -294,10 +285,6 @@ inline std::ostream& operator<<(std::ostream& os, const BlockType &t) {
 
 inline std::ostream& operator<<(std::ostream& os, const BlockHead &h) {
     return os << "BAS<type=" << h.type << " age=" << h.age << " ts=" << h.timestamp << " link=" << h.linked_block << ">";
-}
-
-inline std::ostream& operator<<(std::ostream& os, const BlockTail &h) {
-    return os << "BlockTail<>";
 }
 
 }

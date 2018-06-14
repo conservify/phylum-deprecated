@@ -8,28 +8,28 @@
 namespace phylum {
 
 struct TreeBlockHead {
-    BlockHead header;
+    BlockHead block;
 
-    TreeBlockHead(BlockType type) : header(type) {
+    TreeBlockHead(BlockType type) : block(type) {
     }
 
     void fill() {
-        header.magic.fill();
-        header.age = 0;
-        header.timestamp = 0;
+        block.magic.fill();
+        block.age = 0;
+        block.timestamp = 0;
     }
 
     bool valid() const {
-        return header.valid();
+        return block.valid();
     }
 };
 
 struct TreeBlockTail {
-    block_index_t linked_block{ BLOCK_INDEX_INVALID };
+    BlockTail block;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const TreeBlockHead &h) {
-    return os << "TreeBlock<" << h.header << ">";
+    return os << "TreeBlock<" << h.block << ">";
 }
 
 static inline BlockLayout<TreeBlockHead, TreeBlockTail> get_layout(StorageBackend &storage,

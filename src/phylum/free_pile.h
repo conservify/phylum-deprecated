@@ -8,19 +8,19 @@
 namespace phylum {
 
 struct FreePileBlockHead {
-    BlockHead header;
+    BlockHead block;
 
-    FreePileBlockHead(BlockType type = BlockType::Free) : header(type) {
+    FreePileBlockHead(BlockType type = BlockType::Free) : block(type) {
     }
 
     void fill() {
-        header.magic.fill();
-        header.age = 0;
-        header.timestamp = 0;
+        block.magic.fill();
+        block.age = 0;
+        block.timestamp = 0;
     }
 
     bool valid() const {
-        return header.valid();
+        return block.valid();
     }
 };
 
@@ -34,7 +34,7 @@ struct FreePileEntry {
 };
 
 struct FreePileBlockTail {
-    block_index_t linked_block{ BLOCK_INDEX_INVALID };
+    BlockTail block;
 };
 
 class FreePileManager {

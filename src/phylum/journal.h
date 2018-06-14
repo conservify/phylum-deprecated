@@ -14,19 +14,19 @@ enum class JournalEntryType : uint8_t {
 };
 
 struct JournalBlockHead {
-    BlockHead header;
+    BlockHead block;
 
-    JournalBlockHead(BlockType type = BlockType::Journal) : header(type) {
+    JournalBlockHead(BlockType type = BlockType::Journal) : block(type) {
     }
 
     void fill() {
-        header.magic.fill();
-        header.age = 0;
-        header.timestamp = 0;
+        block.magic.fill();
+        block.age = 0;
+        block.timestamp = 0;
     }
 
     bool valid() const {
-        return header.valid();
+        return block.valid();
     }
 };
 
@@ -41,7 +41,7 @@ struct JournalEntry {
 };
 
 struct JournalBlockTail {
-    block_index_t linked_block{ BLOCK_INDEX_INVALID };
+    BlockTail block;
 };
 
 

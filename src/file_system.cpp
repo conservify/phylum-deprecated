@@ -3,22 +3,32 @@
 
 namespace phylum {
 
-struct FileBlockHeader {
-    BlockHead header;
+struct FileBlockHead {
+    BlockHead block;
     file_id_t file_id{ FILE_ID_INVALID };
 
-    FileBlockHeader() : header(BlockType::File) {
+    FileBlockHead() : block(BlockType::File) {
     }
 
     void fill() {
-        header.magic.fill();
-        header.age = 0;
-        header.timestamp = 0;
+        block.magic.fill();
+        block.age = 0;
+        block.timestamp = 0;
     }
 
     bool valid() const {
-        return header.valid();
+        return block.valid();
     }
+};
+
+struct FileSectorTail {
+    uint16_t bytes;
+};
+
+struct FileBlockTail {
+    FileSectorTail sector;
+    uint32_t bytes_in_block{ 0 };
+    BlockTail block;
 };
 
 // NOTE: This is typically ~1700 bytes. With the union between children and
@@ -95,16 +105,6 @@ bool FileSystem::mount(bool wipe) {
         if (!format()) {
             return false;
         }
-
-        auto &sb = sbm_.block();
-
-        if (!journal_.format(sb.journal)) {
-            return false;
-        }
-
-        if (!fpm_.format(sb.free)) {
-            return false;
-        }
     }
 
     auto &sb = sbm_.block();
@@ -113,11 +113,18 @@ bool FileSystem::mount(bool wipe) {
         return false;
     }
 
-    nodes_.state({ sb.index, sb.leaf });
+    if (!fpm_.locate(sb.free)) {
+        return false;
+    }
 
     tree_addr_ = nodes_.find_head(sb.tree);
+    if (!tree_addr_.valid()) {
+        return false;
+    }
 
-    return tree_addr_.valid();
+    nodes_.state({ sb.index, sb.leaf });
+
+    return true;
 }
 
 bool FileSystem::exists(const char *name) {
@@ -165,6 +172,16 @@ bool FileSystem::format() {
         return false;
     }
 
+    auto &sb = sbm_.block();
+
+    if (!journal_.format(sb.journal)) {
+        return false;
+    }
+
+    if (!fpm_.format(sb.free)) {
+        return false;
+    }
+
     return touch();
 }
 
@@ -173,17 +190,17 @@ bool FileSystem::unmount() {
 }
 
 BlockAddress FileSystem::initialize_block(block_index_t block, file_id_t file_id, block_index_t previous) {
-    FileBlockHeader header;
+    FileBlockHead header;
 
     header.fill();
     header.file_id = file_id;
-    header.header.linked_block = previous;
+    header.block.linked_block = previous;
 
     if (!storage_->erase(block)) {
         return { };
     }
 
-    if (!storage_->write({ block, 0 }, &header, sizeof(FileBlockHeader))) {
+    if (!storage_->write({ block, 0 }, &header, sizeof(FileBlockHead))) {
         return { };
     }
 
@@ -234,10 +251,10 @@ OpenFile::SeekStatistics OpenFile::seek(BlockAddress starting, uint32_t max) {
         // Check to see if our desired location is in this block, otherwise we
         // can just skip this one entirely.
         if (addr.tail_sector(g)) {
-            BlockTail tail;
-            memcpy(&tail, tail_info<BlockTail>(buffer_), sizeof(BlockTail));
-            if (is_valid_block(tail.linked_block) && max > tail.bytes_in_block) {
-                addr = BlockAddress::tail_sector_of(tail.linked_block, g);
+            FileBlockTail tail;
+            memcpy(&tail, tail_info<FileBlockTail>(buffer_), sizeof(FileBlockTail));
+            if (is_valid_block(tail.block.linked_block) && max > tail.bytes_in_block) {
+                addr = BlockAddress::tail_sector_of(tail.block.linked_block, g);
                 bytes += tail.bytes_in_block;
                 max -= tail.bytes_in_block;
                 blocks++;
@@ -247,8 +264,8 @@ OpenFile::SeekStatistics OpenFile::seek(BlockAddress starting, uint32_t max) {
             }
         }
         else {
-            SectorTail tail;
-            memcpy(&tail, tail_info<SectorTail>(buffer_), sizeof(SectorTail));
+            FileSectorTail tail;
+            memcpy(&tail, tail_info<FileSectorTail>(buffer_), sizeof(FileSectorTail));
 
             if (tail.bytes == 0 || tail.bytes == SECTOR_INDEX_INVALID) {
                 break;
@@ -317,7 +334,7 @@ int32_t OpenFile::write(const void *ptr, size_t size) {
     assert(!readonly_);
 
     while (to_write > 0) {
-        auto overhead = tail_sector() ? sizeof(BlockTail) : sizeof(SectorTail);
+        auto overhead = tail_sector() ? sizeof(FileBlockTail) : sizeof(FileSectorTail);
         auto remaining = sizeof(buffer_) - overhead - buffpos_;
         auto copying = to_write > remaining ? remaining : to_write;
 
@@ -356,16 +373,16 @@ int32_t OpenFile::flush() {
     auto addr = head_;
     if (writing_tail_sector) {
         linked = fs_->allocator_->allocate(BlockType::File);
-        BlockTail tail;
+        FileBlockTail tail;
         tail.sector.bytes = buffpos_;
         tail.bytes_in_block = bytes_in_block_;
-        tail.linked_block = linked;
-        memcpy(tail_info<BlockTail>(buffer_), &tail, sizeof(BlockTail));
+        tail.block.linked_block = linked;
+        memcpy(tail_info<FileBlockTail>(buffer_), &tail, sizeof(FileBlockTail));
     }
     else {
-        SectorTail tail;
+        FileSectorTail tail;
         tail.bytes = buffpos_;
-        memcpy(tail_info<SectorTail>(buffer_), &tail, sizeof(SectorTail));
+        memcpy(tail_info<FileSectorTail>(buffer_), &tail, sizeof(FileSectorTail));
         head_.add(SectorSize);
     }
 
@@ -412,19 +429,19 @@ int32_t OpenFile::read(void *ptr, size_t size) {
         // See how much data we have in this sector and/or if we have a block we
         // should be moving onto after this sector is read.
         if (tail_sector()) {
-            BlockTail tail;
-            memcpy(&tail, tail_info<BlockTail>(buffer_), sizeof(BlockTail));
+            FileBlockTail tail;
+            memcpy(&tail, tail_info<FileBlockTail>(buffer_), sizeof(FileBlockTail));
             available_ = tail.sector.bytes;
-            if (tail.linked_block != BLOCK_INDEX_INVALID) {
-                head_ = BlockAddress{ tail.linked_block, SectorSize };
+            if (tail.block.linked_block != BLOCK_INDEX_INVALID) {
+                head_ = BlockAddress{ tail.block.linked_block, SectorSize };
             }
             else {
                 assert(false);
             }
         }
         else {
-            SectorTail tail;
-            memcpy(&tail, tail_info<SectorTail>(buffer_), sizeof(SectorTail));
+            FileSectorTail tail;
+            memcpy(&tail, tail_info<FileSectorTail>(buffer_), sizeof(FileSectorTail));
             available_ = tail.bytes;
             head_.add(SectorSize);
         }

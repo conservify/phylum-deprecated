@@ -160,7 +160,7 @@ public:
 
         THead head(type_);
         head.fill();
-        head.header.linked_block = linked;
+        head.block.linked_block = linked;
 
         if (!storage_.erase(block)) {
             return false;
@@ -218,8 +218,8 @@ private:
                     return { };
                 }
 
-                if (is_valid_block(tail.linked_block)) {
-                    location = { tail.linked_block, 0 };
+                if (is_valid_block(tail.block.linked_block)) {
+                    location = { tail.block.linked_block, 0 };
                 }
                 else {
                     location.add(SectorSize);
@@ -246,7 +246,7 @@ private:
         auto address = BlockAddress::tail_data_of(block, g_, sizeof(TTail));
 
         TTail tail;
-        tail.linked_block = linked;
+        tail.block.linked_block = linked;
 
         #ifdef PHYLUM_LAYOUT_DEBUG
         sdebug() << "layout: WriteTail: " << address << " " << sizeof(TTail) << std::endl;
