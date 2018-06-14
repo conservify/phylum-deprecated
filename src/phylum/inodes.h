@@ -37,6 +37,10 @@ public:
     }
 
 public:
+    static uint32_t file_id(const char *name) {
+        return crc32_checksum((uint8_t *)name, strlen(name));
+    }
+
     static INodeKey file_beginning(uint32_t id) {
         return make(id, 0);
     }
@@ -46,8 +50,11 @@ public:
     }
 
     static INodeKey file_beginning(const char *name) {
-        auto id = crc32_checksum((uint8_t *)name, strlen(name));
-        return file_position(id, 0);
+        return file_position(file_id(name), 0);
+    }
+
+    static INodeKey file_maximum(const char *name) {
+        return make(file_id(name), ((uint32_t)-1));
     }
 
     static INodeKey file_maximum(uint32_t id) {

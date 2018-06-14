@@ -20,8 +20,9 @@ enum class Seek {
 };
 
 class OpenFile {
-    static constexpr uint32_t INVALID_LENGTH = UINT32_MAX;
-    static constexpr uint8_t POSITION_SAVE_FREQUENCY = 8;
+    static constexpr uint32_t InvalidLengthOrPosition = UINT32_MAX;
+    static constexpr uint8_t PositionSaveFrequency = 8;
+    static constexpr int32_t SeekFailed = INT32_MAX;
 
 private:
     FileSystem *fs_;
@@ -41,9 +42,9 @@ private:
 public:
     OpenFile(FileSystem &fs, file_id_t id, BlockAddress head, bool readonly);
 
-    friend class FileSystem;
-
 public:
+    bool open();
+    bool open_or_create();
     uint32_t size();
     uint32_t tell();
     int32_t seek(Seek seek, uint32_t position = 0);
@@ -51,6 +52,10 @@ public:
     int32_t write(const void *ptr, size_t size);
     int32_t read(void *ptr, size_t size);
     void close();
+
+    operator bool() {
+        return open();
+    }
 
 private:
     int32_t flush();
@@ -63,6 +68,7 @@ private:
     };
 
     SeekStatistics seek(BlockAddress starting, uint32_t max);
+    BlockAddress initialize_block(block_index_t block, block_index_t previous);
 
 };
 
@@ -111,7 +117,6 @@ public:
 private:
     bool touch();
     bool format();
-    BlockAddress initialize_block(block_index_t block, file_id_t file_id, block_index_t previous);
     void prepare(SuperBlock &sb);
 
 };

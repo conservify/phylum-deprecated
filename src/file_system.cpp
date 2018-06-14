@@ -136,24 +136,9 @@ bool FileSystem::exists(const char *name) {
 }
 
 OpenFile FileSystem::open(const char *name, bool readonly) {
-    TreeContext<NodeType> tc{ *this };
-
-    auto key = INodeKey::file_beginning(name);
-    auto id = key.upper();
-
-    auto existing = tc.find(key);
-    if (existing == 0) {
-        auto head = initialize_block(allocator_->allocate(BlockType::File), id, BLOCK_INDEX_INVALID);
-        tc.add(key, head);
-        return { *this, id, head, readonly };
-    }
-
-    // TODO: Find a better starting address for the seek.
-    auto head = BlockAddress::from(existing);
-    auto file = OpenFile { *this, id, head, readonly };
-    if (!readonly) {
-        file.seek(Seek::End);
-    }
+    auto id = INodeKey::file_id(name);
+    auto file = OpenFile{ *this, id, BlockAddress{}, readonly };
+    file.open_or_create();
     return file;
 }
 
@@ -189,24 +174,6 @@ bool FileSystem::unmount() {
     return storage_->close();
 }
 
-BlockAddress FileSystem::initialize_block(block_index_t block, file_id_t file_id, block_index_t previous) {
-    FileBlockHead header;
-
-    header.fill();
-    header.file_id = file_id;
-    header.block.linked_block = previous;
-
-    if (!storage_->erase(block)) {
-        return { };
-    }
-
-    if (!storage_->write({ block, 0 }, &header, sizeof(FileBlockHead))) {
-        return { };
-    }
-
-    return BlockAddress { block, SectorSize };
-}
-
 template<typename T, size_t N>
 static T *tail_info(uint8_t(&buffer)[N]) {
     auto tail_offset = sizeof(buffer) - sizeof(T);
@@ -214,8 +181,46 @@ static T *tail_info(uint8_t(&buffer)[N]) {
 }
 
 OpenFile::OpenFile(FileSystem &fs, file_id_t id, BlockAddress head, bool readonly) :
-    fs_(&fs), id_(id), head_(head), readonly_(readonly), length_(readonly ? INVALID_LENGTH : 0) {
+    fs_(&fs), id_(id), head_(head), readonly_(readonly), length_(readonly ? InvalidLengthOrPosition : 0) {
     assert(sizeof(buffer_) == SectorSize);
+}
+
+bool OpenFile::open_or_create() {
+    if (open()) {
+        return true;
+    }
+
+    if (readonly_) {
+        TreeContext<FileSystem::NodeType> tc{ *fs_ };
+
+        auto beginning = tc.find(INodeKey::file_beginning(id_));
+        if (beginning == 0) {
+            return false;
+        }
+
+        head_ = BlockAddress::from(beginning);
+    }
+    else {
+        auto seeked = seek(Seek::End, 0);
+        if (seeked == SeekFailed) {
+            TreeContext<FileSystem::NodeType> tc{ *fs_ };
+
+            auto new_block = initialize_block(fs_->allocator_->allocate(BlockType::File), BLOCK_INDEX_INVALID);
+            if (!new_block.valid()) {
+                return false;
+            }
+
+            tc.add(INodeKey::file_beginning(id_), new_block);
+
+            head_ = new_block;
+        }
+    }
+
+    return true;
+}
+
+bool OpenFile::open() {
+    return head_.valid();
 }
 
 bool OpenFile::tail_sector() {
@@ -223,7 +228,7 @@ bool OpenFile::tail_sector() {
 }
 
 uint32_t OpenFile::size() {
-    if (length_ == INVALID_LENGTH) {
+    if (length_ == InvalidLengthOrPosition) {
         auto saved = position_;
         seek(Seek::End);
         seek(saved);
@@ -305,11 +310,20 @@ int32_t OpenFile::seek(Seek where, uint32_t position) {
     uint64_t value;
     uint64_t saved;
     auto relative = where == Seek::End ? UINT32_MAX : position;
-    assert(tc.find_less_then(INodeKey::file_position(id_, relative), &value, &saved));
+    if (!tc.find_less_then(INodeKey::file_position(id_, relative), &value, &saved)) {
+        return SeekFailed;
+    }
 
-    // This gets us pretty close (within POSITION_SAVE_FREQUENCY blocks) so we
+    // Make sure we get a key from our file. This happens when the file hasn't
+    // been created yet and we get a key from another file.
+    auto key = INodeKey(saved);
+    if (key.upper() != id_) {
+        return SeekFailed;
+    }
+
+    // This gets us pretty close (within PositionSaveFrequency blocks) so we
     // walk the blocks and sectors to find the actual location.
-    auto starting = INodeKey(saved).lower();
+    auto starting = key.lower();
     auto ss = seek(BlockAddress::from(value), relative - starting);
     blocks_since_save_ = ss.blocks;
     head_ = ss.address;
@@ -394,7 +408,7 @@ int32_t OpenFile::flush() {
 
     // We could do this in the if scope above, I like doing things "in order" though.
     if (writing_tail_sector) {
-        head_ = fs_->initialize_block(linked, id_, head_.block);
+        head_ = initialize_block(linked, head_.block);
         if (!head_.valid()) {
             assert(false); // TODO: Yikes.
         }
@@ -402,7 +416,7 @@ int32_t OpenFile::flush() {
         // Every N blocks we save our offset in the tree. This affects how much
         // seeking needs to happen when trying to append or seek around.
         blocks_since_save_++;
-        if (blocks_since_save_ == POSITION_SAVE_FREQUENCY) {
+        if (blocks_since_save_ == PositionSaveFrequency) {
             TreeContext<FileSystem::NodeType> tc{ *fs_ };
             auto key = INodeKey::file_position(id_, length_);
             tc.add(key, head_);
@@ -449,7 +463,7 @@ int32_t OpenFile::read(void *ptr, size_t size) {
         // End of the file? Marked by a "unwritten" sector.
         if (available_ == 0 || available_ == SECTOR_INDEX_INVALID) {
             // If we're at the end we know our length.
-            if (length_ == INVALID_LENGTH) {
+            if (length_ == InvalidLengthOrPosition) {
                 length_ = position_;
             }
             available_ = 0;
@@ -469,6 +483,24 @@ int32_t OpenFile::read(void *ptr, size_t size) {
 
 void OpenFile::close() {
     flush();
+}
+
+BlockAddress OpenFile::initialize_block(block_index_t block, block_index_t previous) {
+    FileBlockHead head;
+
+    head.fill();
+    head.file_id = id_;
+    head.block.linked_block = previous;
+
+    if (!fs_->storage_->erase(block)) {
+        return { };
+    }
+
+    if (!fs_->storage_->write({ block, 0 }, &head, sizeof(FileBlockHead))) {
+        return { };
+    }
+
+    return BlockAddress { block, SectorSize };
 }
 
 }
