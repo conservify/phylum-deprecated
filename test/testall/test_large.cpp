@@ -57,6 +57,32 @@ TEST_P(VaryingDeviceSuite, WriteFileToHalfTheSpace) {
     file.close();
 }
 
+TEST_P(VaryingDeviceSuite, WriteSmallerFilesToHalfTheSpace) {
+    uint8_t data[512] = { 0xcc };
+
+    auto number_of_files = 10;
+    auto per_file = (storage_.size() / 2) / number_of_files;
+
+    for (auto i = 0; i < number_of_files; ++i) {
+        std::ostringstream fn;
+        fn << "large-" << i << ".bin";
+
+        auto file = fs_.open(fn.str().c_str());
+        ASSERT_TRUE(file.open());
+
+        auto size = per_file;
+        auto written = 0;
+        while (written < size) {
+            if (file.write(data, sizeof(data)) != sizeof(data)) {
+                break;
+            }
+            written += sizeof(data);
+        }
+
+        file.close();
+    }
+}
+
 static Geometry from_disk_size(uint64_t size) {
     auto number_of_sectors = size / (uint64_t)SectorSize;
     auto pages_per_block = (page_index_t)4;
