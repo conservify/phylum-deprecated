@@ -49,7 +49,7 @@ bool FreePileManager::append(FreePileEntry entry) {
 }
 
 bool FreePileManager::free(block_index_t block) {
-    return true;
+    return append({ block });
 }
 
 }

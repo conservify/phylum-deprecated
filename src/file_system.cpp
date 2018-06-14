@@ -180,20 +180,25 @@ bool FileSystem::exists(const char *name) {
 
 OpenFile FileSystem::open(const char *name, bool readonly) {
     auto id = INodeKey::file_id(name);
-    auto file = OpenFile{ *this, id, BlockAddress{}, readonly };
+    auto file = OpenFile{ *this, id, readonly };
+
     file.open_or_create();
+
     return file;
 }
 
 bool FileSystem::touch() {
     TreeContext<NodeType> tc{ *this };
     tc.touch();
+
     return true;
 }
 
 bool FileSystem::gc() {
     TreeContext<NodeType> tc{ *this };
-    tc.recreate();
+    if (!tc.recreate()) {
+        return false;
+    }
 
     auto &sb = sbm_.block();
     sb.last_gc = sbm_.timestamp();
@@ -211,8 +216,8 @@ static T *tail_info(uint8_t(&buffer)[N]) {
     return reinterpret_cast<T*>(buffer + tail_offset);
 }
 
-OpenFile::OpenFile(FileSystem &fs, file_id_t id, BlockAddress head, bool readonly) :
-    fs_(&fs), id_(id), head_(head), readonly_(readonly), length_(readonly ? InvalidLengthOrPosition : 0) {
+OpenFile::OpenFile(FileSystem &fs, file_id_t id, bool readonly) :
+    fs_(&fs), id_(id), readonly_(readonly), length_(readonly ? InvalidLengthOrPosition : 0) {
     assert(sizeof(buffer_) == SectorSize);
 }
 

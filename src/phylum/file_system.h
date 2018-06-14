@@ -40,7 +40,7 @@ private:
     uint16_t buffpos_{ 0 };
 
 public:
-    OpenFile(FileSystem &fs, file_id_t id, BlockAddress head, bool readonly);
+    OpenFile(FileSystem &fs, file_id_t id, bool readonly);
 
 public:
     bool open();
