@@ -142,6 +142,7 @@ bool SuperBlockManager::create() {
 
     // We pull allocator state after doing the above allocations to ensure the
     // first state we write is correct.
+    sb_.tree = BLOCK_INDEX_INVALID;
     sb_.journal = allocator_->allocate(BlockType::Journal);
     sb_.free = allocator_->allocate(BlockType::Free);
     sb_.allocator = allocator_->state();

@@ -22,8 +22,8 @@ struct SuperBlock {
     block_index_t tree{ 0 };
     block_index_t journal{ BLOCK_INDEX_INVALID };
     block_index_t free{ BLOCK_INDEX_INVALID };
-    block_index_t leaf{ BLOCK_INDEX_INVALID };
-    block_index_t index{ BLOCK_INDEX_INVALID };
+    BlockAddress leaf{ BLOCK_INDEX_INVALID };
+    BlockAddress index{ BLOCK_INDEX_INVALID };
 
     SuperBlock() {
     }

@@ -90,10 +90,19 @@ private:
     }
 
     bool deserialize(const serialized_head_t *s, NodeType *node) {
-        if (!s->magic.valid()) {
+        if (!deserialize(&s->node, node)) {
             return false;
         }
-        return deserialize(&s->node, node);
+
+        // Ideally this would be enough. We mix head and other index nodes
+        // though. If head ever grows beyond 128 bytes we'll just keep them in
+        // their own blocks or come up with a better scheme of packing them. For
+        // now we can rely on this test below to find valid deserialized
+        // entries. It's low risk, we do erase blocks to either 0x00 or 0xff
+        if (s->magic.valid()) {
+            return true;
+        }
+        return s->node.leaf.size == sizeof(serialized_node_t) || s->node.inner.size == sizeof(serialized_node_t);
     }
 
     bool serialize(const NodeType *node, serialized_node_t *s) {

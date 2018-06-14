@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
 
+#include "phylum/block_alloc.h"
+#include "backends/linux_memory/linux_memory.h"
+
 #include "utilities.h"
 
 using namespace phylum;
@@ -103,7 +106,5 @@ TEST_F(AddressingSuite, FindEndAfterFillingBlockAndBeforeStartingNext) {
         return remaining >= sizeof(pattern);
     };
 
-    auto end = layout.find_tail_entry(first_block, sizeof(pattern), fn);
-
-    ASSERT_TRUE(end);
+    ASSERT_TRUE(layout.find_tail_entry(first_block, sizeof(pattern), fn));
 }

@@ -44,6 +44,7 @@ public:
 
     int32_t number_of_chains(block_index_t first, block_index_t last, BlockType type);
 
+    int32_t number_of_blocks(block_index_t first, block_index_t last, BlockType type);
 };
 
 }
