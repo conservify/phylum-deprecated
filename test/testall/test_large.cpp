@@ -19,10 +19,12 @@ protected:
     FileSystem fs_{ storage_, allocator_ };
 
 protected:
-    void SetUp() override {
-        auto p = GetParam();
+    const Geometry &geometry() const {
+        return GetParam().geometry;
+    }
 
-        ASSERT_TRUE(storage_.initialize(p.geometry));
+    void SetUp() override {
+        ASSERT_TRUE(storage_.initialize(geometry()));
         ASSERT_TRUE(storage_.open());
         ASSERT_TRUE(fs_.mount(true));
     }
@@ -34,6 +36,25 @@ protected:
 };
 
 TEST_P(VaryingDeviceSuite, Mounting) {
+}
+
+TEST_P(VaryingDeviceSuite, WriteFileToHalfTheSpace) {
+    uint8_t data[512] = { 0xcc };
+
+    auto file = fs_.open("large.bin");
+    ASSERT_TRUE(file.open());
+
+    auto size = storage_.size() / 2;
+    auto written = 0;
+    while (written < size) {
+        if (file.write(data, sizeof(data)) != sizeof(data)) {
+            break;
+        }
+
+        written += sizeof(data);
+    }
+
+    file.close();
 }
 
 static Geometry from_disk_size(uint64_t size) {
@@ -53,6 +74,5 @@ static TestConfiguration SmallMemory{ from_disk_size((uint64_t)128 * 1024 * 1024
 static TestConfiguration SdCard4gb{ from_disk_size((uint64_t)4 * 1024 * 1024 * 1024) };
 static TestConfiguration SdCard8gb{ from_disk_size((uint64_t)8 * 1024 * 1024 * 1024) };
 
-INSTANTIATE_TEST_CASE_P(GeneralDevices, VaryingDeviceSuite,
-                        ::testing::Values(SmallMemory, SdCard4gb, SdCard8gb), );
-
+INSTANTIATE_TEST_CASE_P(SmallerDevices, VaryingDeviceSuite, ::testing::Values(SmallMemory), );
+INSTANTIATE_TEST_CASE_P(LargeDevices, VaryingDeviceSuite, ::testing::Values(SdCard4gb, SdCard8gb), );

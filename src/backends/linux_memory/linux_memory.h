@@ -23,6 +23,10 @@ public:
     LinuxMemoryBackend();
 
 public:
+    uint64_t size() {
+        return size_;
+    }
+
     StorageLog &log() {
         return log_;
     }
