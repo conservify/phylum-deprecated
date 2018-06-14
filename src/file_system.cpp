@@ -70,9 +70,24 @@ public:
     }
 
     bool recreate() {
-        new_head = tree.recreate();
+        auto before = fs.nodes_.state();
 
-        return new_head.valid();
+        new_head = tree.recreate();
+        if (!new_head.valid()) {
+            return false;
+        }
+
+        auto after = fs.nodes_.state();
+
+        if (before.index.valid()) {
+            assert(before.index != after.index);
+            fs.fpm().free(before.index.block);
+        }
+
+        assert(before.leaf != after.leaf);
+        fs.fpm().free(before.leaf.block);
+
+        return true;
     }
 
     bool flush() {

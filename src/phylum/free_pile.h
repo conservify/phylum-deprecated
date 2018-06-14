@@ -55,6 +55,7 @@ public:
     bool format(block_index_t block);
     bool locate(block_index_t block);
     bool append(FreePileEntry entry);
+    bool free(block_index_t block);
 
 };
 

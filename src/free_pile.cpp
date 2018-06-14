@@ -48,4 +48,8 @@ bool FreePileManager::append(FreePileEntry entry) {
     return true;
 }
 
+bool FreePileManager::free(block_index_t block) {
+    return true;
+}
+
 }
