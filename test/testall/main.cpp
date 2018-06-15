@@ -21,11 +21,11 @@ int main(int argc, char **argv) {
         }
     }
 
-    ::testing::InitGoogleTest(&argc, argv);
-
     if (!include_memory_intesive) {
         ::testing::GTEST_FLAG(filter) = "-LargeDevices*";
     }
+
+    ::testing::InitGoogleTest(&argc, argv);
 
     return RUN_ALL_TESTS();
 }
