@@ -3,34 +3,6 @@
 
 namespace phylum {
 
-struct FileBlockHead {
-    BlockHead block;
-    file_id_t file_id{ FILE_ID_INVALID };
-
-    FileBlockHead() : block(BlockType::File) {
-    }
-
-    void fill() {
-        block.magic.fill();
-        block.age = 0;
-        block.timestamp = 0;
-    }
-
-    bool valid() const {
-        return block.valid();
-    }
-};
-
-struct FileSectorTail {
-    uint16_t bytes;
-};
-
-struct FileBlockTail {
-    FileSectorTail sector;
-    uint32_t bytes_in_block{ 0 };
-    BlockTail block;
-};
-
 // NOTE: This is typically ~1700 bytes with 8 entries. With the union between
 // children and values in NodeType this weighs in around 1300 bytes.
 template<typename NodeType>

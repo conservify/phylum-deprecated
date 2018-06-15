@@ -14,6 +14,34 @@ namespace phylum {
 
 class FileSystem;
 
+struct FileBlockHead {
+    BlockHead block;
+    file_id_t file_id{ FILE_ID_INVALID };
+
+    FileBlockHead() : block(BlockType::File) {
+    }
+
+    void fill() {
+        block.magic.fill();
+        block.age = 0;
+        block.timestamp = 0;
+    }
+
+    bool valid() const {
+        return block.valid();
+    }
+};
+
+struct FileSectorTail {
+    uint16_t bytes;
+};
+
+struct FileBlockTail {
+    FileSectorTail sector;
+    uint32_t bytes_in_block{ 0 };
+    BlockTail block;
+};
+
 enum class Seek {
     Beginning,
     End,

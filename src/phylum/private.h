@@ -115,6 +115,10 @@ struct Geometry {
         return (pages_per_block * sectors_per_page) * sector_size;
     }
 
+    uint64_t size() const {
+        return (uint64_t)block_size() * (uint64_t)number_of_blocks;
+    }
+
     bool valid() const {
         if (sector_size != SectorSize) {
             return false;
