@@ -139,8 +139,10 @@ public:
     uint32_t position;
 
 public:
-    BlockAddress(block_index_t block = BLOCK_INDEX_INVALID, uint32_t position = POSITION_INDEX_INVALID) :
-        block(block), position(position) {
+    BlockAddress() : block(BLOCK_INDEX_INVALID), position(POSITION_INDEX_INVALID) {
+    }
+
+    BlockAddress(block_index_t block, uint32_t position) : block(block), position(position) {
     }
 
     BlockAddress(SectorAddress addr, uint32_t offset = 0) : block(addr.block), position(addr.sector * SectorSize + offset) {
