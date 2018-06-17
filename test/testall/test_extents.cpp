@@ -8,17 +8,6 @@
 
 using namespace phylum;
 
-enum class WriteStrategy {
-    Append,
-    Rolling
-};
-
-struct FileDescriptor {
-    char name[16];
-    WriteStrategy stategy;
-    uint64_t maximum_size;
-};
-
 class ExtentsSuite : public ::testing::Test {
 protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
@@ -43,6 +32,17 @@ static uint64_t file_block_overhead(const Geometry &geometry) {
 static uint64_t effective_file_block_size(const Geometry &geometry) {
     return geometry.block_size() - file_block_overhead(geometry);
 }
+
+enum class WriteStrategy {
+    Append,
+    Rolling
+};
+
+struct FileDescriptor {
+    char name[16];
+    WriteStrategy stategy;
+    uint64_t maximum_size;
+};
 
 struct Extent {
     block_index_t start;
@@ -96,6 +96,7 @@ inline std::ostream& operator<<(std::ostream& os, const File &f) {
 
 struct IndexBlockHead {
     BlockHead block;
+    uint16_t version{ 0 };
 
     IndexBlockHead(BlockType type) : block(type) {
     }
@@ -112,6 +113,7 @@ struct IndexBlockHead {
 struct IndexRecord {
     uint64_t position;
     BlockAddress address;
+    uint16_t version;
 
     bool valid() {
         return address.valid();
@@ -175,6 +177,10 @@ public:
 
 public:
     bool initialize() {
+        if (head_.valid()) {
+            return true;
+        }
+
         head_ = { file_->index_.start, 0 };
 
         auto allocator = ExtentAllocator{ file_->index_, head_.block };
@@ -217,6 +223,18 @@ public:
 
         head_ = layout.address();
 
+        sdebug() << "Index: " << address << " = " << position << " " << head_ << std::endl;
+
+        return true;
+    }
+
+    bool format() {
+        if (!storage_->erase(file_->index_.start)) {
+            return false;
+        }
+        if (!storage_->erase(file_->data_.start)) {
+            return false;
+        }
         return true;
     }
 
@@ -247,10 +265,6 @@ public:
     }
 
 public:
-    bool tail_sector() const {
-        return head_.tail_sector(storage_->geometry());
-    }
-
     uint64_t maximum_size() const {
         return file_->data_.size(storage_->geometry());
     }
@@ -259,74 +273,8 @@ public:
         return length_;
     }
 
-    struct SeekInfo {
-        BlockAddress address;
-        int32_t bytes;
-        int32_t blocks;
-    };
-
-    SeekInfo seek(block_index_t starting_block, uint64_t max, bool verify_head_block = true) {
-        auto bytes = 0;
-        auto blocks = 0;
-
-        // This is used just to sanity check that the block we were given has
-        // actually been begun. For example, the very first block won't have been.
-        if (verify_head_block) {
-            FileBlockHead head;
-            if (!storage_->read({ starting_block, 0 }, &head, sizeof(FileBlockHead))) {
-                return { };
-            }
-
-            if (!head.valid()) {
-                return { { starting_block, 0 }, 0, 0 };
-            }
-        }
-
-        // Start walking the file from the given starting block until we reach the
-        // end of the file or we've passed `max` bytes.
-        auto &g = storage_->geometry();
-        auto addr = BlockAddress::tail_sector_of(starting_block, g);
-        while (true) {
-            if (!storage_->read(addr, buffer_, sizeof(buffer_))) {
-                return { };
-            }
-
-            // Check to see if our desired location is in this block, otherwise we
-            // can just skip this one entirely.
-            if (addr.tail_sector(g)) {
-                FileBlockTail tail;
-                memcpy(&tail, tail_info<FileBlockTail>(buffer_), sizeof(FileBlockTail));
-                if (is_valid_block(tail.block.linked_block) && max > tail.bytes_in_block) {
-                    addr = BlockAddress::tail_sector_of(tail.block.linked_block, g);
-                    bytes += tail.bytes_in_block;
-                    max -= tail.bytes_in_block;
-                    blocks++;
-                }
-                else {
-                    addr = BlockAddress{ addr.block, SectorSize };
-                }
-            }
-            else {
-                FileSectorTail tail;
-                memcpy(&tail, tail_info<FileSectorTail>(buffer_), sizeof(FileSectorTail));
-
-                if (tail.bytes == 0 || tail.bytes == SECTOR_INDEX_INVALID) {
-                    break;
-                }
-                if (max > tail.bytes) {
-                    bytes += tail.bytes;
-                    max -= tail.bytes;
-                    addr.add(SectorSize);
-                }
-                else {
-                    bytes += max;
-                    addr.add(max);
-                    break;
-                }
-            }
-        }
-
-        return { addr, bytes, blocks };
+    operator bool() const {
+        return file_ != nullptr;
     }
 
     bool seek() {
@@ -347,12 +295,6 @@ public:
         position_ += info.bytes;
 
         return true;
-    }
-
-    template<typename T, size_t N>
-    static T *tail_info(uint8_t(&buffer)[N]) {
-        auto tail_offset = sizeof(buffer) - sizeof(T);
-        return reinterpret_cast<T*>(buffer + tail_offset);
     }
 
     int32_t write(uint8_t *ptr, size_t size) {
@@ -406,6 +348,7 @@ public:
         // It's on us to initialize the first block's header.
         if (head_.block == file_->data_.start && head_.beginning_of_block()) {
             head_ = initialize(head_.block, BLOCK_INDEX_INVALID);
+            index_.append(0, { head_.block, 0 });
         }
 
         // If this is the tail sector in the block write the tail section that links
@@ -474,8 +417,89 @@ public:
         flush();
     }
 
-    operator bool() const {
-        return file_ != nullptr;
+    bool format() {
+        return index_.format();
+    }
+
+private:
+    template<typename T, size_t N>
+    static T *tail_info(uint8_t(&buffer)[N]) {
+        auto tail_offset = sizeof(buffer) - sizeof(T);
+        return reinterpret_cast<T*>(buffer + tail_offset);
+    }
+
+    struct SeekInfo {
+        BlockAddress address;
+        int32_t bytes;
+        int32_t blocks;
+    };
+
+    bool tail_sector() const {
+        return head_.tail_sector(storage_->geometry());
+    }
+
+    SeekInfo seek(block_index_t starting_block, uint64_t max, bool verify_head_block = true) {
+        auto bytes = 0;
+        auto blocks = 0;
+
+        // This is used just to sanity check that the block we were given has
+        // actually been begun. For example, the very first block won't have been.
+        if (verify_head_block) {
+            FileBlockHead head;
+            if (!storage_->read({ starting_block, 0 }, &head, sizeof(FileBlockHead))) {
+                return { };
+            }
+
+            if (!head.valid()) {
+                return { { starting_block, 0 }, 0, 0 };
+            }
+        }
+
+        // Start walking the file from the given starting block until we reach the
+        // end of the file or we've passed `max` bytes.
+        auto &g = storage_->geometry();
+        auto addr = BlockAddress::tail_sector_of(starting_block, g);
+        while (true) {
+            if (!storage_->read(addr, buffer_, sizeof(buffer_))) {
+                return { };
+            }
+
+            // Check to see if our desired location is in this block, otherwise we
+            // can just skip this one entirely.
+            if (addr.tail_sector(g)) {
+                FileBlockTail tail;
+                memcpy(&tail, tail_info<FileBlockTail>(buffer_), sizeof(FileBlockTail));
+                if (is_valid_block(tail.block.linked_block) && max > tail.bytes_in_block) {
+                    addr = BlockAddress::tail_sector_of(tail.block.linked_block, g);
+                    bytes += tail.bytes_in_block;
+                    max -= tail.bytes_in_block;
+                    blocks++;
+                }
+                else {
+                    addr = BlockAddress{ addr.block, SectorSize };
+                }
+            }
+            else {
+                FileSectorTail tail;
+                memcpy(&tail, tail_info<FileSectorTail>(buffer_), sizeof(FileSectorTail));
+
+                if (tail.bytes == 0 || tail.bytes == SECTOR_INDEX_INVALID) {
+                    break;
+                }
+                if (max > tail.bytes) {
+                    bytes += tail.bytes;
+                    max -= tail.bytes;
+                    addr.add(SectorSize);
+                }
+                else {
+                    bytes += max;
+                    addr.add(max);
+                    break;
+                }
+            }
+        }
+
+        return { addr, bytes, blocks };
     }
 
     BlockAddress initialize(block_index_t block, block_index_t previous) {
@@ -547,6 +571,17 @@ public:
         return true;
     }
 
+    bool format() {
+        for (auto &file : files_) {
+            auto f = open(*file.fd_);
+            if (!f.format()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 public:
     block_index_t blocks_required_for_size(uint64_t opaque_size) {
         constexpr uint64_t Megabyte = (1024 * 1024);
@@ -587,6 +622,7 @@ TEST_F(ExtentsSuite, SmallFileWritingToEnd) {
     FileLayout<2> layout{ storage_ };
 
     layout.allocate(files);
+    layout.format();
 
     auto file = layout.open(file_log_startup_fd);
     ASSERT_TRUE(file);
@@ -618,6 +654,7 @@ TEST_F(ExtentsSuite, StandardLayoutAllocating) {
     FileLayout<5> layout{ storage_ };
 
     layout.allocate(files);
+    layout.format();
 }
 
 TEST_F(ExtentsSuite, LargeFileWritingToEnd) {
@@ -632,11 +669,12 @@ TEST_F(ExtentsSuite, LargeFileWritingToEnd) {
     FileLayout<2> layout{ storage_ };
 
     layout.allocate(files);
+    layout.format();
 
     auto file = layout.open(file_data_fk);
     ASSERT_TRUE(file);
 
-    uint64_t total = 0;
+    auto total = 0;
     uint8_t data[128] = { 0xcc };
     for (auto i = 0; i < (1024 * 1024) / (int32_t)sizeof(data); ++i) {
         total += file.write(data, sizeof(data));
@@ -657,17 +695,18 @@ TEST_F(ExtentsSuite, LargeFileAppending) {
     FileLayout<2> layout{ storage_ };
 
     layout.allocate(files);
+    layout.format();
 
     constexpr uint64_t OneMegabyte = 1024 * 1024;
 
     {
         auto file = layout.open(file_data_fk);
         ASSERT_TRUE(file);
-        ASSERT_EQ(file.size(), 0);
+        ASSERT_EQ(file.size(), (uint64_t)0);
 
         uint64_t total = 0;
         uint8_t data[128] = { 0xcc };
-        for (auto i = 0; i < OneMegabyte / (int32_t)sizeof(data); ++i) {
+        for (auto i = 0; i < (int32_t)OneMegabyte / (int32_t)sizeof(data); ++i) {
             total += file.write(data, sizeof(data));
         }
 
@@ -685,7 +724,7 @@ TEST_F(ExtentsSuite, LargeFileAppending) {
 
         uint64_t total = 0;
         uint8_t data[128] = { 0xcc };
-        for (auto i = 0; i < OneMegabyte / (int32_t)sizeof(data); ++i) {
+        for (auto i = 0; i < (int32_t)OneMegabyte / (int32_t)sizeof(data); ++i) {
             total += file.write(data, sizeof(data));
         }
 
