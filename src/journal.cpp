@@ -4,12 +4,12 @@
 namespace phylum {
 
 static inline BlockLayout<JournalBlockHead, JournalBlockTail> get_layout(StorageBackend &storage,
-                                                                         BlockAllocator &allocator,
+                                                                         Allocator &allocator,
                                                                          BlockAddress address) {
     return { storage, allocator, address, BlockType::Journal };
 }
 
-Journal::Journal(StorageBackend &storage, BlockAllocator &allocator)
+Journal::Journal(StorageBackend &storage, Allocator &allocator)
     : storage_(&storage), allocator_(&allocator) {
 }
 

@@ -48,11 +48,11 @@ struct JournalBlockTail {
 class Journal {
 private:
     StorageBackend *storage_;
-    BlockAllocator *allocator_;
+    Allocator *allocator_;
     BlockAddress location_;
 
 public:
-    Journal(StorageBackend &storage, BlockAllocator &allocator);
+    Journal(StorageBackend &storage, Allocator &allocator);
 
 public:
     BlockAddress location() {

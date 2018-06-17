@@ -128,7 +128,7 @@ inline std::ostream& operator<<(std::ostream& os, const IndexRecord &f) {
     return os << "IndexRecord<" << f.position << " addr=" << f.address << ">";
 }
 
-class ExtentAllocator : public BlockAllocator {
+class ExtentAllocator : public Allocator {
 private:
     Extent extent_;
     block_index_t block_;
@@ -138,26 +138,14 @@ public:
     }
 
 public:
-    virtual bool initialize(Geometry &geometry) override {
-        assert(false);
-    }
-    virtual AllocatorState state() override {
-        assert(false);
-    }
-    virtual void state(AllocatorState state) override {
-        assert(false);
-    }
     virtual block_index_t allocate(BlockType type) override {
         return block_++;
-    }
-    virtual void free(block_index_t block) override {
-        assert(false);
     }
 
 };
 
 static inline BlockLayout<IndexBlockHead, IndexBlockTail> get_index_layout(StorageBackend &storage,
-                                                                           BlockAllocator &allocator,
+                                                                           Allocator &allocator,
                                                                            BlockAddress address) {
     return { storage, allocator, address, BlockType::Index };
 }
