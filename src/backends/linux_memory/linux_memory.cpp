@@ -29,6 +29,7 @@ bool LinuxMemoryBackend::open() {
     size_ = (uint64_t)geometry_.number_of_sectors() * geometry_.sector_size;
     ptr_ = (uint8_t *)malloc(size_);
 
+    log_.logging(false);
     log_.append(LogEntry{ OperationType::Opened, ptr_ });
 
     return true;

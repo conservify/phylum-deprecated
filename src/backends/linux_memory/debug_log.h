@@ -81,15 +81,13 @@ class StorageLog {
 private:
     bool copy_on_write_{ false };
     std::list<LogEntry> entries_;
+    bool logging_{ false };
 
 public:
-    void append(LogEntry &&entry) {
-        entries_.emplace_back(std::move(entry));
-        if (copy_on_write_) {
-            entries_.back().backup();
-        }
+    void append(LogEntry &&entry);
 
-        // sdebug() << entry << std::endl;
+    void logging(bool logging) {
+        logging_ = logging;
     }
 
     int32_t size() const {

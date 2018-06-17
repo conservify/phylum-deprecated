@@ -2,6 +2,17 @@
 
 namespace phylum {
 
+void StorageLog ::append(LogEntry &&entry) {
+    entries_.emplace_back(std::move(entry));
+    if (copy_on_write_) {
+        entries_.back().backup();
+    }
+
+    if (logging_) {
+        sdebug() << entry << std::endl;
+    }
+}
+
 std::ostream& operator<<(std::ostream& os, const LogEntry& e) {
     switch (e.type_) {
     case OperationType::Opened:
