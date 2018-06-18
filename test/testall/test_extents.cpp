@@ -199,11 +199,27 @@ private:
             return true;
         }
 
+        // sdebug() << "Initialize" << std::endl;
+
+        auto allocator = ExtentAllocator{ file_->index_, BLOCK_INDEX_INVALID };
+        auto layout1 = get_index_layout(*storage_, allocator, address());
+        auto layout2 = get_index_layout(*storage_, allocator, alternate());
+
+        IndexRecord record;
+        while (layout1.walk<IndexRecord>(record)) {
+            if (record.version > version_) {
+                version_ = record.version;
+            }
+        }
+
+        while (layout2.walk<IndexRecord>(record)) {
+            if (record.version > version_) {
+                version_ = record.version;
+            }
+        }
+
         head_ = address();
-
-        auto allocator = ExtentAllocator{ file_->index_, head_.block };
-        auto layout = get_index_layout(*storage_, allocator, head_);
-
+        auto layout = get_index_layout(*storage_, allocator, address());
         if (layout.find_append_location<IndexRecord>(head_.block)) {
             head_ = layout.address();
         }
@@ -216,20 +232,29 @@ public:
         return version_;
     }
 
-    IndexRecord seek() {
+    IndexRecord seek(uint64_t position) {
+        if (!initialize()) {
+            return { };
+        }
+
         auto allocator = ExtentAllocator{ file_->index_, BLOCK_INDEX_INVALID };
-        auto layout = get_index_layout(*storage_, allocator, address());
+        auto reading = get_index_layout(*storage_, allocator, address());
 
-        if (!layout.find_tail_entry<IndexRecord>(address().block)) {
-            return IndexRecord{ };
-        }
-
+        IndexRecord selected;
         IndexRecord record;
-        if (!storage_->read(layout.address(), &record, sizeof(IndexRecord))) {
-            return IndexRecord{ };
+        while (reading.walk<IndexRecord>(record)) {
+            // sdebug() << reading.address() << " " << record << std::endl;
+            if (position == record.position) {
+                return record;
+            }
+            else if (record.position > position) {
+                return selected;
+            }
+
+            selected = record;
         }
 
-        return record;
+        return selected;
     }
 
     struct ReindexInfo {
@@ -277,26 +302,6 @@ public:
         if (!storage_->erase(file_->data_.start)) {
             return false;
         }
-        return true;
-    }
-
-    bool beginning() {
-        auto allocator = ExtentAllocator{ file_->index_, BLOCK_INDEX_INVALID };
-        auto reading = get_index_layout(*storage_, allocator, address());
-
-        auto seen_beginning = false;
-        IndexRecord record;
-        while (reading.walk<IndexRecord>(record)) {
-            if (record.position == 0) {
-                seen_beginning = true;
-                sdebug() << "Beginning: " << record << std::endl;
-            }
-            else if (seen_beginning) {
-                sdebug() << "First Block: " << record << std::endl;
-                break;
-            }
-        }
-
         return true;
     }
 
@@ -381,7 +386,6 @@ public:
     }
 
     SimpleFile(StorageBackend *storage, File *file) : storage_(storage), file_(file), index_(storage_, file) {
-        head_ = { file_->data_.start, 0 };
     }
 
     ~SimpleFile() {
@@ -392,13 +396,17 @@ public:
 
 public:
     static constexpr block_index_t IndexFrequency = 4;
-    
+
     uint64_t maximum_size() const {
         return file_->data_.size(storage_->geometry());
     }
 
     uint64_t size() const {
         return length_;
+    }
+
+    uint64_t tell() const {
+        return position_;
     }
 
     FileIndex &index() {
@@ -410,26 +418,29 @@ public:
     }
 
     bool seek(uint64_t position = 0) {
-        if (position == UINT64_MAX) {
-            auto end = index().seek();
-            if (end.valid()) {
-                head_ = end.address;
-                length_ = end.position;
-                position_ = end.position;
-            }
+        auto end = index().seek(position);
+        if (end.valid()) {
+            head_ = end.address;
+            position_ = end.position;
         }
         else {
+            // sdebug() << "Seek: " << position << std::endl;
             head_ = { file_->data_.start, 0 };
+            return true;
         }
 
-        auto info = seek(head_.block, position);
+        auto info = seek(head_.block, position - end.position);
 
         seek_offset_ = info.address.sector_offset(storage_->geometry());
         head_ = info.address;
         head_.add(-seek_offset_);
         blocks_since_save_ = info.blocks;
-        length_ += info.bytes;
         position_ += info.bytes;
+        if (position == UINT64_MAX) {
+            length_ = end.position + info.bytes;
+        }
+
+        // sdebug() << "Seek Done: " << position << " " << position_ << " " <<  head_ << " " << seek_offset_ << " " << end.position << std::endl;
 
         return true;
     }
@@ -443,11 +454,15 @@ public:
                 return 0;
             }
 
+            if (!head_.valid()) {
+                if (!seek(0)) {
+                    return 0;
+                }
+            }
+
             if (head_.beginning_of_block()) {
                 head_.add(SectorSize);
             }
-
-            // sdebug() << "Read: " << head_ << std::endl;
 
             if (!storage_->read(head_, buffer_, sizeof(buffer_))) {
                 return 0;
@@ -512,7 +527,13 @@ public:
         assert(!readonly_);
 
         if (!head_.valid()) {
-            return 0;
+            if (!seek(UINT64_MAX)) {
+                return 0;
+            }
+
+            if (!head_.valid()) {
+                return 0;
+            }
         }
 
         while (to_write > 0) {
@@ -542,19 +563,6 @@ public:
         }
 
         return wrote;
-    }
-
-    block_index_t rollover() {
-        auto info = index().reindex(length_, { file_->data_.start, SectorSize });
-        if (!info) {
-            return BLOCK_INDEX_INVALID;
-        }
-
-        blocks_since_save_ = -1; // HACK
-        length_ = info.length;
-        position_ = info.length;
-
-        return file_->data_.start;
     }
 
     int32_t flush() {
@@ -669,6 +677,19 @@ private:
         int32_t bytes;
         int32_t blocks;
     };
+
+    block_index_t rollover() {
+        auto info = index().reindex(length_, { file_->data_.start, SectorSize });
+        if (!info) {
+            return BLOCK_INDEX_INVALID;
+        }
+
+        blocks_since_save_ = -1; // HACK
+        length_ = info.length;
+        position_ = info.length;
+
+        return file_->data_.start;
+    }
 
     bool tail_sector() const {
         return head_.tail_sector(storage_->geometry());
@@ -907,7 +928,7 @@ public:
             while (i < bytes) {
                 auto left = bytes - i;
                 auto pattern_position = total % size();
-                auto comparing = left > (size() - pattern_position) ? (size() - pattern_position) : left;
+                auto comparing = left > int32_t(size() - pattern_position) ? (size() - pattern_position) : left;
 
                 assert(memcmp(buffer + i, data_ + pattern_position, comparing) == 0);
 
@@ -920,8 +941,14 @@ public:
     }
 
     template<size_t N>
-    uint64_t verify_file(FileLayout<N> &layout, FileDescriptor &fd) {
+    uint64_t verify_file(FileLayout<N> &layout, FileDescriptor &fd, int32_t skip = 0) {
         auto file = layout.open(fd);
+
+        if (skip > 0) {
+            if (!file.seek(skip)) {
+                return 0;
+            }
+        }
 
         auto bytes_read = read(file);
 
@@ -1079,10 +1106,11 @@ TEST_F(ExtentsSuite, SeekMiddleOfFile) {
     ASSERT_EQ(file.size(), OneMegabyte);
     ASSERT_EQ(total, OneMegabyte);
 
-    auto middle_on_pattern_edge = (OneMegabyte / 2) / helper.size() * helper.size();
+    auto middle_on_pattern_edge = ((OneMegabyte / 2) / helper.size()) * helper.size();
     auto reading = layout.open(file_data_fk);
     ASSERT_EQ(reading.size(), (uint64_t)0);
-    reading.seek(middle_on_pattern_edge);
+    ASSERT_TRUE(reading.seek(middle_on_pattern_edge));
+    ASSERT_EQ(reading.tell(), middle_on_pattern_edge);
     auto verified = helper.read(reading);
     reading.close();
 
@@ -1112,6 +1140,11 @@ TEST_F(ExtentsSuite, RollingWriteStrategyOneRollover) {
     ASSERT_EQ(total, helper.bytes_written());
 
     file.index().dump();
+
+    auto bytes_per_index_region = SimpleFile::IndexFrequency * effective_file_block_size(storage_.geometry());
+    auto skip = helper.size() - (bytes_per_index_region - (bytes_per_index_region / helper.size()) * helper.size());
+    auto verified = helper.verify_file(layout, file_data_fk, skip);
+    ASSERT_EQ(file.size(), verified + skip);
 }
 
 TEST_F(ExtentsSuite, RollingWriteStrategyTwoRollovers) {
@@ -1126,7 +1159,6 @@ TEST_F(ExtentsSuite, RollingWriteStrategyTwoRollovers) {
     FileLayout<2> layout{ storage_ };
 
     layout.allocate(files);
-    // storage_.log().logging(true);
 
     layout.format();
 
@@ -1140,4 +1172,9 @@ TEST_F(ExtentsSuite, RollingWriteStrategyTwoRollovers) {
     ASSERT_EQ(total, helper.bytes_written());
 
     file.index().dump();
+
+    // auto bytes_per_index_region = SimpleFile::IndexFrequency * effective_file_block_size(storage_.geometry());
+    // auto skip = helper.size() - (bytes_per_index_region - (bytes_per_index_region / helper.size()) * helper.size());
+    auto verified = helper.verify_file(layout, file_data_fk, 80);
+    ASSERT_EQ(file.size(), verified + 80);
 }

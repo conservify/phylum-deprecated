@@ -59,6 +59,7 @@ public:
             #ifdef PHYLUM_LAYOUT_DEBUG
             sdebug() << "layout: ReadTail: " << tl << " " << sizeof(TTail) << std::endl;
             #endif
+
             if (!storage_.read(tl, &tail, sizeof(TTail))) {
                 return false;
             }
@@ -77,6 +78,8 @@ public:
             }
             address_.add(SectorSize);
         }
+
+        assert(address_.find_room(g_, sizeof(TEntry)));
 
         if (!storage_.read(address_, &entry, sizeof(TEntry))) {
             return false;

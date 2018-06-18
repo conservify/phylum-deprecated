@@ -223,7 +223,7 @@ bool DataHelper::write_file(const char *name, size_t size) {
     }
 
     auto written = 0;
-    while (written < size) {
+    while (written < (int32_t)size) {
         if (file.write(pattern, sizeof(pattern)) != sizeof(pattern)) {
             break;
         }
