@@ -9,9 +9,12 @@
 
 #ifdef ARDUINO
 #include <Arduino.h>
+#undef min
+#undef max
 #else
 #include <iostream>
 #include <string>
+#include <ostream>
 #endif
 
 namespace phylum {
@@ -99,29 +102,32 @@ public:
 }
 
 #ifdef ARDUINO
-namespace std {
 
-/**
- *
- */
-using ostream = phylum::LogStream;
+namespace phylum {
 
-/**
- *
- */
 constexpr char endl = '\n';
+
+using ostreamtype = phylum::LogStream;
 
 }
 
 #else
 
+namespace phylum {
+
+constexpr char endl = '\n';
+
+using ostreamtype = ::std::ostream;
+
+}
+
 #endif
 
 namespace phylum {
 
-extern std::ostream &clog;
+extern ostreamtype &clog;
 
-inline std::ostream &sdebug() {
+inline ostreamtype &sdebug() {
     return clog;
 }
 

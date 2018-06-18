@@ -34,9 +34,9 @@ static void write_file(FileSystem &fs, const char *name) {
     auto finished = millis();
     auto elapsed = float(finished - started) / 1000.0f;
 
-    sdebug() << "Bytes: " << file.size() << std::endl;
-    sdebug() << "Duration: " << elapsed << std::endl;
-    sdebug() << "Bytes/s: " << file.size() / float(elapsed) << std::endl;
+    sdebug() << "Bytes: " << file.size() << endl;
+    sdebug() << "Duration: " << elapsed << endl;
+    sdebug() << "Bytes/s: " << file.size() / float(elapsed) << endl;
 
     file.close();
 }
@@ -59,9 +59,9 @@ static void read_file(FileSystem &fs, const char *name) {
     auto finished = millis();
     auto elapsed = float(finished - started) / 1000.0f;
 
-    sdebug() << "Bytes: " << file.size() << std::endl;
-    sdebug() << "Duration: " << elapsed << std::endl;
-    sdebug() << "Bytes/s: " << read / float(elapsed) << std::endl;
+    sdebug() << "Bytes: " << file.size() << endl;
+    sdebug() << "Duration: " << elapsed << endl;
+    sdebug() << "Bytes/s: " << read / float(elapsed) << endl;
 
     file.close();
 }
@@ -75,9 +75,9 @@ static void seek_end_file(FileSystem &fs, const char *name) {
     auto finished = millis();
     auto elapsed = float(finished - started) / 1000.0f;
 
-    sdebug() << "Bytes: " << file.size() << std::endl;
-    sdebug() << "Duration: " << elapsed << std::endl;
-    sdebug() << "Bytes/s: " << file.size() / float(elapsed) << std::endl;
+    sdebug() << "Bytes: " << file.size() << endl;
+    sdebug() << "Duration: " << elapsed << endl;
+    sdebug() << "Bytes/s: " << file.size() / float(elapsed) << endl;
 
     file.close();
 }
@@ -89,15 +89,15 @@ void setup() {
         delay(10);
     }
 
-    sdebug() << "Starting: " << free_memory() << std::endl;
+    sdebug() << "Starting: " << free_memory() << endl;
 
-    sdebug() << "sizeof(FileSystem): " << sizeof(FileSystem) << std::endl;
-    sdebug() << "sizeof(OpenFile): " << sizeof(OpenFile) << std::endl;
-    sdebug() << "sizeof(SequentialBlockAllocator): " << sizeof(SequentialBlockAllocator) << std::endl;
-    sdebug() << "sizeof(ArduinoSdBackend): " << sizeof(ArduinoSdBackend) << std::endl;
-    sdebug() << "sizeof(Node): " << sizeof(Node<uint64_t, uint64_t, BlockAddress, 6, 6>) << std::endl;
+    sdebug() << "sizeof(FileSystem): " << sizeof(FileSystem) << endl;
+    sdebug() << "sizeof(OpenFile): " << sizeof(OpenFile) << endl;
+    sdebug() << "sizeof(SequentialBlockAllocator): " << sizeof(SequentialBlockAllocator) << endl;
+    sdebug() << "sizeof(ArduinoSdBackend): " << sizeof(ArduinoSdBackend) << endl;
+    sdebug() << "sizeof(Node): " << sizeof(Node<uint64_t, uint64_t, BlockAddress, 6, 6>) << endl;
 
-    sdebug() << "Initialize Backend" << std::endl;
+    sdebug() << "Initialize Backend" << endl;
 
     Geometry g{ 0, 4, 4, SectorSize };
     ArduinoSdBackend storage;
@@ -109,7 +109,7 @@ void setup() {
         fail();
     }
 
-    sdebug() << "Initialize FS" << std::endl;
+    sdebug() << "Initialize FS" << endl;
 
     SequentialBlockAllocator allocator;
     FileSystem fs{ storage, allocator };
@@ -117,22 +117,22 @@ void setup() {
         fail();
     }
 
-    sdebug() << std::endl << "Creating small file..." << std::endl;
+    sdebug() << endl << "Creating small file..." << endl;
     write_file<128>(fs, "small.bin");
 
-    sdebug() << std::endl << "Creating file..." << std::endl;
+    sdebug() << endl << "Creating file..." << endl;
     write_file<1024 * 1024>(fs, "large.bin");
 
-    sdebug() << std::endl << "Reading file (256)..." << std::endl;
+    sdebug() << endl << "Reading file (256)..." << endl;
     read_file<256>(fs, "large.bin");
 
-    sdebug() << std::endl << "Reading file (512)..." << std::endl;
+    sdebug() << endl << "Reading file (512)..." << endl;
     read_file<512>(fs, "large.bin");
 
-    sdebug() << std::endl << "Seek end of file..." << std::endl;
+    sdebug() << endl << "Seek end of file..." << endl;
     seek_end_file(fs, "large.bin");
 
-    sdebug() << std::endl << "Done: " << free_memory() << std::endl;
+    sdebug() << endl << "Done: " << free_memory() << endl;
 
     while (true) {
         delay(10);

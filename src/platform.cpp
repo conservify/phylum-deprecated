@@ -6,11 +6,11 @@ namespace phylum {
 
 phylum::LogStream log;
 
-std::ostream &clog = log;
+ostreamtype &clog = log;
 
 #else
 
-std::ostream &clog = std::cout;
+ostreamtype &clog = std::cout;
 
 #endif
 

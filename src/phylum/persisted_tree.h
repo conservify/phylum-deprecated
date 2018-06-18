@@ -64,10 +64,10 @@ public:
     }
 
     template<typename NADDRESS>
-    friend std::ostream& operator<<(std::ostream& os, const NodeRef<NADDRESS> &n);
+    friend ostreamtype& operator<<(ostreamtype& os, const NodeRef<NADDRESS> &n);
 
     template<typename KEY, typename VALUE, typename NADDRESS, size_t N, size_t M>
-    friend std::ostream& operator<<(std::ostream& os, const Node<KEY, VALUE, NADDRESS, N, M> &n);
+    friend ostreamtype& operator<<(ostreamtype& os, const Node<KEY, VALUE, NADDRESS, N, M> &n);
 
 public:
     ADDRESS address() const {
@@ -146,7 +146,7 @@ public:
 };
 
 template<typename KEY, typename VALUE, typename ADDRESS, size_t N, size_t M>
-std::ostream& operator<<(std::ostream& os, const Node<KEY, VALUE, ADDRESS, N, M> &n);
+ostreamtype& operator<<(ostreamtype& os, const Node<KEY, VALUE, ADDRESS, N, M> &n);
 
 template<typename NODE>
 class NodeCache {
@@ -583,8 +583,9 @@ private:
 
 };
 
+
 template<typename KEY, typename VALUE, typename ADDRESS, size_t N, size_t M>
-std::ostream& operator<<(std::ostream& os, const Node<KEY, VALUE, ADDRESS, N, M> &n) {
+ostreamtype& operator<<(ostreamtype& os, const Node<KEY, VALUE, ADDRESS, N, M> &n) {
     os << "NODE<" << (size_t)n.depth << " " << (size_t)n.number_keys << "";
 
     if (n.depth == 0) {
@@ -604,7 +605,7 @@ std::ostream& operator<<(std::ostream& os, const Node<KEY, VALUE, ADDRESS, N, M>
 }
 
 template<typename ADDRESS>
-std::ostream& operator<<(std::ostream& os, const NodeRef<ADDRESS> &n) {
+ostreamtype& operator<<(ostreamtype& os, const NodeRef<ADDRESS> &n) {
     return os << "Ref<#" << (size_t)n.index_ << " addr=" << n.address() << ">";
 }
 

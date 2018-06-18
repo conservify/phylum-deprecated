@@ -44,7 +44,7 @@ TEST_P(VaryingDeviceSuite, WriteFileToHalfTheSpace) {
     auto file = fs_.open("large.bin");
     ASSERT_TRUE(file.open());
 
-    auto size = storage_.size() / 2;
+    auto size = int32_t(storage_.size() / 2);
     auto written = 0;
     while (written < size) {
         if (file.write(data, sizeof(data)) != sizeof(data)) {
@@ -61,7 +61,7 @@ TEST_P(VaryingDeviceSuite, WriteSmallerFilesToHalfTheSpace) {
     uint8_t data[512] = { 0xcc };
 
     auto number_of_files = 10;
-    auto per_file = (storage_.size() / 2) / number_of_files;
+    auto per_file = int32_t(storage_.size() / 2) / number_of_files;
 
     for (auto i = 0; i < number_of_files; ++i) {
         std::ostringstream fn;

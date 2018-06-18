@@ -263,24 +263,24 @@ inline bool Geometry::contains(const BlockAddress addr) const {
     return addr.block < number_of_blocks && addr.position < block_size();
 }
 
-inline std::ostream& operator<<(std::ostream& os, const SectorAddress &addr) {
+inline ostreamtype& operator<<(ostreamtype& os, const SectorAddress &addr) {
     if (!addr.valid()) {
         return os << "<invalid>";
     }
     return os << addr.block << ":" << addr.sector;
 }
 
-inline std::ostream& operator<<(std::ostream& os, const Geometry &g) {
+inline ostreamtype& operator<<(ostreamtype& os, const Geometry &g) {
     return os << "Geometry<" << g.number_of_blocks << " " << g.pages_per_block << " " << g.sectors_per_page << " " << g.sector_size << ">";
 }
 
-inline std::ostream& operator<<(std::ostream& os, const BlockAddress &addr) {
+inline ostreamtype& operator<<(ostreamtype& os, const BlockAddress &addr) {
     auto sector = addr.position / SectorSize;
     auto offset = addr.position % SectorSize;
     return os << addr.block << ":" << sector << "+" << offset;
 }
 
-inline std::ostream& operator<<(std::ostream& os, const BlockType &t) {
+inline ostreamtype& operator<<(ostreamtype& os, const BlockType &t) {
     switch (t) {
     case BlockType::Anchor: return os << "Anchor";
     case BlockType::SuperBlockLink: return os << "SuperBlockLink";
@@ -297,7 +297,7 @@ inline std::ostream& operator<<(std::ostream& os, const BlockType &t) {
     }
 }
 
-inline std::ostream& operator<<(std::ostream& os, const BlockHead &h) {
+inline ostreamtype& operator<<(ostreamtype& os, const BlockHead &h) {
     return os << "BAS<type=" << h.type << " age=" << h.age << " ts=" << h.timestamp << " link=" << h.linked_block << ">";
 }
 

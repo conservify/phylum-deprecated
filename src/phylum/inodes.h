@@ -63,7 +63,7 @@ public:
 
 };
 
-inline std::ostream &operator<<(std::ostream &os, const INodeKey &e) {
+inline ostreamtype &operator<<(ostreamtype &os, const INodeKey &e) {
     return os << "INodeKey<" << e.upper() << " " << e.lower() << ">";
 }
 

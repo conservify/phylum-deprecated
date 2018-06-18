@@ -28,7 +28,7 @@ struct TreeBlockTail {
     BlockTail block;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const TreeBlockHead &h) {
+inline ostreamtype& operator<<(ostreamtype& os, const TreeBlockHead &h) {
     return os << "TreeBlock<" << h.block << ">";
 }
 
