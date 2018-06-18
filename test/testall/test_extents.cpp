@@ -160,9 +160,13 @@ static uint64_t effective_index_block_size(const Geometry &geometry) {
     return geometry.block_size() - index_block_overhead(geometry);
 }
 
-static inline BlockLayout<IndexBlockHead, IndexBlockTail> get_index_layout(StorageBackend &storage,
-                                                                           Allocator &allocator,
-                                                                           BlockAddress address) {
+static EmptyAllocator empty_allocator_;
+
+static inline BlockLayout<IndexBlockHead, IndexBlockTail> get_index_layout(StorageBackend &storage, BlockAddress address) {
+    return { storage, empty_allocator_, address, BlockType::Index };
+}
+
+static inline BlockLayout<IndexBlockHead, IndexBlockTail> get_index_layout(StorageBackend &storage, Allocator &allocator, BlockAddress address) {
     return { storage, allocator, address, BlockType::Index };
 }
 
@@ -201,9 +205,8 @@ private:
 
         // sdebug() << "Initialize" << std::endl;
 
-        auto allocator = ExtentAllocator{ file_->index_, BLOCK_INDEX_INVALID };
-        auto layout1 = get_index_layout(*storage_, allocator, address());
-        auto layout2 = get_index_layout(*storage_, allocator, alternate());
+        auto layout1 = get_index_layout(*storage_, address());
+        auto layout2 = get_index_layout(*storage_, alternate());
 
         IndexRecord record;
         while (layout1.walk<IndexRecord>(record)) {
@@ -219,7 +222,7 @@ private:
         }
 
         head_ = address();
-        auto layout = get_index_layout(*storage_, allocator, address());
+        auto layout = get_index_layout(*storage_, address());
         if (layout.find_append_location<IndexRecord>(head_.block)) {
             head_ = layout.address();
         }
@@ -237,8 +240,7 @@ public:
             return { };
         }
 
-        auto allocator = ExtentAllocator{ file_->index_, BLOCK_INDEX_INVALID };
-        auto reading = get_index_layout(*storage_, allocator, address());
+        auto reading = get_index_layout(*storage_, address());
 
         IndexRecord selected;
         IndexRecord record;
@@ -309,9 +311,8 @@ public:
         version_++;
         head_.invalid();
 
-        auto allocator = ExtentAllocator{ file_->index_, BLOCK_INDEX_INVALID };
-        auto reading = get_index_layout(*storage_, allocator, alternate());
-        auto writing = get_index_layout(*storage_, allocator, address());
+        auto reading = get_index_layout(*storage_, alternate());
+        auto writing = get_index_layout(*storage_, address());
 
         // sdebug() << "Reindex: " << reading.address() << " -> " << writing.address() << " length = " << length << " end = " << new_end << std::endl;
 
@@ -351,8 +352,7 @@ public:
     }
 
     void dump() {
-        auto allocator = ExtentAllocator{ file_->index_, head_.block };
-        auto layout = get_index_layout(*storage_, allocator, address());
+        auto layout = get_index_layout(*storage_, address());
 
         sdebug() << "Index: " << address() << std::endl;
 
@@ -382,6 +382,8 @@ private:
     FileIndex index_;
 
 public:
+    static constexpr block_index_t IndexFrequency = 4;
+
     SimpleFile() {
     }
 
@@ -395,8 +397,6 @@ public:
     }
 
 public:
-    static constexpr block_index_t IndexFrequency = 4;
-
     uint64_t maximum_size() const {
         return file_->data_.size(storage_->geometry());
     }
@@ -789,10 +789,6 @@ public:
     FileLayout(StorageBackend &storage) : storage_(&storage) {
     }
 
-    Geometry &geometry() const {
-        return storage_->geometry();
-    }
-
 public:
     bool allocate(FileDescriptor*(&fds)[SIZE]) {
         block_index_t head = 0;
@@ -854,6 +850,11 @@ public:
         return SimpleFile{ nullptr, nullptr };
     }
 
+public:
+    Geometry &geometry() const {
+        return storage_->geometry();
+    }
+
 private:
     block_index_t blocks_required_for_index(block_index_t nblocks) {
         auto indices_per_block = effective_index_block_size(geometry()) / sizeof(IndexRecord);
@@ -863,7 +864,7 @@ private:
 
     block_index_t blocks_required_for_data(uint64_t opaque_size) {
         constexpr uint64_t Megabyte = (1024 * 1024);
-        constexpr uint64_t Kilobyte = 1024;
+        constexpr uint64_t Kilobyte = (1024);
         uint64_t scale = 0;
 
         if (geometry().size() < 1024 * Megabyte) {

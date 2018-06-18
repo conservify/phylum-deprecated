@@ -27,6 +27,13 @@ public:
     virtual block_index_t allocate(BlockType type) = 0;
 };
 
+class EmptyAllocator : public Allocator {
+public:
+    virtual block_index_t allocate(BlockType type) override {
+        return BLOCK_INDEX_INVALID;
+    }
+};
+
 class BlockAllocator : public Allocator {
 public:
     virtual bool initialize(Geometry &geometry) = 0;
