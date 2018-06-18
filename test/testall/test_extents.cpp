@@ -902,9 +902,16 @@ private:
 
 class PatternHelper {
 private:
-    uint8_t data_[128]{ 0xcc };
+    uint8_t data_[128];
     uint64_t wrote_{ 0 };
     uint64_t read_{ 0 };
+
+public:
+    PatternHelper() {
+        for (size_t i = 0; i < sizeof(data_); ++i) {
+            data_[i] = i;
+        }
+    }
 
 public:
     int32_t size() {
@@ -919,6 +926,7 @@ public:
         return read_;
     }
 
+public:
     uint64_t write(SimpleFile &file, uint32_t times) {
         uint64_t total = 0;
         for (auto i = 0; i < (int32_t)times; ++i) {
