@@ -35,15 +35,6 @@ struct FileDescriptor {
     uint64_t maximum_size;
 };
 
-static uint64_t file_block_overhead(const Geometry &geometry) {
-    auto sectors_per_block = geometry.sectors_per_block();
-    return SectorSize + sizeof(FileBlockTail) + ((sectors_per_block - 2) * sizeof(FileSectorTail));
-}
-
-static uint64_t effective_file_block_size(const Geometry &geometry) {
-    return geometry.block_size() - file_block_overhead(geometry);
-}
-
 struct Extent {
     block_index_t start;
     block_index_t nblocks;
@@ -56,10 +47,6 @@ struct Extent {
         return contains((block_index_t)address.block);
     }
 
-    uint64_t size(const Geometry &g) const {
-        return nblocks * effective_file_block_size(g);
-    }
-
     BlockAddress final_sector(const Geometry &g) const {
         return { start + nblocks - 1, g.block_size() - SectorSize };
     }
@@ -67,6 +54,7 @@ struct Extent {
     BlockAddress end(const Geometry &g) const {
         return { start + nblocks, 0 };
     }
+
 };
 
 class File {
@@ -151,6 +139,15 @@ public:
     }
 
 };
+
+static uint64_t file_block_overhead(const Geometry &geometry) {
+    auto sectors_per_block = geometry.sectors_per_block();
+    return SectorSize + sizeof(FileBlockTail) + ((sectors_per_block - 2) * sizeof(FileSectorTail));
+}
+
+static uint64_t effective_file_block_size(const Geometry &geometry) {
+    return geometry.block_size() - file_block_overhead(geometry);
+}
 
 static uint64_t index_block_overhead(const Geometry &geometry) {
     return SectorSize + sizeof(IndexBlockTail);
@@ -401,9 +398,16 @@ public:
         }
     }
 
+    template<size_t SIZE>
+    friend class FileLayout;
+
 public:
+    operator bool() const {
+        return file_ != nullptr;
+    }
+
     uint64_t maximum_size() const {
-        return file_->data_.size(storage_->geometry());
+        return file_->data_.nblocks * effective_file_block_size(geometry());
     }
 
     uint64_t size() const {
@@ -422,10 +426,6 @@ public:
         return index_;
     }
 
-    operator bool() const {
-        return file_ != nullptr;
-    }
-
 public:
     bool seek(uint64_t position = 0) {
         auto end = index().seek(position);
@@ -434,14 +434,13 @@ public:
             position_ = end.position;
         }
         else {
-            // sdebug() << "Seek: " << position << std::endl;
             head_ = { file_->data_.start, 0 };
             return true;
         }
 
         auto info = seek(head_.block, position - end.position);
 
-        seek_offset_ = info.address.sector_offset(storage_->geometry());
+        seek_offset_ = info.address.sector_offset(geometry());
         head_ = info.address;
         head_.add(-seek_offset_);
         blocks_since_save_ = info.blocks;
@@ -450,8 +449,6 @@ public:
             length_ = end.position + info.bytes;
         }
 
-        // sdebug() << "Seek Done: " << position << " " << position_ << " " <<  head_ << " " << seek_offset_ << " " << end.position << std::endl;
-
         return true;
     }
 
@@ -459,17 +456,21 @@ public:
         // Are we out of data to return?
         if (buffavailable_ == buffpos_) {
             buffpos_ = 0;
+            buffavailable_ = 0;
 
-            if (file_->data_.end(storage_->geometry()) == head_) {
+            // We set head_ to the end of the data extent if we've read to the end.
+            if (file_->data_.end(geometry()) == head_) {
                 return 0;
             }
 
+            // If the head is invalid, seek to the beginning of the file.
             if (!head_.valid()) {
                 if (!seek(0)) {
                     return 0;
                 }
             }
 
+            // Skip head sector, just in case.
             if (head_.beginning_of_block()) {
                 head_.add(SectorSize);
             }
@@ -479,7 +480,8 @@ public:
             }
 
             // See how much data we have in this sector and/or if we have a block we
-            // should be moving onto after this sector is read.
+            // should be moving onto after this sector is read. This advances
+            // things for the following reading.
             if (tail_sector()) {
                 FileBlockTail tail;
                 memcpy(&tail, tail_info<FileBlockTail>(buffer_), sizeof(FileBlockTail));
@@ -489,9 +491,9 @@ public:
                 }
                 else {
                     // We should be in the last sector of the file.
-                    assert(file_->data_.final_sector(storage_->geometry()) == head_);
-                    head_ = file_->data_.end(storage_->geometry());
-                    assert(file_->data_.end(storage_->geometry()) == head_);
+                    assert(file_->data_.final_sector(geometry()) == head_);
+                    head_ = file_->data_.end(geometry());
+                    assert(file_->data_.end(geometry()) == head_);
                 }
             }
             else {
@@ -500,8 +502,6 @@ public:
                 buffavailable_ = tail.bytes;
                 head_.add(SectorSize);
             }
-
-            // sdebug() << "Read: " << head_ << " " << buffavailable_ << std::endl;
 
             // End of the file? Marked by an "unwritten" sector.
             if (buffavailable_ == 0 || buffavailable_ == SECTOR_INDEX_INVALID) {
@@ -514,6 +514,7 @@ public:
                 return 0;
             }
 
+            // Take care of seeks ending in the middle of a block.
             if (seek_offset_ > 0) {
                 buffpos_ = seek_offset_;
                 seek_offset_ = 0;
@@ -536,6 +537,7 @@ public:
 
         assert(!readonly_);
 
+        // If the head is invalid, seek to the end of the file.
         if (!head_.valid()) {
             if (!seek(UINT64_MAX)) {
                 return 0;
@@ -584,12 +586,6 @@ public:
             return 0;
         }
 
-        // It's on us to initialize the first block's header.
-        if (head_.block == file_->data_.start && head_.beginning_of_block()) {
-            head_ = initialize(head_.block, BLOCK_INDEX_INVALID);
-            index().append(0, { head_.block, SectorSize });
-        }
-
         // If this is the tail sector in the block write the tail section that links
         // to the following block.
         auto linked = BLOCK_INDEX_INVALID;
@@ -628,8 +624,6 @@ public:
         // of the time we write full sectors anyway.
         assert(file_->data_.contains(addr));
 
-        // sdebug() << "Write: " << addr << " " << buffpos_ << std::endl;
-
         if (!storage_->write(addr, buffer_, sizeof(buffer_))) {
             return 0;
         }
@@ -637,7 +631,6 @@ public:
         // We could do this in the if scope above, I like doing things "in order" though.
         if (writing_tail_sector) {
             if (is_valid_block(linked)) {
-                // sdebug() << "Initialize: " << head_.block << " -> " << linked << std::endl;
                 head_ = initialize(linked, head_.block);
                 assert(file_->data_.contains(head_));
                 if (!head_.valid()) {
@@ -645,9 +638,8 @@ public:
                 }
 
                 // Every N blocks we save our offset in the tree. This affects how much
-                // seeking needs to happen when trying to append or seek around.
+                // seeking needs to happen when, seeking.
                 blocks_since_save_++;
-                // sdebug() << (int16_t)blocks_since_save_ << " " << head_ << " " << linked << std::endl;
                 if (blocks_since_save_ == IndexFrequency) {
                     if (!index(head_)) {
                         return 0;
@@ -670,22 +662,37 @@ public:
         flush();
     }
 
-    bool format() {
-        return index_.format();
+private:
+    bool initialize() {
+        return true;
     }
 
-private:
+    bool format() {
+        if (!index_.format()) {
+            return false;
+        }
+
+        head_ = initialize(file_->data_.start, BLOCK_INDEX_INVALID);
+        if (!index(head_)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    const Geometry &geometry() const {
+        return storage_->geometry();
+    }
+
     template<typename T, size_t N>
     static T *tail_info(uint8_t(&buffer)[N]) {
         auto tail_offset = sizeof(buffer) - sizeof(T);
         return reinterpret_cast<T*>(buffer + tail_offset);
     }
 
-    struct SeekInfo {
-        BlockAddress address;
-        int32_t bytes;
-        int32_t blocks;
-    };
+    bool tail_sector() const {
+        return head_.tail_sector(geometry());
+    }
 
     bool index(BlockAddress address) {
         auto info = index().append(length_, head_);
@@ -710,9 +717,11 @@ private:
         return file_->data_.start;
     }
 
-    bool tail_sector() const {
-        return head_.tail_sector(storage_->geometry());
-    }
+    struct SeekInfo {
+        BlockAddress address;
+        int32_t bytes;
+        int32_t blocks;
+    };
 
     SeekInfo seek(block_index_t starting_block, uint64_t max, bool verify_head_block = true) {
         auto bytes = 0;
@@ -733,7 +742,7 @@ private:
 
         // Start walking the file from the given starting block until we reach the
         // end of the file or we've passed `max` bytes.
-        auto &g = storage_->geometry();
+        auto &g = geometry();
         auto addr = BlockAddress::tail_sector_of(starting_block, g);
         while (true) {
             if (!storage_->read(addr, buffer_, sizeof(buffer_))) {
@@ -812,8 +821,10 @@ public:
     bool allocate(FileDescriptor*(&fds)[SIZE]) {
         block_index_t head = 0;
 
+        #ifdef PHYLUM_LAYOUT_DEBUG
         sdebug() << "Effective block size: " << effective_file_block_size(geometry()) <<
             " overhead = " << file_block_overhead(geometry()) << std::endl;
+        #endif
 
         for (size_t i = 0; i < SIZE; ++i) {
             auto fd = fds[i];
@@ -844,9 +855,22 @@ public:
 
             files_[i] = File{ *fd, (uint8_t)i, index, data };
 
+            #ifdef PHYLUM_LAYOUT_DEBUG
             sdebug() << "Allocated: " << files_[i] << " " << fd->name << std::endl;
+            #endif
         }
         return true;
+    }
+
+    SimpleFile open(FileDescriptor &fd) {
+        for (size_t i = 0; i < SIZE; ++i) {
+            if (files_[i].fd_ == &fd) {
+                auto file = SimpleFile{ storage_, &files_[i] };
+                file.initialize();
+                return file;
+            }
+        }
+        return SimpleFile{ nullptr, nullptr };
     }
 
     bool format() {
@@ -858,15 +882,6 @@ public:
         }
 
         return true;
-    }
-
-    SimpleFile open(FileDescriptor &fd) {
-        for (size_t i = 0; i < SIZE; ++i) {
-            if (files_[i].fd_ == &fd) {
-                return SimpleFile{ storage_, &files_[i] };
-            }
-        }
-        return SimpleFile{ nullptr, nullptr };
     }
 
 public:
@@ -896,7 +911,6 @@ private:
         auto size = opaque_size * scale;
         return (size / effective_file_block_size(geometry())) + 1;
     }
-
 
 };
 
