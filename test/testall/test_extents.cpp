@@ -173,6 +173,19 @@ private:
     uint16_t version_{ 0 };
     BlockAddress head_;
 
+private:
+    BlockAddress address() {
+        auto bank = (version_ + 0) % 2;
+        auto length = file_->index_.nblocks / 2;
+        return { file_->index_.start + (length * bank), 0 };
+    }
+
+    BlockAddress alternate() {
+        auto bank = (version_ + 1) % 2;
+        auto length = file_->index_.nblocks / 2;
+        return { file_->index_.start + (length * bank), 0 };
+    }
+
 public:
     FileIndex() {
     }
@@ -180,13 +193,13 @@ public:
     FileIndex(StorageBackend *storage, File *file) : storage_(storage), file_(file) {
     }
 
-public:
+private:
     bool initialize() {
         if (head_.valid()) {
             return true;
         }
 
-        head_ = { file_->index_.start, 0 };
+        head_ = address();
 
         auto allocator = ExtentAllocator{ file_->index_, head_.block };
         auto layout = get_index_layout(*storage_, allocator, head_);
@@ -198,11 +211,16 @@ public:
         return true;
     }
 
+public:
+    uint16_t version() {
+        return version_;
+    }
+
     IndexRecord seek() {
         auto allocator = ExtentAllocator{ file_->index_, BLOCK_INDEX_INVALID };
-        auto layout = get_index_layout(*storage_, allocator, { file_->index_.start, 0 });
+        auto layout = get_index_layout(*storage_, allocator, address());
 
-        if (!layout.find_tail_entry<IndexRecord>(file_->index_.start)) {
+        if (!layout.find_tail_entry<IndexRecord>(address().block)) {
             return IndexRecord{ };
         }
 
@@ -214,27 +232,46 @@ public:
         return record;
     }
 
-    bool append(uint32_t position, BlockAddress address) {
+    struct ReindexInfo {
+        uint64_t length;
+
+        ReindexInfo(uint64_t length = 0) : length(length) {
+        }
+
+        operator bool() {
+            return length > 0;
+        }
+    };
+
+    ReindexInfo append(uint32_t position, BlockAddress address) {
         if (!initialize()) {
-            return false;
+            return { };
+        }
+
+        if (version_ >= 1) {
+            return reindex(position, address);
         }
 
         auto allocator = ExtentAllocator{ file_->index_, head_.block };
         auto layout = get_index_layout(*storage_, allocator, head_);
 
-        if (!layout.append(IndexRecord{ position, address, version_ })) {
-            return false;
+        auto record = IndexRecord{ position, address, version_ };
+        if (!layout.append(record)) {
+            return { };
         }
 
         head_ = layout.address();
 
-        sdebug() << "Index: " << address << " = " << position << " head=" << head_ << std::endl;
+        // sdebug() << "Append: " << record << " head=" << head_ << std::endl;
 
-        return true;
+        return { position };
     }
 
     bool format() {
-        if (!storage_->erase(file_->index_.start)) {
+        if (!storage_->erase(address().block)) {
+            return false;
+        }
+        if (!storage_->erase(alternate().block)) {
             return false;
         }
         if (!storage_->erase(file_->data_.start)) {
@@ -243,17 +280,39 @@ public:
         return true;
     }
 
-    bool reindex() {
-        auto allocator = ExtentAllocator{ file_->index_, head_.block };
-        auto layout = get_index_layout(*storage_, allocator, BlockAddress{ file_->index_.start, 0 });
+    bool beginning() {
+        auto allocator = ExtentAllocator{ file_->index_, BLOCK_INDEX_INVALID };
+        auto reading = get_index_layout(*storage_, allocator, address());
 
-        sdebug() << "Reindex: " << head_ << std::endl;
+        auto seen_beginning = false;
+        IndexRecord record;
+        while (reading.walk<IndexRecord>(record)) {
+            if (record.position == 0) {
+                seen_beginning = true;
+                sdebug() << "Beginning: " << record << std::endl;
+            }
+            else if (seen_beginning) {
+                sdebug() << "First Block: " << record << std::endl;
+                break;
+            }
+        }
 
+        return true;
+    }
+
+    ReindexInfo reindex(uint64_t length, BlockAddress new_end) {
         version_++;
+        head_.invalid();
+
+        auto allocator = ExtentAllocator{ file_->index_, BLOCK_INDEX_INVALID };
+        auto reading = get_index_layout(*storage_, allocator, alternate());
+        auto writing = get_index_layout(*storage_, allocator, address());
+
+        // sdebug() << "Reindex: " << reading.address() << " -> " << writing.address() << " length = " << length << " end = " << new_end << std::endl;
 
         uint64_t offset = 0;
         IndexRecord record;
-        while (layout.walk<IndexRecord>(record)) {
+        while (reading.walk<IndexRecord>(record)) {
             if (record.position == 0) {
                 // If offset is non-zero then we've looped around.
                 if (offset != 0) {
@@ -265,20 +324,32 @@ public:
                     offset = record.position;
                 }
 
-                if (!append(record.position - offset, record.address)) {
-                    return false;
+                auto nrecord = IndexRecord{ record.position - offset, record.address, version_ };
+                // sdebug() << "  " << nrecord << std::endl;
+                if (!writing.append(nrecord)) {
+                    return { };
                 }
             }
         }
 
-        return true;
+        auto new_length = length - offset;
+
+        auto nrecord = IndexRecord{ new_length, new_end, version_ };
+        // sdebug() << "  " << nrecord << std::endl;
+        if (!writing.append(nrecord)) {
+            return { };
+        }
+
+        // sdebug() << "EoI: length = " << new_length << std::endl;
+
+        return { new_length };
     }
 
     void dump() {
         auto allocator = ExtentAllocator{ file_->index_, head_.block };
-        auto layout = get_index_layout(*storage_, allocator, BlockAddress{ file_->index_.start, 0 });
+        auto layout = get_index_layout(*storage_, allocator, address());
 
-        sdebug() << "Index: " << std::endl;
+        sdebug() << "Index: " << address() << std::endl;
 
         IndexRecord record;
         while (layout.walk<IndexRecord>(record)) {
@@ -300,7 +371,7 @@ private:
     uint32_t bytes_in_block_{ 0 };
     uint32_t position_{ 0 };
     uint32_t length_{ 0 };
-    uint8_t blocks_since_save_{ 0 };
+    int8_t blocks_since_save_{ 0 };
     bool readonly_{ false };
     BlockAddress head_;
     FileIndex index_;
@@ -320,6 +391,8 @@ public:
     }
 
 public:
+    static constexpr block_index_t IndexFrequency = 4;
+    
     uint64_t maximum_size() const {
         return file_->data_.size(storage_->geometry());
     }
@@ -337,12 +410,8 @@ public:
     }
 
     bool seek(uint64_t position = 0) {
-        if (!index_.initialize()) {
-            return false;
-        }
-
         if (position == UINT64_MAX) {
-            auto end = index_.seek();
+            auto end = index().seek();
             if (end.valid()) {
                 head_ = end.address;
                 length_ = end.position;
@@ -358,6 +427,7 @@ public:
         seek_offset_ = info.address.sector_offset(storage_->geometry());
         head_ = info.address;
         head_.add(-seek_offset_);
+        blocks_since_save_ = info.blocks;
         length_ += info.bytes;
         position_ += info.bytes;
 
@@ -475,9 +545,14 @@ public:
     }
 
     block_index_t rollover() {
-        sdebug() << "Rollover" << std::endl;
+        auto info = index().reindex(length_, { file_->data_.start, SectorSize });
+        if (!info) {
+            return BLOCK_INDEX_INVALID;
+        }
 
-        index_.reindex();
+        blocks_since_save_ = -1; // HACK
+        length_ = info.length;
+        position_ = info.length;
 
         return file_->data_.start;
     }
@@ -494,7 +569,7 @@ public:
         // It's on us to initialize the first block's header.
         if (head_.block == file_->data_.start && head_.beginning_of_block()) {
             head_ = initialize(head_.block, BLOCK_INDEX_INVALID);
-            index_.append(0, { head_.block, 0 });
+            index().append(0, { head_.block, SectorSize });
         }
 
         // If this is the tail sector in the block write the tail section that links
@@ -544,6 +619,7 @@ public:
         // We could do this in the if scope above, I like doing things "in order" though.
         if (writing_tail_sector) {
             if (is_valid_block(linked)) {
+                // sdebug() << "Initialize: " << head_.block << " -> " << linked << std::endl;
                 head_ = initialize(linked, head_.block);
                 assert(file_->data_.contains(head_));
                 if (!head_.valid()) {
@@ -553,9 +629,12 @@ public:
                 // Every N blocks we save our offset in the tree. This affects how much
                 // seeking needs to happen when trying to append or seek around.
                 blocks_since_save_++;
-                if (blocks_since_save_ == 8) {
-                    index_.append(length_, head_);
+                // sdebug() << (int16_t)blocks_since_save_ << " " << head_ << " " << linked << std::endl;
+                if (blocks_since_save_ == IndexFrequency) {
+                    auto info = index().append(length_, head_);
                     blocks_since_save_ = 0;
+                    length_ = info.length;
+                    position_ = info.length;
                 }
             }
             else {
@@ -709,11 +788,11 @@ public:
 
             if (fd->maximum_size > 0) {
                 nblocks = blocks_required_for_data(fd->maximum_size);
-                index_blocks = blocks_required_for_index(nblocks);
+                index_blocks = blocks_required_for_index(nblocks) * 2;
             }
             else {
                 nblocks = geometry().number_of_blocks - head - 1;
-                index_blocks = blocks_required_for_index(nblocks);
+                index_blocks = blocks_required_for_index(nblocks) * 2;
                 nblocks -= index_blocks;
             }
 
@@ -758,7 +837,7 @@ private:
     block_index_t blocks_required_for_index(block_index_t nblocks) {
         auto indices_per_block = effective_index_block_size(geometry()) / sizeof(IndexRecord);
         auto indices = (nblocks / 8) + 1;
-        return std::max((uint64_t)1, indices / indices_per_block) * 2;
+        return std::max((uint64_t)1, indices / indices_per_block);
     }
 
     block_index_t blocks_required_for_data(uint64_t opaque_size) {
@@ -1047,6 +1126,8 @@ TEST_F(ExtentsSuite, RollingWriteStrategyTwoRollovers) {
     FileLayout<2> layout{ storage_ };
 
     layout.allocate(files);
+    // storage_.log().logging(true);
+
     layout.format();
 
     auto file = layout.open(file_data_fk);
