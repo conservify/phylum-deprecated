@@ -261,8 +261,12 @@ public:
 
     struct ReindexInfo {
         uint64_t length;
+        uint64_t truncated;
 
-        ReindexInfo(uint64_t length = 0) : length(length) {
+        ReindexInfo() : length(0), truncated(0) {
+        }
+
+        ReindexInfo(uint64_t length, uint64_t truncated) : length(length), truncated(truncated) {
         }
 
         operator bool() {
@@ -291,7 +295,7 @@ public:
 
         // sdebug() << "Append: " << record << " head=" << head_ << std::endl;
 
-        return { position };
+        return { position, 0 };
     }
 
     bool format() {
@@ -348,7 +352,7 @@ public:
 
         // sdebug() << "EoI: length = " << new_length << std::endl;
 
-        return { new_length };
+        return { new_length, offset };
     }
 
     void dump() {
@@ -376,6 +380,7 @@ private:
     uint32_t bytes_in_block_{ 0 };
     uint32_t position_{ 0 };
     uint32_t length_{ 0 };
+    uint32_t truncated_{ 0 };
     int8_t blocks_since_save_{ 0 };
     bool readonly_{ false };
     BlockAddress head_;
@@ -409,6 +414,10 @@ public:
         return position_;
     }
 
+    uint32_t truncated() const {
+        return truncated_;
+    }
+
     FileIndex &index() {
         return index_;
     }
@@ -417,6 +426,7 @@ public:
         return file_ != nullptr;
     }
 
+public:
     bool seek(uint64_t position = 0) {
         auto end = index().seek(position);
         if (end.valid()) {
@@ -639,10 +649,9 @@ public:
                 blocks_since_save_++;
                 // sdebug() << (int16_t)blocks_since_save_ << " " << head_ << " " << linked << std::endl;
                 if (blocks_since_save_ == IndexFrequency) {
-                    auto info = index().append(length_, head_);
-                    blocks_since_save_ = 0;
-                    length_ = info.length;
-                    position_ = info.length;
+                    if (!index(head_)) {
+                        return 0;
+                    }
                 }
             }
             else {
@@ -678,6 +687,15 @@ private:
         int32_t blocks;
     };
 
+    bool index(BlockAddress address) {
+        auto info = index().append(length_, head_);
+        blocks_since_save_ = 0;
+        length_ = info.length;
+        position_ = info.length;
+        truncated_ += info.truncated;
+        return true;
+    }
+
     block_index_t rollover() {
         auto info = index().reindex(length_, { file_->data_.start, SectorSize });
         if (!info) {
@@ -687,6 +705,7 @@ private:
         blocks_since_save_ = -1; // HACK
         length_ = info.length;
         position_ = info.length;
+        truncated_ += info.truncated;
 
         return file_->data_.start;
     }
@@ -1140,10 +1159,7 @@ TEST_F(ExtentsSuite, RollingWriteStrategyOneRollover) {
 
     ASSERT_EQ(total, helper.bytes_written());
 
-    file.index().dump();
-
-    auto bytes_per_index_region = SimpleFile::IndexFrequency * effective_file_block_size(storage_.geometry());
-    auto skip = helper.size() - (bytes_per_index_region - (bytes_per_index_region / helper.size()) * helper.size());
+    auto skip = helper.size() - (file.truncated() - (file.truncated() / helper.size()) * helper.size());
     auto verified = helper.verify_file(layout, file_data_fk, skip);
     ASSERT_EQ(file.size(), verified + skip);
 }
@@ -1172,10 +1188,7 @@ TEST_F(ExtentsSuite, RollingWriteStrategyTwoRollovers) {
 
     ASSERT_EQ(total, helper.bytes_written());
 
-    file.index().dump();
-
-    // auto bytes_per_index_region = SimpleFile::IndexFrequency * effective_file_block_size(storage_.geometry());
-    // auto skip = helper.size() - (bytes_per_index_region - (bytes_per_index_region / helper.size()) * helper.size());
-    auto verified = helper.verify_file(layout, file_data_fk, 80);
-    ASSERT_EQ(file.size(), verified + 80);
+    auto skip = helper.size() - (file.truncated() - (file.truncated() / helper.size()) * helper.size());
+    auto verified = helper.verify_file(layout, file_data_fk, skip);
+    ASSERT_EQ(file.size(), verified + skip);
 }
