@@ -50,6 +50,43 @@ public:
         return true;
     }
 
+    template<typename TEntry>
+    bool walk(TEntry &entry) {
+        if (should_write_tail(sizeof(TEntry))) {
+            auto tl = BlockAddress::tail_data_of(address_.block, g_, sizeof(TTail));
+            TTail tail;
+
+            #ifdef PHYLUM_LAYOUT_DEBUG
+            sdebug() << "layout: ReadTail: " << tl << " " << sizeof(TTail) << std::endl;
+            #endif
+            if (!storage_.read(tl, &tail, sizeof(TTail))) {
+                return false;
+            }
+
+            if (is_valid_block(tail.block.linked_block)) {
+                address_ = { tail.block.linked_block, 0 };
+            }
+            else {
+                return false;
+            }
+        }
+
+        if (address_.beginning_of_block()) {
+            if (!verify_head(address_)) {
+                return false;
+            }
+            address_.add(SectorSize);
+        }
+
+        if (!storage_.read(address_, &entry, sizeof(TEntry))) {
+            return false;
+        }
+
+        address_.add(sizeof(TEntry));
+
+        return entry.valid();
+    }
+
     bool walk_block(size_t required) {
         if (need_new_block() || should_write_tail(required)) {
             return false;
@@ -186,24 +223,32 @@ private:
         }
     };
 
+    bool verify_head(BlockAddress address) {
+        THead head(BlockType::Error);
+        #ifdef PHYLUM_LAYOUT_DEBUG
+        sdebug() << "layout: ReadHead: " << location << " " << sizeof(THead) << std::endl;
+        #endif
+        if (!storage_.read(address, &head, sizeof(THead))) {
+            return false;
+        }
+
+        // When we start a new block we always write the head.
+        if (!head.valid()) {
+            return false;
+        }
+
+        return true;
+    }
+
     template<typename TRead>
     EndOfChain walk_to_end(block_index_t block, size_t required, TRead fn) {
-        auto verify_head = true;
+        auto verify_block_head = true;
         auto location = BlockAddress{ block, 0 };
         auto found = BlockAddress{ };
         while (location.remaining_in_block(g_) /* - sizeof(TTail)*/ >= required) {
             if (location.beginning_of_block()) {
-                if (verify_head) {
-                    THead head(BlockType::Error);
-                    #ifdef PHYLUM_LAYOUT_DEBUG
-                    sdebug() << "layout: ReadHead: " << location << " " << sizeof(THead) << std::endl;
-                    #endif
-                    if (!storage_.read(location, &head, sizeof(THead))) {
-                        return { };
-                    }
-
-                    // When we start a new block we always write the head.
-                    if (!head.valid()) {
+                if (verify_block_head) {
+                    if (!verify_head(location)) {
                         return { };
                     }
                 }

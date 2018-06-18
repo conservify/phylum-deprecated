@@ -24,6 +24,17 @@ protected:
 
 };
 
+enum class WriteStrategy {
+    Append,
+    Rolling
+};
+
+struct FileDescriptor {
+    char name[16];
+    WriteStrategy strategy;
+    uint64_t maximum_size;
+};
+
 static uint64_t file_block_overhead(const Geometry &geometry) {
     auto sectors_per_block = geometry.sectors_per_block();
     return SectorSize + sizeof(FileBlockTail) + ((sectors_per_block - 2) * sizeof(FileSectorTail));
@@ -32,17 +43,6 @@ static uint64_t file_block_overhead(const Geometry &geometry) {
 static uint64_t effective_file_block_size(const Geometry &geometry) {
     return geometry.block_size() - file_block_overhead(geometry);
 }
-
-enum class WriteStrategy {
-    Append,
-    Rolling
-};
-
-struct FileDescriptor {
-    char name[16];
-    WriteStrategy stategy;
-    uint64_t maximum_size;
-};
 
 struct Extent {
     block_index_t start;
@@ -58,6 +58,14 @@ struct Extent {
 
     uint64_t size(const Geometry &g) const {
         return nblocks * effective_file_block_size(g);
+    }
+
+    BlockAddress final_sector(const Geometry &g) const {
+        return { start + nblocks - 1, g.block_size() - SectorSize };
+    }
+
+    BlockAddress end(const Geometry &g) const {
+        return { start + nblocks, 0 };
     }
 };
 
@@ -125,7 +133,7 @@ struct IndexBlockTail {
 };
 
 inline std::ostream& operator<<(std::ostream& os, const IndexRecord &f) {
-    return os << "IndexRecord<" << f.position << " addr=" << f.address << ">";
+    return os << "IndexRecord<" << f.version << ": " << f.position << " addr=" << f.address << ">";
 }
 
 class ExtentAllocator : public Allocator {
@@ -144,6 +152,14 @@ public:
 
 };
 
+static uint64_t index_block_overhead(const Geometry &geometry) {
+    return SectorSize + sizeof(IndexBlockTail);
+}
+
+static uint64_t effective_index_block_size(const Geometry &geometry) {
+    return geometry.block_size() - index_block_overhead(geometry);
+}
+
 static inline BlockLayout<IndexBlockHead, IndexBlockTail> get_index_layout(StorageBackend &storage,
                                                                            Allocator &allocator,
                                                                            BlockAddress address) {
@@ -154,6 +170,7 @@ class FileIndex {
 private:
     StorageBackend *storage_;
     File *file_{ nullptr };
+    uint16_t version_{ 0 };
     BlockAddress head_;
 
 public:
@@ -205,13 +222,13 @@ public:
         auto allocator = ExtentAllocator{ file_->index_, head_.block };
         auto layout = get_index_layout(*storage_, allocator, head_);
 
-        if (!layout.append(IndexRecord{ position, address })) {
+        if (!layout.append(IndexRecord{ position, address, version_ })) {
             return false;
         }
 
         head_ = layout.address();
 
-        sdebug() << "Index: " << address << " = " << position << " " << head_ << std::endl;
+        sdebug() << "Index: " << address << " = " << position << " head=" << head_ << std::endl;
 
         return true;
     }
@@ -226,6 +243,49 @@ public:
         return true;
     }
 
+    bool reindex() {
+        auto allocator = ExtentAllocator{ file_->index_, head_.block };
+        auto layout = get_index_layout(*storage_, allocator, BlockAddress{ file_->index_.start, 0 });
+
+        sdebug() << "Reindex: " << head_ << std::endl;
+
+        version_++;
+
+        uint64_t offset = 0;
+        IndexRecord record;
+        while (layout.walk<IndexRecord>(record)) {
+            if (record.position == 0) {
+                // If offset is non-zero then we've looped around.
+                if (offset != 0) {
+                    break;
+                }
+            }
+            else {
+                if (offset == 0) {
+                    offset = record.position;
+                }
+
+                if (!append(record.position - offset, record.address)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    void dump() {
+        auto allocator = ExtentAllocator{ file_->index_, head_.block };
+        auto layout = get_index_layout(*storage_, allocator, BlockAddress{ file_->index_.start, 0 });
+
+        sdebug() << "Index: " << std::endl;
+
+        IndexRecord record;
+        while (layout.walk<IndexRecord>(record)) {
+            sdebug() << "  " << record << std::endl;
+        }
+    }
+
 };
 
 class SimpleFile {
@@ -236,6 +296,7 @@ private:
     uint8_t buffer_[SectorSize];
     uint16_t buffavailable_{ 0 };
     uint16_t buffpos_{ 0 };
+    uint16_t seek_offset_{ 0 };
     uint32_t bytes_in_block_{ 0 };
     uint32_t position_{ 0 };
     uint32_t length_{ 0 };
@@ -252,6 +313,12 @@ public:
         head_ = { file_->data_.start, 0 };
     }
 
+    ~SimpleFile() {
+        if (!readonly_) {
+            // close();
+        }
+    }
+
 public:
     uint64_t maximum_size() const {
         return file_->data_.size(storage_->geometry());
@@ -261,28 +328,111 @@ public:
         return length_;
     }
 
+    FileIndex &index() {
+        return index_;
+    }
+
     operator bool() const {
         return file_ != nullptr;
     }
 
-    bool seek() {
+    bool seek(uint64_t position = 0) {
         if (!index_.initialize()) {
             return false;
         }
 
-        auto end = index_.seek();
-        if (end.valid()) {
-            head_ = end.address;
-            length_ = end.position;
-            position_ = end.position;
+        if (position == UINT64_MAX) {
+            auto end = index_.seek();
+            if (end.valid()) {
+                head_ = end.address;
+                length_ = end.position;
+                position_ = end.position;
+            }
+        }
+        else {
+            head_ = { file_->data_.start, 0 };
         }
 
-        auto info = seek(head_.block, UINT64_MAX);
+        auto info = seek(head_.block, position);
+
+        seek_offset_ = info.address.sector_offset(storage_->geometry());
         head_ = info.address;
+        head_.add(-seek_offset_);
         length_ += info.bytes;
         position_ += info.bytes;
 
         return true;
+    }
+
+    int32_t read(uint8_t *ptr, size_t size) {
+        // Are we out of data to return?
+        if (buffavailable_ == buffpos_) {
+            buffpos_ = 0;
+
+            if (file_->data_.end(storage_->geometry()) == head_) {
+                return 0;
+            }
+
+            if (head_.beginning_of_block()) {
+                head_.add(SectorSize);
+            }
+
+            // sdebug() << "Read: " << head_ << std::endl;
+
+            if (!storage_->read(head_, buffer_, sizeof(buffer_))) {
+                return 0;
+            }
+
+            // See how much data we have in this sector and/or if we have a block we
+            // should be moving onto after this sector is read.
+            if (tail_sector()) {
+                FileBlockTail tail;
+                memcpy(&tail, tail_info<FileBlockTail>(buffer_), sizeof(FileBlockTail));
+                buffavailable_ = tail.sector.bytes;
+                if (tail.block.linked_block != BLOCK_INDEX_INVALID) {
+                    head_ = BlockAddress{ tail.block.linked_block, SectorSize };
+                }
+                else {
+                    // We should be in the last sector of the file.
+                    assert(file_->data_.final_sector(storage_->geometry()) == head_);
+                    head_ = file_->data_.end(storage_->geometry());
+                    assert(file_->data_.end(storage_->geometry()) == head_);
+                }
+            }
+            else {
+                FileSectorTail tail;
+                memcpy(&tail, tail_info<FileSectorTail>(buffer_), sizeof(FileSectorTail));
+                buffavailable_ = tail.bytes;
+                head_.add(SectorSize);
+            }
+
+            // sdebug() << "Read: " << head_ << " " << buffavailable_ << std::endl;
+
+            // End of the file? Marked by an "unwritten" sector.
+            if (buffavailable_ == 0 || buffavailable_ == SECTOR_INDEX_INVALID) {
+                // If we're at the end we know our length.
+                if (length_ == ((uint32_t)-1)) {
+                    assert(false);
+                    length_ = position_;
+                }
+                buffavailable_ = 0;
+                return 0;
+            }
+
+            if (seek_offset_ > 0) {
+                buffpos_ = seek_offset_;
+                seek_offset_ = 0;
+            }
+        }
+
+        auto remaining = (uint16_t)(buffavailable_ - buffpos_);
+        auto copying = remaining > size ? size : remaining;
+        memcpy(ptr, buffer_ + buffpos_, copying);
+
+        buffpos_ += copying;
+        position_ += copying;
+
+        return copying;
     }
 
     int32_t write(uint8_t *ptr, size_t size) {
@@ -324,6 +474,14 @@ public:
         return wrote;
     }
 
+    block_index_t rollover() {
+        sdebug() << "Rollover" << std::endl;
+
+        index_.reindex();
+
+        return file_->data_.start;
+    }
+
     int32_t flush() {
         if (readonly_) {
             return 0;
@@ -348,7 +506,16 @@ public:
             // Check to see if we're at the end of our allocated space.
             linked = head_.block + 1;
             if (!file_->data_.contains(linked)) {
-                linked = BLOCK_INDEX_INVALID;
+                switch (file_->fd_->strategy) {
+                case WriteStrategy::Append: {
+                    linked = BLOCK_INDEX_INVALID;
+                    break;
+                }
+                case WriteStrategy::Rolling: {
+                    linked = rollover();
+                    break;
+                }
+                }
             }
 
             FileBlockTail tail;
@@ -367,6 +534,8 @@ public:
         // Write this full sector. No partial writes here because of the tail. Most
         // of the time we write full sectors anyway.
         assert(file_->data_.contains(addr));
+
+        // sdebug() << "Write: " << addr << " " << buffpos_ << std::endl;
 
         if (!storage_->write(addr, buffer_, sizeof(buffer_))) {
             return 0;
@@ -534,23 +703,29 @@ public:
         for (size_t i = 0; i < SIZE; ++i) {
             auto fd = fds[i];
             auto nblocks = block_index_t(0);
+            auto index_blocks = block_index_t(0);
 
             assert(fd != nullptr);
 
             if (fd->maximum_size > 0) {
-                nblocks = blocks_required_for_size(fd->maximum_size);
+                nblocks = blocks_required_for_data(fd->maximum_size);
+                index_blocks = blocks_required_for_index(nblocks);
             }
             else {
-                nblocks = geometry().number_of_blocks - head;
+                nblocks = geometry().number_of_blocks - head - 1;
+                index_blocks = blocks_required_for_index(nblocks);
+                nblocks -= index_blocks;
             }
 
             assert(nblocks > 0);
 
-            auto index = Extent{ head, 2 };
-            head += 2;
+            auto index = Extent{ head, index_blocks };
+            head += index.nblocks;
+            assert(geometry().contains(BlockAddress{ head, 0 }));
 
             auto data = Extent{ head, nblocks };
-            head += nblocks;
+            head += data.nblocks;
+            assert(geometry().contains(BlockAddress{ head, 0 }));
 
             files_[i] = File{ *fd, (uint8_t)i, index, data };
 
@@ -570,8 +745,23 @@ public:
         return true;
     }
 
-public:
-    block_index_t blocks_required_for_size(uint64_t opaque_size) {
+    SimpleFile open(FileDescriptor &fd) {
+        for (size_t i = 0; i < SIZE; ++i) {
+            if (files_[i].fd_ == &fd) {
+                return SimpleFile{ storage_, &files_[i] };
+            }
+        }
+        return SimpleFile{ nullptr, nullptr };
+    }
+
+private:
+    block_index_t blocks_required_for_index(block_index_t nblocks) {
+        auto indices_per_block = effective_index_block_size(geometry()) / sizeof(IndexRecord);
+        auto indices = (nblocks / 8) + 1;
+        return std::max((uint64_t)1, indices / indices_per_block) * 2;
+    }
+
+    block_index_t blocks_required_for_data(uint64_t opaque_size) {
         constexpr uint64_t Megabyte = (1024 * 1024);
         constexpr uint64_t Kilobyte = 1024;
         uint64_t scale = 0;
@@ -587,42 +777,79 @@ public:
         return (size / effective_file_block_size(geometry())) + 1;
     }
 
-    SimpleFile open(FileDescriptor &fd) {
-        for (size_t i = 0; i < SIZE; ++i) {
-            if (files_[i].fd_ == &fd) {
-                return SimpleFile{ storage_, &files_[i] };
-            }
-        }
-        return SimpleFile{ nullptr, nullptr };
-    }
 
 };
 
-TEST_F(ExtentsSuite, SmallFileWritingToEnd) {
-    FileDescriptor file_system_area_fd =   { "system",        WriteStrategy::Append,  100 };
-    FileDescriptor file_log_startup_fd =   { "startup.log",   WriteStrategy::Append,  100 };
+class PatternHelper {
+private:
+    uint8_t data_[128]{ 0xcc };
+    uint64_t wrote_{ 0 };
+    uint64_t read_{ 0 };
 
-    static FileDescriptor* files[] = {
-        &file_system_area_fd,
-        &file_log_startup_fd,
-    };
-
-    FileLayout<2> layout{ storage_ };
-
-    layout.allocate(files);
-    layout.format();
-
-    auto file = layout.open(file_log_startup_fd);
-    ASSERT_TRUE(file);
-
-    uint64_t total = 0;
-    uint8_t data[128] = { 0xcc };
-    for (auto i = 0; i < (1024 * 1024) / (int32_t)sizeof(data); ++i) {
-        total += file.write(data, sizeof(data));
+public:
+    int32_t size() {
+        return sizeof(data_);
     }
 
-    ASSERT_EQ(total, file.maximum_size());
-}
+    uint64_t bytes_written() {
+        return wrote_;
+    }
+
+    uint64_t bytes_read() {
+        return read_;
+    }
+
+    uint64_t write(SimpleFile &file, uint32_t times) {
+        uint64_t total = 0;
+        for (auto i = 0; i < (int32_t)times; ++i) {
+            auto bytes = file.write(data_, sizeof(data_));
+            total += bytes;
+            wrote_ += bytes;
+            if (bytes != sizeof(data_)) {
+                break;
+            }
+        }
+        return total;
+    }
+
+    uint32_t read(SimpleFile &file) {
+        uint8_t buffer[sizeof(data_)];
+        uint64_t total = 0;
+
+        assert(sizeof(buffer) % sizeof(data_) == (size_t)0);
+
+        while (true) {
+            auto bytes = file.read(buffer, sizeof(buffer));
+            if (bytes == 0) {
+                break;
+            }
+
+            auto i = 0;
+            while (i < bytes) {
+                auto left = bytes - i;
+                auto pattern_position = total % size();
+                auto comparing = left > (size() - pattern_position) ? (size() - pattern_position) : left;
+
+                assert(memcmp(buffer + i, data_ + pattern_position, comparing) == 0);
+
+                i += comparing;
+                total += comparing;
+            }
+        }
+
+        return total;
+    }
+
+    template<size_t N>
+    uint64_t verify_file(FileLayout<N> &layout, FileDescriptor &fd) {
+        auto file = layout.open(fd);
+
+        auto bytes_read = read(file);
+
+        return bytes_read;
+    }
+
+};
 
 TEST_F(ExtentsSuite, StandardLayoutAllocating) {
     FileDescriptor file_system_area_fd =   { "system",        WriteStrategy::Append,  100 };
@@ -645,9 +872,37 @@ TEST_F(ExtentsSuite, StandardLayoutAllocating) {
     layout.format();
 }
 
+TEST_F(ExtentsSuite, SmallFileWritingToEnd) {
+    FileDescriptor file_system_area_fd =   { "system",      WriteStrategy::Append,  100 };
+    FileDescriptor file_log_startup_fd =   { "startup.log", WriteStrategy::Append,  100 };
+
+    static FileDescriptor* files[] = {
+        &file_system_area_fd,
+        &file_log_startup_fd,
+    };
+
+    FileLayout<2> layout{ storage_ };
+
+    layout.allocate(files);
+    layout.format();
+
+    auto file = layout.open(file_log_startup_fd);
+    ASSERT_TRUE(file);
+
+    PatternHelper helper;
+    auto total = helper.write(file, (1024 * 1024) / helper.size());
+
+    ASSERT_EQ(total, file.maximum_size());
+
+    file.close();
+
+    auto verified = helper.verify_file(layout, file_log_startup_fd);
+    ASSERT_EQ(total, verified);
+}
+
 TEST_F(ExtentsSuite, LargeFileWritingToEnd) {
-    FileDescriptor file_system_area_fd =   { "system",        WriteStrategy::Append,  100 };
-    FileDescriptor file_data_fk =          { "data.fk",       WriteStrategy::Append,  0   };
+    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
+    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Append,  0   };
 
     static FileDescriptor* files[] = {
         &file_system_area_fd,
@@ -662,18 +917,20 @@ TEST_F(ExtentsSuite, LargeFileWritingToEnd) {
     auto file = layout.open(file_data_fk);
     ASSERT_TRUE(file);
 
-    auto total = 0;
-    uint8_t data[128] = { 0xcc };
-    for (auto i = 0; i < (1024 * 1024) / (int32_t)sizeof(data); ++i) {
-        total += file.write(data, sizeof(data));
-    }
+    PatternHelper helper;
+    auto total = helper.write(file, (1024 * 1024) / helper.size());
 
-    ASSERT_EQ(total, 1024 * 1024);
+    file.close();
+
+    ASSERT_EQ(total, (uint64_t)1024 * 1024);
+
+    auto verified = helper.verify_file(layout, file_data_fk);
+    ASSERT_EQ(total, verified);
 }
 
 TEST_F(ExtentsSuite, LargeFileAppending) {
-    FileDescriptor file_system_area_fd =   { "system",        WriteStrategy::Append,  100 };
-    FileDescriptor file_data_fk =          { "data.fk",       WriteStrategy::Append,  0   };
+    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
+    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Append,  0   };
 
     static FileDescriptor* files[] = {
         &file_system_area_fd,
@@ -687,16 +944,13 @@ TEST_F(ExtentsSuite, LargeFileAppending) {
 
     constexpr uint64_t OneMegabyte = 1024 * 1024;
 
+    PatternHelper helper;
     {
         auto file = layout.open(file_data_fk);
         ASSERT_TRUE(file);
         ASSERT_EQ(file.size(), (uint64_t)0);
 
-        uint64_t total = 0;
-        uint8_t data[128] = { 0xcc };
-        for (auto i = 0; i < (int32_t)OneMegabyte / (int32_t)sizeof(data); ++i) {
-            total += file.write(data, sizeof(data));
-        }
+        auto total = helper.write(file, (int32_t)OneMegabyte / helper.size());
 
         file.close();
 
@@ -707,18 +961,102 @@ TEST_F(ExtentsSuite, LargeFileAppending) {
     {
         auto file = layout.open(file_data_fk);
         ASSERT_TRUE(file);
-        ASSERT_TRUE(file.seek());
+        ASSERT_TRUE(file.seek(UINT64_MAX));
         ASSERT_EQ(file.size(), OneMegabyte);
 
-        uint64_t total = 0;
-        uint8_t data[128] = { 0xcc };
-        for (auto i = 0; i < (int32_t)OneMegabyte / (int32_t)sizeof(data); ++i) {
-            total += file.write(data, sizeof(data));
-        }
+        auto total = helper.write(file, (int32_t)OneMegabyte / helper.size());
 
         file.close();
 
         ASSERT_EQ(file.size(), 2 * OneMegabyte);
         ASSERT_EQ(total, OneMegabyte);
     }
+
+    auto verified = helper.verify_file(layout, file_data_fk);
+    ASSERT_EQ(OneMegabyte * 2, verified);
+}
+
+TEST_F(ExtentsSuite, SeekMiddleOfFile) {
+    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
+    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Append,  0   };
+
+    static FileDescriptor* files[] = {
+        &file_system_area_fd,
+        &file_data_fk
+    };
+
+    FileLayout<2> layout{ storage_ };
+
+    layout.allocate(files);
+    layout.format();
+
+    constexpr uint64_t OneMegabyte = 1024 * 1024;
+    auto file = layout.open(file_data_fk);
+    ASSERT_EQ(file.size(), (uint64_t)0);
+    PatternHelper helper;
+    auto total = helper.write(file, (int32_t)OneMegabyte / helper.size());
+    file.close();
+
+    ASSERT_EQ(file.size(), OneMegabyte);
+    ASSERT_EQ(total, OneMegabyte);
+
+    auto middle_on_pattern_edge = (OneMegabyte / 2) / helper.size() * helper.size();
+    auto reading = layout.open(file_data_fk);
+    ASSERT_EQ(reading.size(), (uint64_t)0);
+    reading.seek(middle_on_pattern_edge);
+    auto verified = helper.read(reading);
+    reading.close();
+
+    ASSERT_EQ(verified, OneMegabyte / 2);
+}
+
+TEST_F(ExtentsSuite, RollingWriteStrategyOneRollover) {
+    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
+    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Rolling, 100 };
+
+    static FileDescriptor* files[] = {
+        &file_system_area_fd,
+        &file_data_fk
+    };
+
+    FileLayout<2> layout{ storage_ };
+
+    layout.allocate(files);
+    layout.format();
+
+    auto file = layout.open(file_data_fk);
+    PatternHelper helper;
+    auto total = helper.write(file, ((file.maximum_size() + 4096) / helper.size()));
+
+    file.close();
+
+    ASSERT_EQ(total, helper.bytes_written());
+
+    file.index().dump();
+}
+
+TEST_F(ExtentsSuite, RollingWriteStrategyTwoRollovers) {
+    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
+    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Rolling, 100 };
+
+    static FileDescriptor* files[] = {
+        &file_system_area_fd,
+        &file_data_fk
+    };
+
+    FileLayout<2> layout{ storage_ };
+
+    layout.allocate(files);
+    layout.format();
+
+    auto file = layout.open(file_data_fk);
+
+    PatternHelper helper;
+    auto total = helper.write(file, ((file.maximum_size() * 2 + 4096) / helper.size()));
+
+    file.close();
+
+    ASSERT_EQ(total, helper.bytes_written());
+
+    file.index().dump();
 }
