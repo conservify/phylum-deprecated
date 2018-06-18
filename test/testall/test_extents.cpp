@@ -176,15 +176,7 @@ private:
 
 private:
     BlockAddress address() {
-        auto bank = (version_ + 0) % 2;
-        auto length = file_->index_.nblocks / 2;
-        return { file_->index_.start + (length * bank), 0 };
-    }
-
-    BlockAddress alternate() {
-        auto bank = (version_ + 1) % 2;
-        auto length = file_->index_.nblocks / 2;
-        return { file_->index_.start + (length * bank), 0 };
+        return { file_->index_.start, 0 };
     }
 
 public:
@@ -200,26 +192,16 @@ private:
             return true;
         }
 
-        // sdebug() << "Initialize" << std::endl;
-
-        auto layout1 = get_index_layout(*storage_, address());
-        auto layout2 = get_index_layout(*storage_, alternate());
+        auto layout = get_index_layout(*storage_, address());
 
         IndexRecord record;
-        while (layout1.walk<IndexRecord>(record)) {
-            if (record.version > version_) {
-                version_ = record.version;
-            }
-        }
-
-        while (layout2.walk<IndexRecord>(record)) {
+        while (layout.walk<IndexRecord>(record)) {
             if (record.version > version_) {
                 version_ = record.version;
             }
         }
 
         head_ = address();
-        auto layout = get_index_layout(*storage_, address());
         if (layout.find_append_location<IndexRecord>(head_.block)) {
             head_ = layout.address();
         }
@@ -242,7 +224,6 @@ public:
         IndexRecord selected;
         IndexRecord record;
         while (reading.walk<IndexRecord>(record)) {
-            // sdebug() << reading.address() << " " << record << std::endl;
             if (position == record.position) {
                 return record;
             }
@@ -299,12 +280,6 @@ public:
         if (!storage_->erase(address().block)) {
             return false;
         }
-        if (!storage_->erase(alternate().block)) {
-            return false;
-        }
-        if (!storage_->erase(file_->data_.start)) {
-            return false;
-        }
         return true;
     }
 
@@ -312,7 +287,7 @@ public:
         version_++;
         head_.invalid();
 
-        auto reading = get_index_layout(*storage_, alternate());
+        auto reading = get_index_layout(*storage_, address());
         auto writing = get_index_layout(*storage_, address());
 
         // sdebug() << "Reindex: " << reading.address() << " -> " << writing.address() << " length = " << length << " end = " << new_end << std::endl;
@@ -320,21 +295,24 @@ public:
         uint64_t offset = 0;
         IndexRecord record;
         while (reading.walk<IndexRecord>(record)) {
-            if (record.position == 0) {
-                // If offset is non-zero then we've looped around.
-                if (offset != 0) {
-                    break;
+            // sdebug() << "  Old: " << record << std::endl;
+            if (record.version == version_ - 1) {
+                if (record.position == 0) {
+                    // If offset is non-zero then we've looped around.
+                    if (offset != 0) {
+                        break;
+                    }
                 }
-            }
-            else {
-                if (offset == 0) {
-                    offset = record.position;
-                }
+                else {
+                    if (offset == 0) {
+                        offset = record.position;
+                    }
 
-                auto nrecord = IndexRecord{ record.position - offset, record.address, version_ };
-                // sdebug() << "  " << nrecord << std::endl;
-                if (!writing.append(nrecord)) {
-                    return { };
+                    auto nrecord = IndexRecord{ record.position - offset, record.address, version_ };
+                    // sdebug() << "  " << nrecord << std::endl;
+                    if (!writing.append(nrecord)) {
+                        return { };
+                    }
                 }
             }
         }
