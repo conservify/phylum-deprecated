@@ -392,7 +392,7 @@ public:
 
     ~SimpleFile() {
         if (!readonly_) {
-            // close();
+            close();
         }
     }
 
@@ -570,7 +570,7 @@ public:
             return 0;
         }
 
-        if (buffpos_ == 0) {
+        if (buffpos_ == 0 || buffavailable_ > 0) {
             return 0;
         }
 
