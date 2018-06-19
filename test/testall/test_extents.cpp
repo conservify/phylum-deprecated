@@ -224,7 +224,6 @@ TEST_F(ExtentsSuite, RollingWriteStrategyTwoRollovers) {
     FileLayout<2> layout{ storage_ };
 
     layout.allocate(files);
-
     layout.format();
 
     auto file = layout.open(file_data_fk);
@@ -235,6 +234,38 @@ TEST_F(ExtentsSuite, RollingWriteStrategyTwoRollovers) {
     file.close();
 
     ASSERT_EQ(total, helper.bytes_written());
+
+    file.index().dump();
+
+    auto skip = helper.size() - (file.truncated() - (file.truncated() / helper.size()) * helper.size());
+    auto verified = helper.verify_file(layout, file_data_fk, skip);
+    ASSERT_EQ(file.size(), verified + skip);
+}
+
+TEST_F(ExtentsSuite, RollingWriteStrategyIndexWraparound) {
+    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
+    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Rolling, 100 };
+
+    static FileDescriptor* files[] = {
+        &file_system_area_fd,
+        &file_data_fk
+    };
+
+    FileLayout<2> layout{ storage_ };
+
+    layout.allocate(files);
+    layout.format();
+
+    auto file = layout.open(file_data_fk);
+
+    PatternHelper helper;
+    auto total = helper.write(file, ((file.maximum_size() * 100) / helper.size()));
+
+    file.close();
+
+    ASSERT_EQ(total, helper.bytes_written());
+
+    file.index().dump();
 
     auto skip = helper.size() - (file.truncated() - (file.truncated() / helper.size()) * helper.size());
     auto verified = helper.verify_file(layout, file_data_fk, skip);

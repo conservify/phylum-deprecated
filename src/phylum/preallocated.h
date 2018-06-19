@@ -111,6 +111,7 @@ private:
     StorageBackend *storage_;
     File *file_{ nullptr };
     uint16_t version_{ 0 };
+    BlockAddress beginning_;
     BlockAddress head_;
 
 public:
@@ -138,10 +139,6 @@ public:
 
 private:
     bool initialize();
-
-    BlockAddress address() {
-        return { file_->index_.start, 0 };
-    }
 
     uint16_t version() {
         return version_;

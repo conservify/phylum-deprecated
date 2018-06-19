@@ -248,7 +248,7 @@ private:
         auto verify_block_head = true;
         auto location = BlockAddress{ block, 0 };
         auto found = BlockAddress{ };
-        while (location.remaining_in_block(g_) /* - sizeof(TTail)*/ >= required) {
+        while (location.remaining_in_block(g_) >= required) {
             if (location.beginning_of_block()) {
                 if (verify_block_head) {
                     if (!verify_head(location)) {
