@@ -1,6 +1,8 @@
 #include "phylum/phylum.h"
 #include "phylum/preallocated.h"
 
+#define PHYLUM_DEBUG
+
 namespace phylum {
 
 static EmptyAllocator empty_allocator;
@@ -75,12 +77,23 @@ bool FileIndex::format() {
 bool FileIndex::initialize() {
     auto layout = get_index_layout(*storage_, { file_->index_.start, 0 });
 
+    auto skipped = false;
+
     beginning_ = layout.address();
 
     IndexRecord record;
     while (layout.walk<IndexRecord>(record)) {
         if (record.version > version_) {
             if (version_ != record.version) {
+                if (record.position != 0) {
+                    if (!skipped) {
+                        sdebug() << "Skip to following block." << endl;
+                        // Skip to following block.
+                        layout.address({ file_->index_.start + 1, 0 });
+                        skipped = true;
+                    }
+                    continue;
+                }
                 beginning_ = layout.address();
             }
             version_ = record.version;
