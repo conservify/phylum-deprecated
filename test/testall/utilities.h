@@ -29,10 +29,10 @@ private:
 
     std::map<block_index_t, BlockInfo> blocks;
     StorageBackend *storage_;
-    BlockAllocator *allocator_;
+    BlockManager *allocator_;
 
 public:
-    BlockHelper(StorageBackend &storage, BlockAllocator &allocator) : storage_(&storage), allocator_(&allocator) {
+    BlockHelper(StorageBackend &storage, BlockManager &allocator) : storage_(&storage), allocator_(&allocator) {
     }
 
 public:

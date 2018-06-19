@@ -76,7 +76,7 @@ public:
     }
 };
 
-FileSystem::FileSystem(StorageBackend &storage, BlockAllocator &allocator) :
+FileSystem::FileSystem(StorageBackend &storage, BlockManager &allocator) :
     storage_(&storage), allocator_(&allocator), sbm_{ storage, allocator },
     nodes_{ storage, allocator }, journal_(storage, allocator),
     fpm_(storage, allocator) {

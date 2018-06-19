@@ -21,20 +21,19 @@ struct AllocatorState {
     }
 };
 
-// TODO: Rename this and the class below.
-class Allocator {
+class BlockAllocator {
 public:
     virtual block_index_t allocate(BlockType type) = 0;
 };
 
-class EmptyAllocator : public Allocator {
+class EmptyAllocator : public BlockAllocator {
 public:
     virtual block_index_t allocate(BlockType type) override {
         return BLOCK_INDEX_INVALID;
     }
 };
 
-class BlockAllocator : public Allocator {
+class BlockManager : public BlockAllocator {
 public:
     virtual bool initialize(Geometry &geometry) = 0;
     virtual AllocatorState state() = 0;
@@ -43,7 +42,7 @@ public:
 
 };
 
-class SequentialBlockAllocator : public BlockAllocator {
+class SequentialBlockAllocator : public BlockManager {
 private:
     Geometry *geometry_{ nullptr };
     uint32_t block_{ 3 };
@@ -89,7 +88,7 @@ public:
 
 };
 
-class QueueBlockAllocator : public BlockAllocator {
+class QueueBlockAllocator : public BlockManager {
 private:
     Geometry *geometry_{ nullptr };
     bool initialized_{ false };

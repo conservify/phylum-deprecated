@@ -7,8 +7,8 @@ namespace phylum {
 constexpr uint16_t SuperBlockStartSector = 0;
 constexpr block_index_t SuperBlockManager::AnchorBlocks[];
 
-SuperBlockManager::SuperBlockManager(StorageBackend &storage, BlockAllocator &allocator) :
-    storage_(&storage), allocator_(&allocator) {
+SuperBlockManager::SuperBlockManager(StorageBackend &storage, BlockManager &blocks) :
+    storage_(&storage), blocks_(&blocks) {
 }
 
 bool SuperBlockManager::walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where) {
@@ -66,7 +66,7 @@ bool SuperBlockManager::locate() {
         return false;
     }
 
-    allocator_->state(sb_.allocator);
+    blocks_->state(sb_.allocator);
 
     return true;
 }
@@ -102,7 +102,7 @@ bool SuperBlockManager::create() {
     link.header.age = 0;
 
     for (auto i = 0; i < chain_length() + 1; ++i) {
-        auto block = allocator_->allocate(i == 0 ? BlockType::SuperBlock : BlockType::SuperBlockLink);
+        auto block = blocks_->allocate(i == 0 ? BlockType::SuperBlock : BlockType::SuperBlockLink);
         assert(block != BLOCK_INDEX_INVALID);
 
         if (!storage_->erase(block)) {
@@ -143,9 +143,9 @@ bool SuperBlockManager::create() {
     // We pull allocator state after doing the above allocations to ensure the
     // first state we write is correct.
     sb_.tree = BLOCK_INDEX_INVALID;
-    sb_.journal = allocator_->allocate(BlockType::Journal);
-    sb_.free = allocator_->allocate(BlockType::Free);
-    sb_.allocator = allocator_->state();
+    sb_.journal = blocks_->allocate(BlockType::Journal);
+    sb_.free = blocks_->allocate(BlockType::Free);
+    sb_.allocator = blocks_->state();
 
     assert(sb_.journal != BLOCK_INDEX_INVALID);
     assert(sb_.free != BLOCK_INDEX_INVALID);
@@ -183,7 +183,7 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
         }
     }
 
-    auto block = allocator_->allocate(pending.type);
+    auto block = blocks_->allocate(pending.type);
     relocated = { block, SuperBlockStartSector };
     if (!storage_->erase(block)) {
         return false;
@@ -214,14 +214,14 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
         return false;
     }
 
-    allocator_->free(addr.block);
+    blocks_->free(addr.block);
 
     return true;
 }
 
 bool SuperBlockManager::save() {
     sb_.link.header.timestamp++;
-    sb_.allocator = allocator_->state();
+    sb_.allocator = blocks_->state();
 
     auto sb_write = PendingWrite{
         BlockType::SuperBlock,

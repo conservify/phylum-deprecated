@@ -34,13 +34,13 @@ class SuperBlockManager {
 private:
     static constexpr block_index_t AnchorBlocks[] = { 1, 2 };
     StorageBackend *storage_;
-    BlockAllocator *allocator_;
+    BlockManager *blocks_;
     // TODO: Store more than one super block in a sector?
     SectorAddress location_;
     SuperBlock sb_;
 
 public:
-    SuperBlockManager(StorageBackend &storage, BlockAllocator &allocator);
+    SuperBlockManager(StorageBackend &storage, BlockManager &blocks);
 
 public:
     SectorAddress location() {

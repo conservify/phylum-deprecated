@@ -5,7 +5,7 @@ namespace phylum {
 
 static EmptyAllocator empty_allocator;
 
-class ExtentAllocator : public Allocator {
+class ExtentAllocator : public BlockAllocator {
 private:
     Extent extent_;
     block_index_t block_;
@@ -38,7 +38,7 @@ static uint64_t effective_index_block_size(const Geometry &geometry) {
     return geometry.block_size() - index_block_overhead(geometry);
 }
 
-static inline BlockLayout<IndexBlockHead, IndexBlockTail> get_index_layout(StorageBackend &storage, Allocator &allocator, BlockAddress address) {
+static inline BlockLayout<IndexBlockHead, IndexBlockTail> get_index_layout(StorageBackend &storage, BlockAllocator &allocator, BlockAddress address) {
     return { storage, allocator, address, BlockType::Index };
 }
 

@@ -105,7 +105,7 @@ private:
     using NodeType = Node<uint64_t, uint64_t, BlockAddress, 6, 6>;
 
     StorageBackend *storage_;
-    BlockAllocator *allocator_;
+    BlockManager *allocator_;
     SuperBlockManager sbm_;
     StorageBackendNodeStorage<NodeType> nodes_;
     BlockAddress tree_addr_;
@@ -113,7 +113,7 @@ private:
     FreePileManager fpm_;
 
 public:
-    FileSystem(StorageBackend &storage, BlockAllocator &allocator);
+    FileSystem(StorageBackend &storage, BlockManager &allocator);
 
     template<typename NodeType>
     friend struct TreeContext;

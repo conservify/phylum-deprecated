@@ -10,7 +10,7 @@ template<typename THead, typename TTail>
 class BlockLayout {
 private:
     StorageBackend &storage_;
-    Allocator &allocator_;
+    BlockAllocator &allocator_;
     Geometry &g_;
     BlockAddress address_;
     BlockType type_;
@@ -30,7 +30,7 @@ public:
     }
 
 public:
-    BlockLayout(StorageBackend &storage, Allocator &allocator, BlockAddress address, BlockType type)
+    BlockLayout(StorageBackend &storage, BlockAllocator &allocator, BlockAddress address, BlockType type)
         : storage_(storage), allocator_(allocator), g_(storage.geometry()), address_(address), type_(type) {
     }
 

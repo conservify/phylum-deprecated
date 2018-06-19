@@ -33,7 +33,7 @@ inline ostreamtype& operator<<(ostreamtype& os, const TreeBlockHead &h) {
 }
 
 static inline BlockLayout<TreeBlockHead, TreeBlockTail> get_layout(StorageBackend &storage,
-              Allocator &allocator, BlockAddress address, BlockType type) {
+              BlockAllocator &allocator, BlockAddress address, BlockType type) {
     return { storage, allocator, address, type };
 }
 
@@ -50,12 +50,12 @@ public:
 
 private:
     StorageBackend *storage_;
-    Allocator *allocator_;
+    BlockAllocator *allocator_;
     BlockAddress index_;
     BlockAddress leaf_;
 
 public:
-    StorageBackendNodeStorage(StorageBackend &storage, Allocator &allocator)
+    StorageBackendNodeStorage(StorageBackend &storage, BlockAllocator &allocator)
         : storage_(&storage), allocator_(&allocator) {
     }
 
