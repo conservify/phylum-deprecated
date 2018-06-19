@@ -106,49 +106,6 @@ inline ostreamtype& operator<<(ostreamtype& os, const IndexRecord &f) {
     return os << "IndexRecord<" << f.version << ": " << f.position << " addr=" << f.address << ">";
 }
 
-class ExtentAllocator : public Allocator {
-private:
-    Extent extent_;
-    block_index_t block_;
-
-public:
-    ExtentAllocator(Extent extent, block_index_t block) : extent_(extent), block_(block) {
-    }
-
-public:
-    virtual block_index_t allocate(BlockType type) override {
-        return block_++;
-    }
-
-};
-
-static uint64_t file_block_overhead(const Geometry &geometry) {
-    auto sectors_per_block = geometry.sectors_per_block();
-    return SectorSize + sizeof(FileBlockTail) + ((sectors_per_block - 2) * sizeof(FileSectorTail));
-}
-
-static uint64_t effective_file_block_size(const Geometry &geometry) {
-    return geometry.block_size() - file_block_overhead(geometry);
-}
-
-static uint64_t index_block_overhead(const Geometry &geometry) {
-    return SectorSize + sizeof(IndexBlockTail);
-}
-
-static uint64_t effective_index_block_size(const Geometry &geometry) {
-    return geometry.block_size() - index_block_overhead(geometry);
-}
-
-static EmptyAllocator empty_allocator_;
-
-static inline BlockLayout<IndexBlockHead, IndexBlockTail> get_index_layout(StorageBackend &storage, BlockAddress address) {
-    return { storage, empty_allocator_, address, BlockType::Index };
-}
-
-static inline BlockLayout<IndexBlockHead, IndexBlockTail> get_index_layout(StorageBackend &storage, Allocator &allocator, BlockAddress address) {
-    return { storage, allocator, address, BlockType::Index };
-}
-
 class FileIndex {
 private:
     StorageBackend *storage_;
@@ -193,7 +150,7 @@ private:
 public:
     bool format();
 
-    IndexRecord seek(uint64_t position);
+    bool seek(uint64_t position, IndexRecord &recod);
 
     ReindexInfo append(uint32_t position, BlockAddress address);
 
@@ -244,25 +201,15 @@ public:
         return file_ != nullptr;
     }
 
-    uint64_t maximum_size() const {
-        return file_->data_.nblocks * effective_file_block_size(geometry());
-    }
+    uint64_t maximum_size() const;
 
-    uint64_t size() const {
-        return length_;
-    }
+    uint64_t size() const;
 
-    uint64_t tell() const {
-        return position_;
-    }
+    uint64_t tell() const;
 
-    uint32_t truncated() const {
-        return truncated_;
-    }
+    uint32_t truncated() const;
 
-    FileIndex &index() {
-        return index_;
-    }
+    FileIndex &index();
 
 public:
     bool seek(uint64_t position);
@@ -278,23 +225,18 @@ public:
     }
 
 private:
-    bool initialize();
-
-    bool format();
-
     const Geometry &geometry() const {
         return storage_->geometry();
-    }
-
-    template<typename T, size_t N>
-    static T *tail_info(uint8_t(&buffer)[N]) {
-        auto tail_offset = sizeof(buffer) - sizeof(T);
-        return reinterpret_cast<T*>(buffer + tail_offset);
     }
 
     bool tail_sector() const {
         return head_.tail_sector(geometry());
     }
+
+private:
+    bool initialize();
+
+    bool format();
 
     bool index(BlockAddress address);
 
@@ -312,6 +254,29 @@ private:
 
 };
 
+class FilePreallocator {
+private:
+    block_index_t head_ = 0;
+    StorageBackend &storage_;
+
+public:
+    FilePreallocator(StorageBackend &storage) : storage_(storage) {
+    }
+
+public:
+    bool allocate(uint8_t id, FileDescriptor *fd, File &file);
+
+private:
+    Geometry &geometry() const {
+        return storage_.geometry();
+    }
+
+    block_index_t blocks_required_for_index(block_index_t nblocks);
+
+    block_index_t blocks_required_for_data(uint64_t opaque_size);
+
+};
+
 template<size_t SIZE>
 class FileLayout {
 private:
@@ -324,7 +289,7 @@ public:
 
 public:
     bool allocate(FileDescriptor*(&fds)[SIZE]) {
-        block_index_t head = 0;
+        FilePreallocator allocator{ *storage_ };
 
         #ifdef PHYLUM_LAYOUT_DEBUG
         sdebug() << "Effective block size: " << effective_file_block_size(geometry()) <<
@@ -332,37 +297,9 @@ public:
         #endif
 
         for (size_t i = 0; i < SIZE; ++i) {
-            auto fd = fds[i];
-            auto nblocks = block_index_t(0);
-            auto index_blocks = block_index_t(0);
-
-            assert(fd != nullptr);
-
-            if (fd->maximum_size > 0) {
-                nblocks = blocks_required_for_data(fd->maximum_size);
-                index_blocks = blocks_required_for_index(nblocks) * 2;
+            if (!allocator.allocate((uint8_t)i, fds[i], files_[i])) {
+                return false;
             }
-            else {
-                nblocks = geometry().number_of_blocks - head - 1;
-                index_blocks = blocks_required_for_index(nblocks) * 2;
-                nblocks -= index_blocks;
-            }
-
-            assert(nblocks > 0);
-
-            auto index = Extent{ head, index_blocks };
-            head += index.nblocks;
-            assert(geometry().contains(BlockAddress{ head, 0 }));
-
-            auto data = Extent{ head, nblocks };
-            head += data.nblocks;
-            assert(geometry().contains(BlockAddress{ head, 0 }));
-
-            files_[i] = File{ *fd, (uint8_t)i, index, data };
-
-            #ifdef PHYLUM_LAYOUT_DEBUG
-            sdebug() << "Allocated: " << files_[i] << " " << fd->name << endl;
-            #endif
         }
         return true;
     }
@@ -387,34 +324,6 @@ public:
         }
 
         return true;
-    }
-
-public:
-    Geometry &geometry() const {
-        return storage_->geometry();
-    }
-
-private:
-    block_index_t blocks_required_for_index(block_index_t nblocks) {
-        auto indices_per_block = effective_index_block_size(geometry()) / sizeof(IndexRecord);
-        auto indices = (nblocks / 8) + 1;
-        return std::max((uint64_t)1, indices / indices_per_block);
-    }
-
-    block_index_t blocks_required_for_data(uint64_t opaque_size) {
-        constexpr uint64_t Megabyte = (1024 * 1024);
-        constexpr uint64_t Kilobyte = (1024);
-        uint64_t scale = 0;
-
-        if (geometry().size() < 1024 * Megabyte) {
-            scale = Kilobyte;
-        }
-        else {
-            scale = Megabyte;
-        }
-
-        auto size = opaque_size * scale;
-        return (size / effective_file_block_size(geometry())) + 1;
     }
 
 };

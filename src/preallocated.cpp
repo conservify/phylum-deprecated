@@ -3,6 +3,55 @@
 
 namespace phylum {
 
+static EmptyAllocator empty_allocator;
+
+class ExtentAllocator : public Allocator {
+private:
+    Extent extent_;
+    block_index_t block_;
+
+public:
+    ExtentAllocator(Extent extent, block_index_t block) : extent_(extent), block_(block) {
+    }
+
+public:
+    virtual block_index_t allocate(BlockType type) override {
+        return block_++;
+    }
+
+};
+
+static uint64_t file_block_overhead(const Geometry &geometry) {
+    auto sectors_per_block = geometry.sectors_per_block();
+    return SectorSize + sizeof(FileBlockTail) + ((sectors_per_block - 2) * sizeof(FileSectorTail));
+}
+
+static uint64_t effective_file_block_size(const Geometry &geometry) {
+    return geometry.block_size() - file_block_overhead(geometry);
+}
+
+static uint64_t index_block_overhead(const Geometry &geometry) {
+    return SectorSize + sizeof(IndexBlockTail);
+}
+
+static uint64_t effective_index_block_size(const Geometry &geometry) {
+    return geometry.block_size() - index_block_overhead(geometry);
+}
+
+static inline BlockLayout<IndexBlockHead, IndexBlockTail> get_index_layout(StorageBackend &storage, Allocator &allocator, BlockAddress address) {
+    return { storage, allocator, address, BlockType::Index };
+}
+
+static inline BlockLayout<IndexBlockHead, IndexBlockTail> get_index_layout(StorageBackend &storage, BlockAddress address) {
+    return get_index_layout(storage, empty_allocator, address);
+}
+
+template<typename T, size_t N>
+static T *tail_info(uint8_t(&buffer)[N]) {
+    auto tail_offset = sizeof(buffer) - sizeof(T);
+    return reinterpret_cast<T*>(buffer + tail_offset);
+}
+
 bool FileIndex::format() {
     if (!storage_->erase(address().block)) {
         return false;
@@ -32,27 +81,27 @@ bool FileIndex::initialize() {
     return true;
 }
 
-IndexRecord FileIndex::seek(uint64_t position) {
+bool FileIndex::seek(uint64_t position, IndexRecord &selected) {
     if (!initialize()) {
-        return { };
+        return false;
     }
 
     auto reading = get_index_layout(*storage_, address());
 
-    IndexRecord selected;
     IndexRecord record;
     while (reading.walk<IndexRecord>(record)) {
         if (position == record.position) {
-            return record;
+            selected = record;
+            return true;
         }
         else if (record.position > position) {
-            return selected;
+            return true;
         }
 
         selected = record;
     }
 
-    return selected;
+    return true;
 }
 
 FileIndex::ReindexInfo FileIndex::append(uint32_t position, BlockAddress address) {
@@ -138,7 +187,10 @@ void FileIndex::dump() {
 }
 
 bool SimpleFile::seek(uint64_t position) {
-    auto end = index().seek(position);
+    IndexRecord end;
+    if (!index().seek(position, end)) {
+        return false;
+    }
     if (end.valid()) {
         head_ = end.address;
         position_ = end.position;
@@ -385,6 +437,26 @@ bool SimpleFile::format() {
     return true;
 }
 
+uint64_t SimpleFile::maximum_size() const {
+    return file_->data_.nblocks * effective_file_block_size(geometry());
+}
+
+uint64_t SimpleFile::size() const {
+    return length_;
+}
+
+uint64_t SimpleFile::tell() const {
+    return position_;
+}
+
+uint32_t SimpleFile::truncated() const {
+    return truncated_;
+}
+
+FileIndex &SimpleFile::index() {
+    return index_;
+}
+
 bool SimpleFile::index(BlockAddress address) {
     auto info = index().append(length_, head_);
     blocks_since_save_ = 0;
@@ -488,6 +560,63 @@ BlockAddress SimpleFile::initialize(block_index_t block, block_index_t previous)
     }
 
     return BlockAddress { block, SectorSize };
+}
+
+bool FilePreallocator::allocate(uint8_t id, FileDescriptor *fd, File &file) {
+    auto nblocks = block_index_t(0);
+    auto index_blocks = block_index_t(0);
+
+    assert(fd != nullptr);
+
+    if (fd->maximum_size > 0) {
+        nblocks = blocks_required_for_data(fd->maximum_size);
+        index_blocks = blocks_required_for_index(nblocks) * 2;
+    }
+    else {
+        nblocks = geometry().number_of_blocks - head_ - 1;
+        index_blocks = blocks_required_for_index(nblocks) * 2;
+        nblocks -= index_blocks;
+    }
+
+    assert(nblocks > 0);
+
+    auto index = Extent{ head_, index_blocks };
+    head_ += index.nblocks;
+    assert(geometry().contains(BlockAddress{ head_, 0 }));
+
+    auto data = Extent{ head_, nblocks };
+    head_ += data.nblocks;
+    assert(geometry().contains(BlockAddress{ head_, 0 }));
+
+    file = File{ *fd, (uint8_t)id, index, data };
+
+    #ifdef PHYLUM_LAYOUT_DEBUG
+    sdebug() << "Allocated: " << file << " " << fd->name << endl;
+    #endif
+
+    return true;
+}
+
+block_index_t FilePreallocator::blocks_required_for_index(block_index_t nblocks) {
+    auto indices_per_block = effective_index_block_size(geometry()) / sizeof(IndexRecord);
+    auto indices = (nblocks / 8) + 1;
+    return std::max((uint64_t)1, indices / indices_per_block);
+}
+
+block_index_t FilePreallocator::blocks_required_for_data(uint64_t opaque_size) {
+    constexpr uint64_t Megabyte = (1024 * 1024);
+    constexpr uint64_t Kilobyte = (1024);
+    uint64_t scale = 0;
+
+    if (geometry().size() < 1024 * Megabyte) {
+        scale = Kilobyte;
+    }
+    else {
+        scale = Megabyte;
+    }
+
+    auto size = opaque_size * scale;
+    return (size / effective_file_block_size(geometry())) + 1;
 }
 
 }
