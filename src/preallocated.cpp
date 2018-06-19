@@ -93,7 +93,7 @@ bool FileIndex::initialize() {
                         // than just ensuring the new index is on its own block.
                         // This is only temporary though, until the reindex
                         // happens again.
-                        layout.address({ file_->index_.start + 1, 0 });
+                        layout.address({ layout.address().block + 1, 0 });
                         skipped = true;
                     }
                     continue;
@@ -280,6 +280,8 @@ bool SimpleFile::seek(uint64_t position) {
 }
 
 int32_t SimpleFile::read(uint8_t *ptr, size_t size) {
+    assert(readonly_);
+
     // Are we out of data to return?
     if (buffavailable_ == buffpos_) {
         buffpos_ = 0;
@@ -332,11 +334,6 @@ int32_t SimpleFile::read(uint8_t *ptr, size_t size) {
 
         // End of the file? Marked by an "unwritten" sector.
         if (buffavailable_ == 0 || buffavailable_ == SECTOR_INDEX_INVALID) {
-            // If we're at the end we know our length.
-            if (length_ == ((uint32_t)-1)) {
-                assert(false);
-                length_ = position_;
-            }
             buffavailable_ = 0;
             return 0;
         }

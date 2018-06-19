@@ -60,7 +60,7 @@ TEST_F(ExtentsSuite, SmallFileWritingToEnd) {
     layout.allocate(files);
     layout.format();
 
-    auto file = layout.open(file_log_startup_fd);
+    auto file = layout.open(file_log_startup_fd, OpenMode::Write);
     ASSERT_TRUE(file);
 
     PatternHelper helper;
@@ -88,7 +88,7 @@ TEST_F(ExtentsSuite, LargeFileWritingToEnd) {
     layout.allocate(files);
     layout.format();
 
-    auto file = layout.open(file_data_fk);
+    auto file = layout.open(file_data_fk, OpenMode::Write);
     ASSERT_TRUE(file);
 
     PatternHelper helper;
@@ -120,7 +120,7 @@ TEST_F(ExtentsSuite, LargeFileAppending) {
 
     PatternHelper helper;
     {
-        auto file = layout.open(file_data_fk);
+        auto file = layout.open(file_data_fk, OpenMode::Write);
         ASSERT_TRUE(file);
         ASSERT_EQ(file.size(), (uint64_t)0);
 
@@ -133,7 +133,7 @@ TEST_F(ExtentsSuite, LargeFileAppending) {
     }
 
     {
-        auto file = layout.open(file_data_fk);
+        auto file = layout.open(file_data_fk, OpenMode::Write);
         ASSERT_TRUE(file);
         ASSERT_TRUE(file.seek(UINT64_MAX));
         ASSERT_EQ(file.size(), OneMegabyte);
@@ -165,7 +165,7 @@ TEST_F(ExtentsSuite, SeekMiddleOfFile) {
     layout.format();
 
     constexpr uint64_t OneMegabyte = 1024 * 1024;
-    auto file = layout.open(file_data_fk);
+    auto file = layout.open(file_data_fk, OpenMode::Write);
     ASSERT_EQ(file.size(), (uint64_t)0);
     PatternHelper helper;
     auto total = helper.write(file, (int32_t)OneMegabyte / helper.size());
@@ -199,7 +199,7 @@ TEST_F(ExtentsSuite, RollingWriteStrategyOneRollover) {
     layout.allocate(files);
     layout.format();
 
-    auto file = layout.open(file_data_fk);
+    auto file = layout.open(file_data_fk, OpenMode::Write);
     PatternHelper helper;
     auto total = helper.write(file, ((file.maximum_size() + 4096) / helper.size()));
 
@@ -226,7 +226,7 @@ TEST_F(ExtentsSuite, RollingWriteStrategyTwoRollovers) {
     layout.allocate(files);
     layout.format();
 
-    auto file = layout.open(file_data_fk);
+    auto file = layout.open(file_data_fk, OpenMode::Write);
 
     PatternHelper helper;
     auto total = helper.write(file, ((file.maximum_size() * 2 + 4096) / helper.size()));
@@ -254,7 +254,7 @@ TEST_F(ExtentsSuite, RollingWriteStrategyIndexWraparound) {
     layout.allocate(files);
     layout.format();
 
-    auto file = layout.open(file_data_fk);
+    auto file = layout.open(file_data_fk, OpenMode::Write);
 
     PatternHelper helper;
     auto total = helper.write(file, ((file.maximum_size() * 40) / helper.size()));

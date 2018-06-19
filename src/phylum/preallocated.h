@@ -156,6 +156,11 @@ public:
 
 };
 
+enum class OpenMode {
+    Read,
+    Write
+};
+
 class SimpleFile {
 private:
     StorageBackend *storage_;
@@ -180,7 +185,8 @@ public:
     SimpleFile() {
     }
 
-    SimpleFile(StorageBackend *storage, File *file) : storage_(storage), file_(file), index_(storage_, file) {
+    SimpleFile(StorageBackend *storage, File *file, OpenMode mode) :
+        storage_(storage), file_(file), readonly_(mode == OpenMode::Read), index_(storage_, file) {
     }
 
     ~SimpleFile() {
@@ -302,7 +308,7 @@ public:
 
     bool format() {
         for (size_t i = 0; i < SIZE; ++i) {
-            auto file = SimpleFile{ storage_, &files_[i] };
+            auto file = SimpleFile{ storage_, &files_[i], OpenMode::Write };
             if (!file.format()) {
                 return false;
             }
@@ -311,15 +317,15 @@ public:
         return true;
     }
 
-    SimpleFile open(FileDescriptor &fd) {
+    SimpleFile open(FileDescriptor &fd, OpenMode mode = OpenMode::Read) {
         for (size_t i = 0; i < SIZE; ++i) {
             if (files_[i].fd_ == &fd) {
-                auto file = SimpleFile{ storage_, &files_[i] };
+                auto file = SimpleFile{ storage_, &files_[i], mode };
                 file.initialize();
                 return file;
             }
         }
-        return SimpleFile{ nullptr, nullptr };
+        return SimpleFile{ nullptr, nullptr, OpenMode::Read };
     }
 
 };
