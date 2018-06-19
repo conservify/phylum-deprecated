@@ -263,8 +263,6 @@ TEST_F(ExtentsSuite, RollingWriteStrategyIndexWraparound) {
 
     ASSERT_EQ(total, helper.bytes_written());
 
-    file.index().dump();
-
     auto skip = helper.size() - (file.truncated() - (file.truncated() / helper.size()) * helper.size());
     auto verified = helper.verify_file(layout, file_data_fk, skip);
     ASSERT_EQ(file.size(), verified + skip);

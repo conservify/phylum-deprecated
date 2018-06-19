@@ -13,6 +13,7 @@ private:
     BlockAllocator &allocator_;
     Geometry &g_;
     BlockAddress address_;
+    BlockAddress iterator_;
     BlockType type_;
 
 public:
@@ -65,6 +66,13 @@ public:
 
     template<typename TEntry>
     bool walk(TEntry &entry) {
+        if (iterator_.valid()) {
+            address_ = iterator_;
+        }
+        else {
+            assert(address_.find_room(g_, sizeof(TEntry)));
+        }
+
         // Walk leaves the address as the one we just read, so we need room for
         // two entries, the one we read previously and the following one,
         // otherwise we can skip to the following block.
@@ -98,7 +106,6 @@ public:
             address_.add(SectorSize);
         }
         else {
-            assert(address_.add_or_move_to_following_sector(g_, sizeof(TEntry)));
         }
 
         #ifdef PHYLUM_LAYOUT_DEBUG
@@ -107,6 +114,10 @@ public:
         if (!storage_.read(address_, &entry, sizeof(TEntry))) {
             return false;
         }
+
+        iterator_ = address_;
+
+        assert(iterator_.add_or_move_to_following_sector(g_, sizeof(TEntry)));
 
         if (!entry.valid()) {
             #ifdef PHYLUM_LAYOUT_DEBUG

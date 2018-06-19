@@ -1,8 +1,6 @@
 #include "phylum/phylum.h"
 #include "phylum/preallocated.h"
 
-#define PHYLUM_DEBUG
-
 namespace phylum {
 
 static EmptyAllocator empty_allocator;
@@ -74,21 +72,27 @@ bool FileIndex::format() {
     return true;
 }
 
+constexpr uint16_t INVALID_VERSION = ((uint16_t)-1);
+
 bool FileIndex::initialize() {
     auto layout = get_index_layout(*storage_, { file_->index_.start, 0 });
-
     auto skipped = false;
 
+    version_ = INVALID_VERSION;
     beginning_ = layout.address();
 
     IndexRecord record;
     while (layout.walk<IndexRecord>(record)) {
-        if (record.version > version_) {
+        if (version_ == INVALID_VERSION || record.version > version_) {
             if (version_ != record.version) {
                 if (record.position != 0) {
                     if (!skipped) {
-                        sdebug() << "Skip to following block." << endl;
-                        // Skip to following block.
+                        // Skip to following block. This happens if we wrapped
+                        // around while reindexing, so this is one way we can
+                        // find the beginning again. Not sure if this is better
+                        // than just ensuring the new index is on its own block.
+                        // This is only temporary though, until the reindex
+                        // happens again.
                         layout.address({ file_->index_.start + 1, 0 });
                         skipped = true;
                     }
@@ -113,10 +117,18 @@ bool FileIndex::seek(uint64_t position, IndexRecord &selected) {
     assert(head_.valid());
     assert(beginning_.valid());
 
-    auto reading = get_index_layout(*storage_, { file_->index_.start, 0 });
+    auto reading = get_index_layout(*storage_, beginning_);
+
+    #ifdef PHYLUM_DEBUG
+    sdebug() << "Seeking: " << position << " " << beginning_ << " version=" << version_ << endl;
+    #endif
 
     IndexRecord record;
     while (reading.walk<IndexRecord>(record)) {
+        #ifdef PHYLUM_DEBUG
+        sdebug() << "  " << record << " " << reading.address() << endl;
+        #endif
+
         if (record.version == version_) {
             if (position == record.position) {
                 selected = record;
