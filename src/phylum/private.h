@@ -194,6 +194,28 @@ public:
         return position == 0;
     }
 
+    bool add_or_move_to_following_sector(const Geometry &g, uint32_t n) {
+        assert(n <= g.sector_size);
+
+        auto block_remaining = remaining_in_block(g);
+        if (n > block_remaining) {
+            return false;
+        }
+
+        if (remaining_in_sector(g) >= n) {
+            position += n;
+        }
+
+        auto sector_remaining = remaining_in_sector(g);
+        if (sector_remaining >= n) {
+            return true;
+        }
+
+        position += sector_remaining;
+
+        return true;
+    }
+
     bool find_room(const Geometry &g, uint32_t n) {
         assert(n <= g.sector_size);
 

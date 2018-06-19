@@ -35,6 +35,16 @@ public:
     }
 
 public:
+    bool walk_single_block(size_t required) {
+        if (invalid_address() || should_move_to_following_block(required)) {
+            return false;
+        }
+
+        assert(address_.find_room(g_, required));
+
+        return true;
+    }
+
     template<typename TEntry>
     bool append(TEntry entry) {
         auto address = find_available(sizeof(TEntry));
@@ -43,6 +53,9 @@ public:
             return false;
         }
 
+        #ifdef PHYLUM_LAYOUT_DEBUG
+        sdebug() << "layout: Write: " << address << " " << sizeof(TEntry) << endl;
+        #endif
         if (!storage_.write(address, &entry, sizeof(TEntry))) {
             return false;
         }
@@ -52,12 +65,15 @@ public:
 
     template<typename TEntry>
     bool walk(TEntry &entry) {
-        if (should_write_tail(sizeof(TEntry))) {
+        // Walk leaves the address as the one we just read, so we need room for
+        // two entries, the one we read previously and the following one,
+        // otherwise we can skip to the following block.
+        if (should_move_to_following_block(sizeof(TEntry) * 2)) {
             auto tl = BlockAddress::tail_data_of(address_.block, g_, sizeof(TTail));
             TTail tail;
 
             #ifdef PHYLUM_LAYOUT_DEBUG
-            sdebug() << "layout: ReadTail: " << tl << " " << sizeof(TTail) << std::endl;
+            sdebug() << "layout: ReadTail: " << tl << " " << sizeof(TTail) << endl;
             #endif
 
             if (!storage_.read(tl, &tail, sizeof(TTail))) {
@@ -74,34 +90,36 @@ public:
 
         if (address_.beginning_of_block()) {
             if (!verify_head(address_)) {
+                #ifdef PHYLUM_LAYOUT_DEBUG
+                sdebug() << "layout: Invalid Head" << endl;
+                #endif
                 return false;
             }
             address_.add(SectorSize);
         }
+        else {
+            assert(address_.add_or_move_to_following_sector(g_, sizeof(TEntry)));
+        }
 
-        assert(address_.find_room(g_, sizeof(TEntry)));
-
+        #ifdef PHYLUM_LAYOUT_DEBUG
+        sdebug() << "layout: Read (" << address_ << ")" << endl;
+        #endif
         if (!storage_.read(address_, &entry, sizeof(TEntry))) {
             return false;
         }
 
-        address_.add(sizeof(TEntry));
-
-        return entry.valid();
-    }
-
-    bool walk_block(size_t required) {
-        if (need_new_block() || should_write_tail(required)) {
+        if (!entry.valid()) {
+            #ifdef PHYLUM_LAYOUT_DEBUG
+            sdebug() << "layout: Invalid (" << address_ << ")" << endl;
+            #endif
             return false;
         }
-
-        assert(address_.find_room(g_, required));
 
         return true;
     }
 
     BlockAddress find_available(size_t required) {
-        if (need_new_block() || should_write_tail(required)) {
+        if (invalid_address() || should_move_to_following_block(required)) {
             assert(type_ != BlockType::Error);
             auto new_block = allocator_.allocate(type_);
             if (!write_head(new_block, address_.block)) {
@@ -119,7 +137,7 @@ public:
         }
 
         // If at beginning of a block, append head. This will rarely be true.
-        if (should_write_head()) {
+        if (address_.beginning_of_block()) {
             if (!write_head(address_.block)) {
                 return { };
             }
@@ -207,7 +225,7 @@ public:
         }
 
         #ifdef PHYLUM_LAYOUT_DEBUG
-        sdebug() << "layout: WriteHead: " << address << " " << sizeof(THead) << std::endl;
+        sdebug() << "layout: WriteHead: " << address << " " << sizeof(THead) << endl;
         #endif
         if (!storage_.write(address, &head, sizeof(THead))) {
             return false;
@@ -229,7 +247,7 @@ private:
     bool verify_head(BlockAddress address) {
         THead head(BlockType::Error);
         #ifdef PHYLUM_LAYOUT_DEBUG
-        sdebug() << "layout: ReadHead: " << location << " " << sizeof(THead) << std::endl;
+        sdebug() << "layout: ReadHead: " << location << " " << sizeof(THead) << endl;
         #endif
         if (!storage_.read(address, &head, sizeof(THead))) {
             return false;
@@ -260,7 +278,7 @@ private:
                 TTail tail;
 
                 #ifdef PHYLUM_LAYOUT_DEBUG
-                sdebug() << "layout: ReadTail: " << tl << " " << sizeof(TTail) << std::endl;
+                sdebug() << "layout: ReadTail: " << tl << " " << sizeof(TTail) << endl;
                 #endif
                 if (!storage_.read(tl, &tail, sizeof(TTail))) {
                     return { };
@@ -297,7 +315,7 @@ private:
         tail.block.linked_block = linked;
 
         #ifdef PHYLUM_LAYOUT_DEBUG
-        sdebug() << "layout: WriteTail: " << address << " " << sizeof(TTail) << std::endl;
+        sdebug() << "layout: WriteTail: " << address << " " << sizeof(TTail) << endl;
         #endif
         if (!storage_.write(address, &tail, sizeof(TTail))) {
             return false;
@@ -306,11 +324,7 @@ private:
         return true;
     }
 
-    bool should_write_head() {
-        return address_.beginning_of_block();
-    }
-
-    bool should_write_tail(size_t required) {
+    bool should_move_to_following_block(size_t required) {
         auto remaining = address_.remaining_in_block(g_);
 
         if (remaining >= required + sizeof(TTail)) {
@@ -320,7 +334,7 @@ private:
         return true;
     }
 
-    bool need_new_block()  {
+    bool invalid_address()  {
         return !address_.valid();
     }
 

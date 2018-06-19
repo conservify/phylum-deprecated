@@ -137,14 +137,13 @@ public:
         }
     };
 
-private:
+public:
     bool initialize();
 
     uint16_t version() {
         return version_;
     }
 
-public:
     bool format();
 
     bool seek(uint64_t position, IndexRecord &recod);
@@ -301,6 +300,17 @@ public:
         return true;
     }
 
+    bool format() {
+        for (size_t i = 0; i < SIZE; ++i) {
+            auto file = SimpleFile{ storage_, &files_[i] };
+            if (!file.format()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     SimpleFile open(FileDescriptor &fd) {
         for (size_t i = 0; i < SIZE; ++i) {
             if (files_[i].fd_ == &fd) {
@@ -310,17 +320,6 @@ public:
             }
         }
         return SimpleFile{ nullptr, nullptr };
-    }
-
-    bool format() {
-        for (auto &file : files_) {
-            auto f = open(*file.fd_);
-            if (!f.format()) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
 };

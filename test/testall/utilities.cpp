@@ -155,7 +155,7 @@ void BlockHelper::dump(block_index_t block) {
     }
     case BlockType::Journal: {
         auto layout = get_journal_layout(*storage_, *allocator_, BlockAddress{ block, SectorSize });
-        while (layout.walk_block(sizeof(JournalEntry))) {
+        while (layout.walk_single_block(sizeof(JournalEntry))) {
             JournalEntry entry;
             storage_->read(layout.address(), &entry, sizeof(entry));
             if (!entry.valid()) {
@@ -170,7 +170,7 @@ void BlockHelper::dump(block_index_t block) {
     }
     case BlockType::Leaf: {
         auto layout = get_tree_layout(*storage_, *allocator_, BlockAddress{ block, SectorSize });
-        while (layout.walk_block(SerializerType::HeadNodeSize)) {
+        while (layout.walk_single_block(SerializerType::HeadNodeSize)) {
             SerializerType::serialized_node_t node;
             storage_->read(layout.address(), &node, sizeof(node));
             if (!node.valid()) {
@@ -186,7 +186,7 @@ void BlockHelper::dump(block_index_t block) {
     }
     case BlockType::Index: {
         auto layout = get_tree_layout(*storage_, *allocator_, BlockAddress{ block, SectorSize });
-        while (layout.walk_block(SerializerType::HeadNodeSize)) {
+        while (layout.walk_single_block(SerializerType::HeadNodeSize)) {
             SerializerType::serialized_node_t node;
             storage_->read(layout.address(), &node, sizeof(node));
             if (!node.valid()) {

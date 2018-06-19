@@ -62,39 +62,43 @@ bool FileIndex::format() {
         return false;
     }
 
-    head_ = { file_->index_.start, 0 };
+    beginning_ = { file_->index_.start, 0 };
+    head_ = beginning_;
+
+    #ifdef PHYLUM_DEBUG
+    sdebug() << "Formatted: beginning=" << beginning_ << " head=" << head_ << endl;
+    #endif
 
     return true;
 }
 
 bool FileIndex::initialize() {
-    if (head_.valid()) {
-        return true;
-    }
-
     auto layout = get_index_layout(*storage_, { file_->index_.start, 0 });
+
+    beginning_ = layout.address();
 
     IndexRecord record;
     while (layout.walk<IndexRecord>(record)) {
         if (record.version > version_) {
+            if (version_ != record.version) {
+                beginning_ = layout.address();
+            }
             version_ = record.version;
         }
     }
 
-    if (layout.find_append_location<IndexRecord>(file_->index_.start)) {
-        head_ = layout.address();
-    }
-    else {
-        head_ = { file_->index_.start, 0 };
-    }
+    head_ = layout.address();
+
+    #ifdef PHYLUM_DEBUG
+    sdebug() << "Initialized: beginning=" << beginning_ << " head=" << head_ << endl;
+    #endif
 
     return true;
 }
 
 bool FileIndex::seek(uint64_t position, IndexRecord &selected) {
-    if (!initialize()) {
-        return false;
-    }
+    assert(head_.valid());
+    assert(beginning_.valid());
 
     auto reading = get_index_layout(*storage_, { file_->index_.start, 0 });
 
@@ -114,16 +118,15 @@ bool FileIndex::seek(uint64_t position, IndexRecord &selected) {
     }
 
     #ifdef PHYLUM_DEBUG
-    sdebug() << "Seek: " << position << " = " << selected << endl;
+    sdebug() << "Seek: beginning=" << beginning_ << " " << position << " = " << selected << endl;
     #endif
 
     return true;
 }
 
 FileIndex::ReindexInfo FileIndex::append(uint32_t position, BlockAddress address) {
-    if (!initialize()) {
-        return { };
-    }
+    assert(beginning_.valid());
+    assert(head_.valid());
 
     if (version_ >= 1) {
         return reindex(position, address);
@@ -140,26 +143,33 @@ FileIndex::ReindexInfo FileIndex::append(uint32_t position, BlockAddress address
     head_ = layout.address();
 
     #ifdef PHYLUM_DEBUG
-    sdebug() << "Append: " << record << " head=" << head_ << endl;
+    sdebug() << "Append: " << record << " head=" << head_ << " beg=" << beginning_ << endl;
     #endif
 
     return { position, 0 };
 }
 
 FileIndex::ReindexInfo FileIndex::reindex(uint64_t length, BlockAddress new_end) {
-    version_++;
+    assert(beginning_.valid());
+    assert(head_.valid());
 
     auto allocator = ExtentAllocator{ file_->index_, head_.block + 1 };
-    auto reading = get_index_layout(*storage_, { file_->index_.start, 0 });
     auto writing = get_index_layout(*storage_, allocator, head_);
+    auto reading = get_index_layout(*storage_, beginning_);
+
+    version_++;
+    beginning_ = head_;
 
     #ifdef PHYLUM_DEBUG
-    sdebug() << "Reindex: " << reading.address() << " -> " << writing.address() << " length = " << length << " end = " << new_end << endl;
+    sdebug() << "Reindex: version=" << version_ << " " << reading.address() << " -> " << writing.address() << " length = " << length << " end = " << new_end << endl;
     #endif
 
     uint64_t offset = 0;
     IndexRecord record;
     while (reading.walk<IndexRecord>(record)) {
+        #ifdef PHYLUM_DEBUG
+        sdebug() << "  Old: " << reading.address() << " " << record << endl;
+        #endif
         if (record.version == version_ - 1) {
             if (record.position == 0) {
                 // If offset is non-zero then we've looped around.
@@ -174,7 +184,7 @@ FileIndex::ReindexInfo FileIndex::reindex(uint64_t length, BlockAddress new_end)
 
                 auto nrecord = IndexRecord{ record.position - offset, record.address, version_ };
                 #ifdef PHYLUM_DEBUG
-                sdebug() << "  " << nrecord << endl;
+                sdebug() << "  " << nrecord << " " << writing.address() << endl;
                 #endif
                 if (!writing.append(nrecord)) {
                     return { };
@@ -187,14 +197,14 @@ FileIndex::ReindexInfo FileIndex::reindex(uint64_t length, BlockAddress new_end)
 
     auto nrecord = IndexRecord{ new_length, new_end, version_ };
     #ifdef PHYLUM_DEBUG
-    sdebug() << "  " << nrecord << endl;
+    sdebug() << "  " << nrecord << " " << writing.address() << endl;
     #endif
     if (!writing.append(nrecord)) {
         return { };
     }
 
     #ifdef PHYLUM_DEBUG
-    sdebug() << "  EoI: length = " << new_length << endl;
+    sdebug() << "  Done: new-length = " << new_length << endl;
     #endif
 
     head_ = writing.address();
@@ -203,13 +213,16 @@ FileIndex::ReindexInfo FileIndex::reindex(uint64_t length, BlockAddress new_end)
 }
 
 void FileIndex::dump() {
+    assert(beginning_.valid());
+    assert(head_.valid());
+
     auto layout = get_index_layout(*storage_, { file_->index_.start, 0 });
 
     sdebug() << "Index: " << layout.address() << endl;
 
     IndexRecord record;
     while (layout.walk<IndexRecord>(record)) {
-        sdebug() << "  " << record << endl;
+        sdebug() << "  " << record << " " << layout.address() << endl;
     }
 }
 
@@ -448,7 +461,7 @@ int32_t SimpleFile::flush() {
 }
 
 bool SimpleFile::initialize() {
-    return true;
+    return index().initialize();
 }
 
 bool SimpleFile::format() {
@@ -461,7 +474,7 @@ bool SimpleFile::format() {
         return false;
     }
 
-    return true;
+    return initialize();
 }
 
 uint64_t SimpleFile::maximum_size() const {
