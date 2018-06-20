@@ -158,6 +158,10 @@ public:
         return block != BLOCK_INDEX_INVALID && position != POSITION_INDEX_INVALID;
     }
 
+    bool zero() const {
+        return block == 0 && position == 0;
+    }
+
     uint32_t remaining_in_sector(const Geometry &g) {
         return g.sector_size - (position % g.sector_size);
     }

@@ -160,7 +160,7 @@ bool FileIndex::seek(uint64_t position, IndexRecord &selected) {
     auto reading = get_index_layout(*storage_, beginning_);
 
     #ifdef PHYLUM_DEBUG
-    sdebug() << "Seeking: " << *this << " " << position << endl;
+    sdebug() << "Seeking: " << *this << " position=" << position << endl;
     #endif
 
     IndexRecord record;
@@ -226,7 +226,8 @@ FileIndex::ReindexInfo FileIndex::reindex(uint64_t length, BlockAddress new_end)
     beginning_ = head_;
 
     #ifdef PHYLUM_DEBUG
-    sdebug() << "Reindex: version=" << version_ << " " << reading.address() << " -> " << writing.address() << " length = " << length << " end = " << new_end << endl;
+    sdebug() << "Reindex: version=" << version_ << " " << reading.address() << " -> " << writing.address() <<
+        " length = " << length << " end = " << new_end << endl;
     #endif
 
     uint64_t offset = 0;
@@ -363,7 +364,6 @@ int32_t SimpleFile::read(uint8_t *ptr, size_t size) {
                 // We should be in the last sector of the file.
                 assert(file_->data_.final_sector(geometry()) == head_);
                 head_ = file_->data_.end(geometry());
-                assert(file_->data_.end(geometry()) == head_);
             }
         }
         else {
@@ -376,6 +376,7 @@ int32_t SimpleFile::read(uint8_t *ptr, size_t size) {
         // End of the file? Marked by an "unwritten" sector.
         if (buffavailable_ == 0 || buffavailable_ == SECTOR_INDEX_INVALID) {
             buffavailable_ = 0;
+            length_ = position_;
             return 0;
         }
 

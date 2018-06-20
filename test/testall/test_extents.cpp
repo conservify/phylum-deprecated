@@ -68,8 +68,8 @@ TEST_F(ExtentsSuite, StandardLayoutAllocating) {
 }
 
 TEST_F(ExtentsSuite, SmallFileWritingToEnd) {
-    FileDescriptor file_system_area_fd =   { "system",      WriteStrategy::Append,  100 };
-    FileDescriptor file_log_startup_fd =   { "startup.log", WriteStrategy::Append,  100 };
+    FileDescriptor file_system_area_fd = { "system",      WriteStrategy::Append,  100 };
+    FileDescriptor file_log_startup_fd = { "startup.log", WriteStrategy::Append,  100 };
 
     static FileDescriptor* files[] = {
         &file_system_area_fd,
@@ -95,8 +95,8 @@ TEST_F(ExtentsSuite, SmallFileWritingToEnd) {
 }
 
 TEST_F(ExtentsSuite, LargeFileWritingToEnd) {
-    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
-    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Append,  0   };
+    FileDescriptor file_system_area_fd = { "system",  WriteStrategy::Append,  100 };
+    FileDescriptor file_data_fk =        { "data.fk", WriteStrategy::Append,  0   };
 
     static FileDescriptor* files[] = {
         &file_system_area_fd,
@@ -122,8 +122,8 @@ TEST_F(ExtentsSuite, LargeFileWritingToEnd) {
 }
 
 TEST_F(ExtentsSuite, LargeFileAppending) {
-    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
-    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Append,  0   };
+    FileDescriptor file_system_area_fd = { "system",  WriteStrategy::Append,  100 };
+    FileDescriptor file_data_fk =        { "data.fk", WriteStrategy::Append,  0   };
 
     static FileDescriptor* files[] = {
         &file_system_area_fd,

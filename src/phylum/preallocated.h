@@ -83,7 +83,7 @@ struct IndexRecord {
     uint16_t version;
 
     bool valid() {
-        return address.valid();
+        return address.valid() && !address.zero();
     }
 };
 
@@ -327,8 +327,14 @@ public:
 
 };
 
+class FileOpener {
+public:
+    virtual SimpleFile open(FileDescriptor &fd, OpenMode mode) = 0;
+
+};
+
 template<size_t SIZE>
-class FileLayout {
+class FileLayout : public FileOpener {
 private:
     StorageBackend *storage_;
     FileDescriptor **fds_;
@@ -365,7 +371,12 @@ public:
                 return false;
             }
 
-            auto file = SimpleFile{ storage_, fds_[i], &allocations_[i], OpenMode::Write };
+            auto file = SimpleFile{
+                storage_,
+                fds_[i],
+                &allocations_[i],
+                OpenMode::Write
+            };
             if (!file.format()) {
                 return false;
             }
@@ -404,7 +415,7 @@ public:
         return true;
     }
 
-    SimpleFile open(FileDescriptor &fd, OpenMode mode = OpenMode::Read) {
+    virtual SimpleFile open(FileDescriptor &fd, OpenMode mode = OpenMode::Read) override {
         for (size_t i = 0; i < SIZE; ++i) {
             if (fds_[i] == &fd) {
                 auto file = SimpleFile{ storage_, fds_[i], &allocations_[i], mode };
