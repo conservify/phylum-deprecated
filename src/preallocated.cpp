@@ -161,13 +161,13 @@ bool FileIndex::seek(uint64_t position, IndexRecord &selected) {
     auto caching = SectorCachingStorage{ *storage_ };
     auto reading = get_index_layout(caching, beginning_);
 
-    #ifdef PHYLUM_DEBUG
+    #if PHYLUM_DEBUG > 1
     sdebug() << "Seeking: " << *this << " position=" << position << endl;
     #endif
 
     IndexRecord record;
     while (reading.walk<IndexRecord>(record)) {
-        #ifdef PHYLUM_DEBUG
+        #if PHYLUM_DEBUG > 1
         sdebug() << "  " << record << " " << reading.address() << endl;
         #endif
 
@@ -253,7 +253,7 @@ FileIndex::ReindexInfo FileIndex::reindex(uint64_t length, BlockAddress new_end)
                 }
 
                 auto nrecord = IndexRecord{ record.position - offset, record.address, version_ };
-                #ifdef PHYLUM_DEBUG
+                #if PHYLUM_DEBUG > 1
                 sdebug() << "  " << nrecord << " " << writing.address() << endl;
                 #endif
                 if (!writing.append(nrecord)) {
@@ -266,14 +266,14 @@ FileIndex::ReindexInfo FileIndex::reindex(uint64_t length, BlockAddress new_end)
     auto new_length = length - offset;
 
     auto nrecord = IndexRecord{ new_length, new_end, version_ };
-    #ifdef PHYLUM_DEBUG
+    #if PHYLUM_DEBUG > 1
     sdebug() << "  " << nrecord << " " << writing.address() << endl;
     #endif
     if (!writing.append(nrecord)) {
         return { };
     }
 
-    #ifdef PHYLUM_DEBUG
+    #if PHYLUM_DEBUG > 1
     sdebug() << "  Done: new-length = " << new_length << endl;
     #endif
 

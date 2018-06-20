@@ -228,9 +228,7 @@ TEST_F(ExtentsSuite, SeekMiddleOfFile) {
     auto middle_on_pattern_edge = ((OneMegabyte / 2) / helper.size()) * helper.size();
     auto reading = layout.open(file_data_fk);
     ASSERT_EQ(reading.size(), (uint64_t)0);
-    storage_.log().logging(true);
     ASSERT_TRUE(reading.seek(middle_on_pattern_edge));
-    storage_.log().logging(false);
     ASSERT_EQ(reading.tell(), middle_on_pattern_edge);
     auto verified = helper.read(reading);
     reading.close();

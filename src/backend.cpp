@@ -13,6 +13,14 @@ bool SectorCachingStorage::read(BlockAddress addr, void *d, size_t n) {
             return false;
         }
         sector_ = sector;
+        #if PHYLUM_DEBUG > 3
+        sdebug() << "SectorCache: MISS " << sector << endl;
+        #endif
+    }
+    else {
+        #if PHYLUM_DEBUG > 3
+        sdebug() << "SectorCache: HIT " << sector << endl;
+        #endif
     }
 
     memcpy(d, buffer_ + offset, n);
