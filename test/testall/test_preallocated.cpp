@@ -9,7 +9,7 @@
 
 using namespace phylum;
 
-class ExtentsSuite : public ::testing::Test {
+class PreallocatedSuite : public ::testing::Test {
 protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend storage_;
@@ -25,7 +25,7 @@ protected:
 
 };
 
-TEST_F(ExtentsSuite, StandardLayoutAllocating) {
+TEST_F(PreallocatedSuite, StandardLayoutAllocating) {
     FileDescriptor file_system_area_fd =   { "system",        WriteStrategy::Append,  100 };
     FileDescriptor file_log_startup_fd =   { "startup.log",   WriteStrategy::Append,  100 };
     FileDescriptor file_log_now_fd =       { "now.log",       WriteStrategy::Rolling, 100 };
@@ -67,7 +67,7 @@ TEST_F(ExtentsSuite, StandardLayoutAllocating) {
     ASSERT_EQ(layout.allocation(1), FileAllocation{ });
 }
 
-TEST_F(ExtentsSuite, SmallFileWritingToEnd) {
+TEST_F(PreallocatedSuite, SmallFileWritingToEnd) {
     FileDescriptor file_system_area_fd = { "system",      WriteStrategy::Append,  100 };
     FileDescriptor file_log_startup_fd = { "startup.log", WriteStrategy::Append,  100 };
 
@@ -94,7 +94,7 @@ TEST_F(ExtentsSuite, SmallFileWritingToEnd) {
     ASSERT_EQ(total, verified);
 }
 
-TEST_F(ExtentsSuite, LargeFileWritingToEnd) {
+TEST_F(PreallocatedSuite, LargeFileWritingToEnd) {
     FileDescriptor file_system_area_fd = { "system",  WriteStrategy::Append,  100 };
     FileDescriptor file_data_fk =        { "data.fk", WriteStrategy::Append,  0   };
 
@@ -121,7 +121,7 @@ TEST_F(ExtentsSuite, LargeFileWritingToEnd) {
     ASSERT_EQ(total, verified);
 }
 
-TEST_F(ExtentsSuite, LargeFileAppending) {
+TEST_F(PreallocatedSuite, LargeFileAppending) {
     FileDescriptor file_system_area_fd = { "system",  WriteStrategy::Append,  100 };
     FileDescriptor file_data_fk =        { "data.fk", WriteStrategy::Append,  0   };
 
@@ -168,7 +168,7 @@ TEST_F(ExtentsSuite, LargeFileAppending) {
     ASSERT_EQ(OneMegabyte * 2, verified);
 }
 
-TEST_F(ExtentsSuite, Seeking) {
+TEST_F(PreallocatedSuite, Seeking) {
     FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
     FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Append,  0   };
 
@@ -202,7 +202,7 @@ TEST_F(ExtentsSuite, Seeking) {
     ASSERT_EQ(verified, OneMegabyte);
 }
 
-TEST_F(ExtentsSuite, SeekMiddleOfFile) {
+TEST_F(PreallocatedSuite, SeekMiddleOfFile) {
     FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
     FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Append,  0   };
 
@@ -236,7 +236,7 @@ TEST_F(ExtentsSuite, SeekMiddleOfFile) {
     ASSERT_EQ(verified, OneMegabyte / 2);
 }
 
-TEST_F(ExtentsSuite, RollingWriteStrategyOneRollover) {
+TEST_F(PreallocatedSuite, RollingWriteStrategyOneRollover) {
     FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
     FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Rolling, 100 };
 
@@ -262,7 +262,7 @@ TEST_F(ExtentsSuite, RollingWriteStrategyOneRollover) {
     ASSERT_EQ(file.size(), verified + skip);
 }
 
-TEST_F(ExtentsSuite, RollingWriteStrategyTwoRollovers) {
+TEST_F(PreallocatedSuite, RollingWriteStrategyTwoRollovers) {
     FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
     FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Rolling, 100 };
 
@@ -289,7 +289,7 @@ TEST_F(ExtentsSuite, RollingWriteStrategyTwoRollovers) {
     ASSERT_EQ(file.size(), verified + skip);
 }
 
-TEST_F(ExtentsSuite, RollingWriteStrategyIndexWraparound) {
+TEST_F(PreallocatedSuite, RollingWriteStrategyIndexWraparound) {
     FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
     FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Rolling, 100 };
 
@@ -314,4 +314,25 @@ TEST_F(ExtentsSuite, RollingWriteStrategyIndexWraparound) {
     auto skip = helper.size() - (file.truncated() - (file.truncated() / helper.size()) * helper.size());
     auto verified = helper.verify_file(layout, file_data_fk, skip);
     ASSERT_EQ(file.size(), verified + skip);
+}
+
+class FileIndexSuite : public ::testing::Test {
+protected:
+    Geometry geometry_{ 1024 * 1024, 4, 4, 512 };
+    LinuxMemoryBackend storage_;
+
+protected:
+    void SetUp() override {
+        ASSERT_TRUE(storage_.initialize(geometry_));
+        ASSERT_TRUE(storage_.open());
+    }
+
+    void TearDown() override {
+    }
+
+};
+
+TEST_F(FileIndexSuite, LargeIndex) {
+    FileAllocation allocation{ { 1, 10000 }, { 0, 1} };
+    FileIndex index{ &storage_, &allocation };
 }
