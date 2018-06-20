@@ -43,11 +43,11 @@ enum class WriteStrategy {
 };
 
 struct FileAllocation {
-    Extent index_;
-    Extent data_;
+    Extent index;
+    Extent data;
 
     bool operator==(const FileAllocation &other) const {
-        return index_ == other.index_ && data_ == other.data_;
+        return index == other.index && data == other.data;
     }
 
     bool operator!=(const FileAllocation &other) const {
@@ -96,7 +96,7 @@ inline ostreamtype& operator<<(ostreamtype& os, const Extent &e) {
 }
 
 inline ostreamtype& operator<<(ostreamtype& os, const FileAllocation &f) {
-    return os << "FileAllocation<index=" << f.index_ << " data=" << f.data_ << ">";
+    return os << "FileAllocation<index=" << f.index << " data=" << f.data << ">";
 }
 
 inline ostreamtype& operator<<(ostreamtype& os, const IndexRecord &f) {

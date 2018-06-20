@@ -95,11 +95,11 @@ static T *tail_info(uint8_t(&buffer)[N]) {
 }
 
 bool FileIndex::format() {
-    if (!storage_->erase(file_->index_.start)) {
+    if (!storage_->erase(file_->index.start)) {
         return false;
     }
 
-    beginning_ = { file_->index_.start, 0 };
+    beginning_ = { file_->index.start, 0 };
     head_ = beginning_;
 
     #ifdef PHYLUM_DEBUG
@@ -113,7 +113,7 @@ constexpr uint16_t INVALID_VERSION = ((uint16_t)-1);
 
 bool FileIndex::initialize() {
     auto caching = SectorCachingStorage{ *storage_ };
-    auto layout = get_index_layout(caching, { file_->index_.start, 0 });
+    auto layout = get_index_layout(caching, { file_->index.start, 0 });
     auto skipped = false;
 
     version_ = INVALID_VERSION;
@@ -200,7 +200,7 @@ FileIndex::ReindexInfo FileIndex::append(uint32_t position, BlockAddress address
     }
 
     auto caching = SectorCachingStorage{ *storage_ };
-    auto allocator = ExtentAllocator{ file_->index_, head_.block + 1 };
+    auto allocator = ExtentAllocator{ file_->index, head_.block + 1 };
     auto layout = get_index_layout(caching, allocator, head_);
 
     auto record = IndexRecord{ position, address, version_ };
@@ -221,7 +221,7 @@ FileIndex::ReindexInfo FileIndex::reindex(uint64_t length, BlockAddress new_end)
     assert(beginning_.valid());
     assert(head_.valid());
 
-    auto allocator = ExtentAllocator{ file_->index_, head_.block + 1 };
+    auto allocator = ExtentAllocator{ file_->index, head_.block + 1 };
     auto writing = get_index_layout(*storage_, allocator, head_);
     auto caching = SectorCachingStorage{ *storage_ };
     auto reading = get_index_layout(caching, beginning_);
@@ -287,7 +287,7 @@ void FileIndex::dump() {
     assert(head_.valid());
 
     auto caching = SectorCachingStorage{ *storage_ };
-    auto layout = get_index_layout(caching, { file_->index_.start, 0 });
+    auto layout = get_index_layout(caching, { file_->index.start, 0 });
 
     sdebug() << "Index: " << layout.address() << endl;
 
@@ -307,7 +307,7 @@ bool SimpleFile::seek(uint64_t position) {
         position_ = end.position;
     }
     else {
-        head_ = { file_->data_.start, 0 };
+        head_ = { file_->data.start, 0 };
         length_ = 0;
         return true;
     }
@@ -335,7 +335,7 @@ int32_t SimpleFile::read(uint8_t *ptr, size_t size) {
         buffavailable_ = 0;
 
         // We set head_ to the end of the data extent if we've read to the end.
-        if (file_->data_.end(geometry()) == head_) {
+        if (file_->data.end(geometry()) == head_) {
             return 0;
         }
 
@@ -367,8 +367,8 @@ int32_t SimpleFile::read(uint8_t *ptr, size_t size) {
             }
             else {
                 // We should be in the last sector of the file.
-                assert(file_->data_.final_sector(geometry()) == head_);
-                head_ = file_->data_.end(geometry());
+                assert(file_->data.final_sector(geometry()) == head_);
+                head_ = file_->data.end(geometry());
             }
         }
         else {
@@ -466,7 +466,7 @@ int32_t SimpleFile::flush() {
     if (writing_tail_sector) {
         // Check to see if we're at the end of our allocated space.
         linked = head_.block + 1;
-        if (!file_->data_.contains(linked)) {
+        if (!file_->data.contains(linked)) {
             switch (fd_->strategy) {
             case WriteStrategy::Append: {
                 linked = BLOCK_INDEX_INVALID;
@@ -494,7 +494,7 @@ int32_t SimpleFile::flush() {
 
     // Write this full sector. No partial writes here because of the tail. Most
     // of the time we write full sectors anyway.
-    assert(file_->data_.contains(addr));
+    assert(file_->data.contains(addr));
 
     if (!storage_->write(addr, buffer_, sizeof(buffer_))) {
         return 0;
@@ -504,7 +504,7 @@ int32_t SimpleFile::flush() {
     if (writing_tail_sector) {
         if (is_valid_block(linked)) {
             head_ = initialize(linked, head_.block);
-            assert(file_->data_.contains(head_));
+            assert(file_->data.contains(head_));
             if (!head_.valid()) {
                 assert(false); // TODO: Yikes.
             }
@@ -539,7 +539,7 @@ bool SimpleFile::format() {
         return false;
     }
 
-    head_ = initialize(file_->data_.start, BLOCK_INDEX_INVALID);
+    head_ = initialize(file_->data.start, BLOCK_INDEX_INVALID);
     if (!index(head_)) {
         return false;
     }
@@ -548,7 +548,7 @@ bool SimpleFile::format() {
 }
 
 uint64_t SimpleFile::maximum_size() const {
-    return file_->data_.nblocks * effective_file_block_size(geometry());
+    return file_->data.nblocks * effective_file_block_size(geometry());
 }
 
 uint64_t SimpleFile::size() const {
@@ -577,7 +577,7 @@ bool SimpleFile::index(BlockAddress address) {
 }
 
 block_index_t SimpleFile::rollover() {
-    auto info = index().reindex(length_, { file_->data_.start, SectorSize });
+    auto info = index().reindex(length_, { file_->data.start, SectorSize });
     if (!info) {
         return BLOCK_INDEX_INVALID;
     }
@@ -587,7 +587,7 @@ block_index_t SimpleFile::rollover() {
     position_ = info.length;
     truncated_ += info.truncated;
 
-    return file_->data_.start;
+    return file_->data.start;
 }
 
 SimpleFile::SeekInfo SimpleFile::seek(block_index_t starting_block, uint64_t max, bool verify_head_block) {
