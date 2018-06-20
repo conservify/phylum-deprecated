@@ -93,6 +93,14 @@ struct SectorAddress {
     bool valid() const {
         return block != BLOCK_INDEX_INVALID && sector != SECTOR_INDEX_INVALID;
     }
+
+    bool operator==(const SectorAddress &other) const {
+        return block == other.block && sector == other.sector;
+    }
+
+    bool operator!=(const SectorAddress &other) const {
+        return !(*this == other);
+    }
 };
 
 struct BlockAddress;

@@ -415,6 +415,7 @@ public:
         return true;
     }
 
+public:
     virtual SimpleFile open(FileDescriptor &fd, OpenMode mode = OpenMode::Read) override {
         for (size_t i = 0; i < SIZE; ++i) {
             if (fds_[i] == &fd) {

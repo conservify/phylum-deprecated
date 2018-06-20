@@ -3,6 +3,54 @@
 
 namespace phylum {
 
+class CachingStorage : public StorageBackend {
+private:
+    StorageBackend &target;
+    SectorAddress sector_;
+    uint8_t buffer_[SectorSize];
+
+public:
+    CachingStorage(StorageBackend &target) : target(target) {
+    }
+
+public:
+    virtual bool open() override {
+        return target.open();
+    }
+
+    virtual bool close() override {
+        return target.close();
+    }
+
+    virtual Geometry &geometry() override {
+        return target.geometry();
+    }
+
+    virtual bool erase(block_index_t block) override {
+        return target.erase(block);
+    }
+
+    virtual bool read(BlockAddress addr, void *d, size_t n) override {
+        auto sector = addr.sector(geometry());
+        auto offset = addr.sector_offset(geometry());
+        if (sector_ != sector) {
+            if (!target.read({ sector, 0 }, buffer_, SectorSize)) {
+                return false;
+            }
+            sector_ = sector;
+        }
+
+        memcpy(d, buffer_ + offset, n);
+
+        return true;
+    }
+
+    virtual bool write(BlockAddress addr, void *d, size_t n) override {
+        return target.write(addr, d, n);
+    }
+
+};
+
 static EmptyAllocator empty_allocator;
 
 class ExtentAllocator : public BlockAllocator {
@@ -112,7 +160,8 @@ bool FileIndex::format() {
 constexpr uint16_t INVALID_VERSION = ((uint16_t)-1);
 
 bool FileIndex::initialize() {
-    auto layout = get_index_layout(*storage_, { file_->index_.start, 0 });
+    auto caching = CachingStorage{ *storage_ };
+    auto layout = get_index_layout(caching, { file_->index_.start, 0 });
     auto skipped = false;
 
     version_ = INVALID_VERSION;
@@ -157,7 +206,8 @@ bool FileIndex::seek(uint64_t position, IndexRecord &selected) {
     assert(head_.valid());
     assert(beginning_.valid());
 
-    auto reading = get_index_layout(*storage_, beginning_);
+    auto caching = CachingStorage{ *storage_ };
+    auto reading = get_index_layout(caching, beginning_);
 
     #ifdef PHYLUM_DEBUG
     sdebug() << "Seeking: " << *this << " position=" << position << endl;
@@ -197,8 +247,9 @@ FileIndex::ReindexInfo FileIndex::append(uint32_t position, BlockAddress address
         return reindex(position, address);
     }
 
+    auto caching = CachingStorage{ *storage_ };
     auto allocator = ExtentAllocator{ file_->index_, head_.block + 1 };
-    auto layout = get_index_layout(*storage_, allocator, head_);
+    auto layout = get_index_layout(caching, allocator, head_);
 
     auto record = IndexRecord{ position, address, version_ };
     if (!layout.append(record)) {
@@ -220,7 +271,8 @@ FileIndex::ReindexInfo FileIndex::reindex(uint64_t length, BlockAddress new_end)
 
     auto allocator = ExtentAllocator{ file_->index_, head_.block + 1 };
     auto writing = get_index_layout(*storage_, allocator, head_);
-    auto reading = get_index_layout(*storage_, beginning_);
+    auto caching = CachingStorage{ *storage_ };
+    auto reading = get_index_layout(caching, beginning_);
 
     version_++;
     beginning_ = head_;
@@ -282,7 +334,8 @@ void FileIndex::dump() {
     assert(beginning_.valid());
     assert(head_.valid());
 
-    auto layout = get_index_layout(*storage_, { file_->index_.start, 0 });
+    auto caching = CachingStorage{ *storage_ };
+    auto layout = get_index_layout(caching, { file_->index_.start, 0 });
 
     sdebug() << "Index: " << layout.address() << endl;
 
