@@ -113,6 +113,7 @@ private:
     uint16_t version_{ 0 };
     BlockAddress beginning_;
     BlockAddress head_;
+    BlockAddress end_;
 
 public:
     FileIndex() {
@@ -120,6 +121,8 @@ public:
 
     FileIndex(StorageBackend *storage, File *file) : storage_(storage), file_(file) {
     }
+
+    friend ostreamtype& operator<<(ostreamtype& os, const FileIndex &e);
 
 public:
     struct ReindexInfo {

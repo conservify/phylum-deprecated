@@ -1,6 +1,8 @@
 #include "phylum/phylum.h"
 #include "phylum/preallocated.h"
 
+#define PHYLUM_DEBUG
+
 namespace phylum {
 
 static EmptyAllocator empty_allocator;
@@ -51,6 +53,13 @@ static inline BlockLayout<IndexBlockHead, IndexBlockTail> get_index_layout(Stora
     return get_index_layout(storage, empty_allocator, address);
 }
 
+inline ostreamtype& operator<<(ostreamtype& os, const FileIndex &e) {
+    return os << "FileIndex<version=" << e.version_ <<
+        " beginning=" << e.beginning_ <<
+        " end=" << e.end_ <<
+        " head=" << e.head_ << ">";
+}
+
 template<typename T, size_t N>
 static T *tail_info(uint8_t(&buffer)[N]) {
     auto tail_offset = sizeof(buffer) - sizeof(T);
@@ -66,7 +75,7 @@ bool FileIndex::format() {
     head_ = beginning_;
 
     #ifdef PHYLUM_DEBUG
-    sdebug() << "Formatted: beginning=" << beginning_ << " head=" << head_ << endl;
+    sdebug() << "Formatted: " << *this << endl;
     #endif
 
     return true;
@@ -102,12 +111,15 @@ bool FileIndex::initialize() {
             }
             version_ = record.version;
         }
+        else if (version_ == record.version) {
+            end_ = layout.address();
+        }
     }
 
     head_ = layout.address();
 
     #ifdef PHYLUM_DEBUG
-    sdebug() << "Initialized: beginning=" << beginning_ << " head=" << head_ << endl;
+    sdebug() << "Initialized: " << *this << endl;
     #endif
 
     return true;
@@ -120,7 +132,7 @@ bool FileIndex::seek(uint64_t position, IndexRecord &selected) {
     auto reading = get_index_layout(*storage_, beginning_);
 
     #ifdef PHYLUM_DEBUG
-    sdebug() << "Seeking: " << position << " " << beginning_ << " version=" << version_ << endl;
+    sdebug() << "Seeking: " << *this << " " << position << endl;
     #endif
 
     IndexRecord record;
@@ -143,7 +155,7 @@ bool FileIndex::seek(uint64_t position, IndexRecord &selected) {
     }
 
     #ifdef PHYLUM_DEBUG
-    sdebug() << "Seek: beginning=" << beginning_ << " " << position << " = " << selected << endl;
+    sdebug() << "Seek: " << *this << " position=" << position << " = " << selected << endl;
     #endif
 
     return true;
@@ -262,6 +274,7 @@ bool SimpleFile::seek(uint64_t position) {
     }
     else {
         head_ = { file_->data_.start, 0 };
+        length_ = 0;
         return true;
     }
 

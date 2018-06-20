@@ -150,6 +150,43 @@ TEST_F(ExtentsSuite, LargeFileAppending) {
     ASSERT_EQ(OneMegabyte * 2, verified);
 }
 
+TEST_F(ExtentsSuite, Seeking) {
+    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
+    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Append,  0   };
+
+    static FileDescriptor* files[] = {
+        &file_system_area_fd,
+        &file_data_fk
+    };
+
+    FileLayout<2> layout{ storage_ };
+
+    layout.allocate(files);
+    layout.format();
+
+    constexpr uint64_t OneMegabyte = 1024 * 1024;
+    auto file = layout.open(file_data_fk, OpenMode::Write);
+    ASSERT_EQ(file.size(), (uint64_t)0);
+    PatternHelper helper;
+    auto total = helper.write(file, (int32_t)OneMegabyte / helper.size());
+    file.close();
+
+    ASSERT_EQ(file.size(), OneMegabyte);
+    ASSERT_EQ(total, OneMegabyte);
+
+    // storage_.log().logging(true);
+    auto reading = layout.open(file_data_fk);
+    ASSERT_EQ(reading.size(), (uint64_t)0);
+    reading.seek(UINT64_MAX);
+    ASSERT_EQ(reading.size(), (uint64_t)OneMegabyte);
+    reading.seek(0);
+    // storage_.log().logging(false);
+    auto verified = helper.read(reading);
+    reading.close();
+
+    ASSERT_EQ(verified, OneMegabyte);
+}
+
 TEST_F(ExtentsSuite, SeekMiddleOfFile) {
     FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
     FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Append,  0   };
