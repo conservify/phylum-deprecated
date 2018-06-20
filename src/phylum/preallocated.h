@@ -6,17 +6,6 @@
 
 namespace phylum {
 
-enum class WriteStrategy {
-    Append,
-    Rolling
-};
-
-struct FileDescriptor {
-    char name[16];
-    WriteStrategy strategy;
-    uint64_t maximum_size;
-};
-
 struct Extent {
     block_index_t start;
     block_index_t nblocks;
@@ -39,29 +28,20 @@ struct Extent {
 
 };
 
-class File {
-private:
-    FileDescriptor *fd_;
-    uint8_t id_;
+enum class WriteStrategy {
+    Append,
+    Rolling
+};
+
+struct FileAllocation {
     Extent index_;
     Extent data_;
+};
 
-public:
-    File() {
-    }
-
-    File(FileDescriptor &fd, uint8_t id, Extent index, Extent data) : fd_(&fd), id_(id), index_(index), data_(data) {
-    }
-
-    friend class SimpleFile;
-    friend class FileIndex;
-
-public:
-    friend ostreamtype& operator<<(ostreamtype& os, const File &f);
-
-    template<size_t SIZE>
-    friend class FileLayout;
-
+struct FileDescriptor {
+    char name[16];
+    WriteStrategy strategy;
+    uint64_t maximum_size;
 };
 
 struct IndexBlockHead {
@@ -98,8 +78,8 @@ inline ostreamtype& operator<<(ostreamtype& os, const Extent &e) {
     return os << "Extent<" << e.start << " - " << e.start + e.nblocks << " l=" << e.nblocks << ">";
 }
 
-inline ostreamtype& operator<<(ostreamtype& os, const File &f) {
-    return os << "File<id=" << (int16_t)f.id_ << " index=" << f.index_ << " data=" << f.data_ << ">";
+inline ostreamtype& operator<<(ostreamtype& os, const FileAllocation &f) {
+    return os << "FileAllocation<index=" << f.index_ << " data=" << f.data_ << ">";
 }
 
 inline ostreamtype& operator<<(ostreamtype& os, const IndexRecord &f) {
@@ -109,7 +89,7 @@ inline ostreamtype& operator<<(ostreamtype& os, const IndexRecord &f) {
 class FileIndex {
 private:
     StorageBackend *storage_;
-    File *file_{ nullptr };
+    FileAllocation *file_{ nullptr };
     uint16_t version_{ 0 };
     BlockAddress beginning_;
     BlockAddress head_;
@@ -119,7 +99,7 @@ public:
     FileIndex() {
     }
 
-    FileIndex(StorageBackend *storage, File *file) : storage_(storage), file_(file) {
+    FileIndex(StorageBackend *storage, FileAllocation *file) : storage_(storage), file_(file) {
     }
 
     friend ostreamtype& operator<<(ostreamtype& os, const FileIndex &e);
@@ -167,7 +147,8 @@ enum class OpenMode {
 class SimpleFile {
 private:
     StorageBackend *storage_;
-    File *file_{ nullptr };
+    FileDescriptor *fd_{ nullptr };
+    FileAllocation *file_{ nullptr };
     uint32_t id_{ 0 };
     uint8_t buffer_[SectorSize];
     uint16_t buffavailable_{ 0 };
@@ -188,8 +169,8 @@ public:
     SimpleFile() {
     }
 
-    SimpleFile(StorageBackend *storage, File *file, OpenMode mode) :
-        storage_(storage), file_(file), readonly_(mode == OpenMode::Read), index_(storage_, file) {
+    SimpleFile(StorageBackend *storage, FileDescriptor *fd, FileAllocation *file, OpenMode mode) :
+        storage_(storage), fd_(fd), file_(file), readonly_(mode == OpenMode::Read), index_(storage_, file) {
     }
 
     ~SimpleFile() {
@@ -261,7 +242,7 @@ private:
 
 class FilePreallocator {
 private:
-    block_index_t head_ = 0;
+    block_index_t head_ = 2;
     StorageBackend &storage_;
 
 public:
@@ -269,7 +250,7 @@ public:
     }
 
 public:
-    bool allocate(uint8_t id, FileDescriptor *fd, File &file);
+    bool allocate(uint8_t id, FileDescriptor *fd, FileAllocation &file);
 
 private:
     Geometry &geometry() const {
@@ -282,11 +263,18 @@ private:
 
 };
 
+class FileTable {
+private:
+
+public:
+};
+
 template<size_t SIZE>
 class FileLayout {
 private:
     StorageBackend *storage_;
-    File files_[SIZE];
+    FileDescriptor **fds_;
+    FileAllocation allocations_[SIZE];
 
 public:
     FileLayout(StorageBackend &storage) : storage_(&storage) {
@@ -296,22 +284,29 @@ public:
     bool allocate(FileDescriptor*(&fds)[SIZE]) {
         FilePreallocator allocator{ *storage_ };
 
+        fds_ = fds;
+
         #ifdef PHYLUM_LAYOUT_DEBUG
         sdebug() << "Effective block size: " << effective_file_block_size(geometry()) <<
             " overhead = " << file_block_overhead(geometry()) << endl;
         #endif
 
         for (size_t i = 0; i < SIZE; ++i) {
-            if (!allocator.allocate((uint8_t)i, fds[i], files_[i])) {
+            if (!allocator.allocate((uint8_t)i, fds_[i], allocations_[i])) {
                 return false;
             }
         }
+
+        return true;
+    }
+
+    bool mount() {
         return true;
     }
 
     bool format() {
         for (size_t i = 0; i < SIZE; ++i) {
-            auto file = SimpleFile{ storage_, &files_[i], OpenMode::Write };
+            auto file = SimpleFile{ storage_, fds_[i], &allocations_[i], OpenMode::Write };
             if (!file.format()) {
                 return false;
             }
@@ -322,13 +317,13 @@ public:
 
     SimpleFile open(FileDescriptor &fd, OpenMode mode = OpenMode::Read) {
         for (size_t i = 0; i < SIZE; ++i) {
-            if (files_[i].fd_ == &fd) {
-                auto file = SimpleFile{ storage_, &files_[i], mode };
+            if (fds_[i] == &fd) {
+                auto file = SimpleFile{ storage_, fds_[i], &allocations_[i], mode };
                 file.initialize();
                 return file;
             }
         }
-        return SimpleFile{ nullptr, nullptr, OpenMode::Read };
+        return SimpleFile{ nullptr, nullptr, nullptr, OpenMode::Read };
     }
 
 };

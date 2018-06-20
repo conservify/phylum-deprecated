@@ -432,7 +432,7 @@ int32_t SimpleFile::flush() {
         // Check to see if we're at the end of our allocated space.
         linked = head_.block + 1;
         if (!file_->data_.contains(linked)) {
-            switch (file_->fd_->strategy) {
+            switch (fd_->strategy) {
             case WriteStrategy::Append: {
                 linked = BLOCK_INDEX_INVALID;
                 break;
@@ -637,7 +637,7 @@ BlockAddress SimpleFile::initialize(block_index_t block, block_index_t previous)
     return BlockAddress { block, SectorSize };
 }
 
-bool FilePreallocator::allocate(uint8_t id, FileDescriptor *fd, File &file) {
+bool FilePreallocator::allocate(uint8_t id, FileDescriptor *fd, FileAllocation &file) {
     auto nblocks = block_index_t(0);
     auto index_blocks = block_index_t(0);
 
@@ -663,7 +663,7 @@ bool FilePreallocator::allocate(uint8_t id, FileDescriptor *fd, File &file) {
     head_ += data.nblocks;
     assert(geometry().contains(BlockAddress{ head_, 0 }));
 
-    file = File{ *fd, (uint8_t)id, index, data };
+    file = FileAllocation{ index, data };
 
     #ifdef PHYLUM_DEBUG
     sdebug() << "Allocated: " << file << " " << fd->name << endl;
