@@ -3,8 +3,6 @@
 
 namespace phylum {
 
-static EmptyAllocator empty_allocator;
-
 class ExtentAllocator : public BlockAllocator {
 private:
     Extent extent_;

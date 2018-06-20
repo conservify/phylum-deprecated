@@ -107,6 +107,8 @@ public:
 };
 #endif
 
+extern EmptyAllocator empty_allocator;
+
 }
 
 #endif

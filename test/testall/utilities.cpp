@@ -60,7 +60,7 @@ int32_t BlockHelper::number_of_chains(BlockType type, block_index_t first, block
     size_t c = 0;
 
     if (last == BLOCK_INDEX_INVALID) {
-        last = allocator_->state().head;
+        last = g.number_of_blocks - 1;
     }
 
     for (auto block = first; block < last; ++block) {
@@ -88,7 +88,7 @@ int32_t BlockHelper::number_of_blocks(BlockType type, block_index_t first, block
     size_t c = 0;
 
     if (last == BLOCK_INDEX_INVALID) {
-        last = allocator_->state().head;
+        last = g.number_of_blocks - 1;
     }
 
     for (auto block = first; block < last; ++block) {
@@ -154,7 +154,7 @@ void BlockHelper::dump(block_index_t block) {
         break;
     }
     case BlockType::Journal: {
-        auto layout = get_journal_layout(*storage_, *allocator_, BlockAddress{ block, SectorSize });
+        auto layout = get_journal_layout(*storage_, empty_allocator, BlockAddress{ block, SectorSize });
         while (layout.walk_single_block(sizeof(JournalEntry))) {
             JournalEntry entry;
             storage_->read(layout.address(), &entry, sizeof(entry));
@@ -169,7 +169,7 @@ void BlockHelper::dump(block_index_t block) {
         break;
     }
     case BlockType::Leaf: {
-        auto layout = get_tree_layout(*storage_, *allocator_, BlockAddress{ block, SectorSize });
+        auto layout = get_tree_layout(*storage_, empty_allocator, BlockAddress{ block, SectorSize });
         while (layout.walk_single_block(SerializerType::HeadNodeSize)) {
             SerializerType::serialized_node_t node;
             storage_->read(layout.address(), &node, sizeof(node));
@@ -185,7 +185,7 @@ void BlockHelper::dump(block_index_t block) {
         break;
     }
     case BlockType::Index: {
-        auto layout = get_tree_layout(*storage_, *allocator_, BlockAddress{ block, SectorSize });
+        auto layout = get_tree_layout(*storage_, empty_allocator, BlockAddress{ block, SectorSize });
         while (layout.walk_single_block(SerializerType::HeadNodeSize)) {
             SerializerType::serialized_node_t node;
             storage_->read(layout.address(), &node, sizeof(node));

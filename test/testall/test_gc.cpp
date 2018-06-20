@@ -15,7 +15,7 @@ protected:
     DebuggingBlockAllocator allocator_;
     FileSystem fs_{ storage_, allocator_ };
     DataHelper helper{ fs_ };
-    BlockHelper blocks{ storage_, allocator_ };
+    BlockHelper blocks{ storage_ };
 
 protected:
     void SetUp() override {
@@ -38,8 +38,8 @@ TEST_F(GarbageCollectionSuite, RunOnSingleBlockTree) {
     ASSERT_TRUE(helper.write_file("test-1.bin", 32));
     ASSERT_TRUE(helper.write_file("test-2.bin", 32));
 
-    ASSERT_EQ(blocks.number_of_blocks(BlockType::Leaf), 1);
-    ASSERT_EQ(blocks.number_of_blocks(BlockType::Index), 0);
+    ASSERT_EQ(blocks.number_of_blocks(BlockType::Leaf, 0, allocator_.state().head), 1);
+    ASSERT_EQ(blocks.number_of_blocks(BlockType::Index, 0, allocator_.state().head), 0);
 
     auto before = fs_.sb().tree;
 
@@ -49,8 +49,8 @@ TEST_F(GarbageCollectionSuite, RunOnSingleBlockTree) {
 
     ASSERT_NE(before, after);
 
-    ASSERT_EQ(blocks.number_of_blocks(BlockType::Leaf), 2);
-    ASSERT_EQ(blocks.number_of_blocks(BlockType::Index), 0);
+    ASSERT_EQ(blocks.number_of_blocks(BlockType::Leaf, 0, allocator_.state().head), 2);
+    ASSERT_EQ(blocks.number_of_blocks(BlockType::Index, 0, allocator_.state().head), 0);
 }
 
 TEST_F(GarbageCollectionSuite, RunOnSingleLargeTree) {
@@ -71,6 +71,6 @@ TEST_F(GarbageCollectionSuite, RunOnSingleLargeTree) {
     ASSERT_NE(before_address, after_address);
     ASSERT_GT(after_ts, before_ts);
 
-    ASSERT_EQ(blocks.number_of_blocks(BlockType::Leaf), 3);
-    ASSERT_EQ(blocks.number_of_blocks(BlockType::Index), 4);
+    ASSERT_EQ(blocks.number_of_blocks(BlockType::Leaf, 0, allocator_.state().head), 3);
+    ASSERT_EQ(blocks.number_of_blocks(BlockType::Index, 0, allocator_.state().head), 4);
 }

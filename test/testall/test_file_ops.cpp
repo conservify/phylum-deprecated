@@ -372,7 +372,7 @@ TEST_F(FileOpsSuite, MountingFindsPreviousTreeBlocks) {
     ASSERT_TRUE(second_fs.exists("test-2.bin"));
 
     auto last_block = std::max(allocator_.state().head, second_allocator.state().head);
-    BlockHelper helper{ storage_, second_allocator };
+    BlockHelper helper{ storage_ };
     // helper.dump(0, last_block);
 
     ASSERT_EQ(helper.number_of_chains(BlockType::Leaf, 0, last_block), 1);

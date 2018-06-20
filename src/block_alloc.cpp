@@ -2,6 +2,8 @@
 
 namespace phylum {
 
+EmptyAllocator empty_allocator;
+
 SequentialBlockAllocator::SequentialBlockAllocator() {
 }
 
