@@ -42,12 +42,29 @@ TEST_F(ExtentsSuite, StandardLayoutAllocating) {
 
     FileLayout<5> layout{ storage_ };
 
+    FileAllocation expected[] = {
+        FileAllocation{ Extent{  2, 2 }, Extent{  4, 14 } },
+        FileAllocation{ Extent{ 18, 2 }, Extent{ 20, 14 } }
+    };
+
     ASSERT_FALSE(layout.mount(files));
     ASSERT_TRUE(layout.unmount());
 
     ASSERT_TRUE(layout.format(files));
+    ASSERT_EQ(layout.allocation(0), expected[0]);
+    ASSERT_EQ(layout.allocation(1), expected[1]);
+
     ASSERT_TRUE(layout.unmount());
+    ASSERT_EQ(layout.allocation(0), FileAllocation{ });
+    ASSERT_EQ(layout.allocation(1), FileAllocation{ });
+
     ASSERT_TRUE(layout.mount(files));
+    ASSERT_EQ(layout.allocation(0), expected[0]);
+    ASSERT_EQ(layout.allocation(1), expected[1]);
+
+    ASSERT_TRUE(layout.unmount());
+    ASSERT_EQ(layout.allocation(0), FileAllocation{ });
+    ASSERT_EQ(layout.allocation(1), FileAllocation{ });
 }
 
 TEST_F(ExtentsSuite, SmallFileWritingToEnd) {

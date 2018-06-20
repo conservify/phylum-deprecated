@@ -28,6 +28,13 @@ struct Extent {
         return { start + nblocks, 0 };
     }
 
+    bool operator==(const Extent &other) const {
+        return start == other.start && nblocks == other.nblocks;
+    }
+
+    bool operator!=(const Extent &other) const {
+        return !(*this == other);
+    }
 };
 
 enum class WriteStrategy {
@@ -38,6 +45,14 @@ enum class WriteStrategy {
 struct FileAllocation {
     Extent index_;
     Extent data_;
+
+    bool operator==(const FileAllocation &other) const {
+        return index_ == other.index_ && data_ == other.data_;
+    }
+
+    bool operator!=(const FileAllocation &other) const {
+        return !(*this == other);
+    }
 };
 
 struct FileDescriptor {
@@ -324,6 +339,10 @@ public:
     }
 
 public:
+    FileAllocation allocation(size_t i) const {
+        return allocations_[i];
+    }
+
     bool format(FileDescriptor*(&fds)[SIZE]) {
         FileTable table{ *storage_ };
 
@@ -400,10 +419,10 @@ private:
     bool allocate(FileDescriptor*(&fds)[SIZE]) {
         FilePreallocator allocator{ *storage_ };
 
-#ifdef PHYLUM_LAYOUT_DEBUG
+        #ifdef PHYLUM_LAYOUT_DEBUG
         sdebug() << "Effective block size: " << effective_file_block_size(geometry()) <<
             " overhead = " << file_block_overhead(geometry()) << endl;
-#endif
+        #endif
 
         for (size_t i = 0; i < SIZE; ++i) {
             if (!allocator.allocate((uint8_t)i, fds[i], allocations_[i])) {
