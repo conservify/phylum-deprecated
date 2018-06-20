@@ -1,8 +1,6 @@
 #include "phylum/phylum.h"
 #include "phylum/preallocated.h"
 
-#define PHYLUM_DEBUG
-
 namespace phylum {
 
 static EmptyAllocator empty_allocator;
@@ -45,11 +43,13 @@ static uint64_t effective_index_block_size(const Geometry &geometry) {
     return geometry.block_size() - index_block_overhead(geometry);
 }
 
-static inline BlockLayout<IndexBlockHead, IndexBlockTail> get_index_layout(StorageBackend &storage, BlockAllocator &allocator, BlockAddress address) {
+static inline BlockLayout<IndexBlockHead, IndexBlockTail>
+    get_index_layout(StorageBackend &storage, BlockAllocator &allocator, BlockAddress address) {
     return { storage, allocator, address, BlockType::Index };
 }
 
-static inline BlockLayout<IndexBlockHead, IndexBlockTail> get_index_layout(StorageBackend &storage, BlockAddress address) {
+static inline BlockLayout<IndexBlockHead, IndexBlockTail>
+    get_index_layout(StorageBackend &storage, BlockAddress address) {
     return get_index_layout(storage, empty_allocator, address);
 }
 
@@ -58,6 +58,34 @@ inline ostreamtype& operator<<(ostreamtype& os, const FileIndex &e) {
         " beginning=" << e.beginning_ <<
         " end=" << e.end_ <<
         " head=" << e.head_ << ">";
+}
+
+FileTable::FileTable(StorageBackend &storage) :
+    layout{ storage, empty_allocator, { 0, 0 }, BlockType::Index } {
+}
+
+bool FileTable::erase() {
+    if (!layout.write_head(0)) {
+        return false;
+    }
+
+    return true;
+}
+
+bool FileTable::write(FileTableEntry &entry) {
+    if (!layout.append(entry)) {
+        return false;
+    }
+
+    return true;
+}
+
+bool FileTable::read(FileTableEntry &entry) {
+    if (!layout.walk(entry)) {
+        return false;
+    }
+
+    return true;
 }
 
 template<typename T, size_t N>

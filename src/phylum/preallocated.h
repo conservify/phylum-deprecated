@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cinttypes>
 
+#include "phylum/private.h"
+
 namespace phylum {
 
 struct Extent {
@@ -263,10 +265,51 @@ private:
 
 };
 
+struct FileTableHead {
+    BlockHead block;
+
+    FileTableHead(BlockType type) : block(type) {
+    }
+
+    void fill() {
+        block.fill();
+    }
+
+    bool valid() {
+        return block.valid();
+    }
+};
+
+struct FileTableEntry {
+    BlockMagic magic;
+    FileDescriptor fd;
+    FileAllocation alloc;
+
+    void fill() {
+        magic.fill();
+    }
+
+    bool valid() {
+        return magic.valid();
+    }
+};
+
+struct FileTableTail {
+    BlockTail block;
+};
+
 class FileTable {
 private:
+    BlockLayout<FileTableHead, FileTableTail> layout;
 
 public:
+    FileTable(StorageBackend &storage);
+
+public:
+    bool erase();
+    bool write(FileTableEntry &entry);
+    bool read(FileTableEntry &entry);
+
 };
 
 template<size_t SIZE>
@@ -281,18 +324,30 @@ public:
     }
 
 public:
-    bool allocate(FileDescriptor*(&fds)[SIZE]) {
-        FilePreallocator allocator{ *storage_ };
+    bool format(FileDescriptor*(&fds)[SIZE]) {
+        FileTable table{ *storage_ };
 
         fds_ = fds;
 
-        #ifdef PHYLUM_LAYOUT_DEBUG
-        sdebug() << "Effective block size: " << effective_file_block_size(geometry()) <<
-            " overhead = " << file_block_overhead(geometry()) << endl;
-        #endif
+        if (!allocate(fds)) {
+            return false;
+        }
+
+        if (!table.erase()) {
+            return false;
+        }
 
         for (size_t i = 0; i < SIZE; ++i) {
-            if (!allocator.allocate((uint8_t)i, fds_[i], allocations_[i])) {
+            FileTableEntry entry;
+            entry.magic.fill();
+            memcpy(&entry.fd, fds_[i], sizeof(FileDescriptor));
+            memcpy(&entry.alloc, &allocations_[i], sizeof(FileAllocation));
+            if (!table.write(entry)) {
+                return false;
+            }
+
+            auto file = SimpleFile{ storage_, fds_[i], &allocations_[i], OpenMode::Write };
+            if (!file.format()) {
                 return false;
             }
         }
@@ -300,16 +355,31 @@ public:
         return true;
     }
 
-    bool mount() {
+    bool mount(FileDescriptor*(&fds)[SIZE]) {
+        FileTable table{ *storage_ };
+
+        fds_ = fds;
+
+        for (size_t i = 0; i < SIZE; ++i) {
+            FileTableEntry entry;
+            if (!table.read(entry)) {
+                return false;
+            }
+
+            if (!entry.magic.valid()) {
+                return false;
+            }
+
+            memcpy(&allocations_[i], &entry.alloc, sizeof(FileAllocation));
+        }
+
         return true;
     }
 
-    bool format() {
+    bool unmount() {
+        fds_ = nullptr;
         for (size_t i = 0; i < SIZE; ++i) {
-            auto file = SimpleFile{ storage_, fds_[i], &allocations_[i], OpenMode::Write };
-            if (!file.format()) {
-                return false;
-            }
+            allocations_[i] = { };
         }
 
         return true;
@@ -324,6 +394,24 @@ public:
             }
         }
         return SimpleFile{ nullptr, nullptr, nullptr, OpenMode::Read };
+    }
+
+private:
+    bool allocate(FileDescriptor*(&fds)[SIZE]) {
+        FilePreallocator allocator{ *storage_ };
+
+#ifdef PHYLUM_LAYOUT_DEBUG
+        sdebug() << "Effective block size: " << effective_file_block_size(geometry()) <<
+            " overhead = " << file_block_overhead(geometry()) << endl;
+#endif
+
+        for (size_t i = 0; i < SIZE; ++i) {
+            if (!allocator.allocate((uint8_t)i, fds[i], allocations_[i])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
 };

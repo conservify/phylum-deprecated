@@ -42,8 +42,12 @@ TEST_F(ExtentsSuite, StandardLayoutAllocating) {
 
     FileLayout<5> layout{ storage_ };
 
-    layout.allocate(files);
-    layout.format();
+    ASSERT_FALSE(layout.mount(files));
+    ASSERT_TRUE(layout.unmount());
+
+    ASSERT_TRUE(layout.format(files));
+    ASSERT_TRUE(layout.unmount());
+    ASSERT_TRUE(layout.mount(files));
 }
 
 TEST_F(ExtentsSuite, SmallFileWritingToEnd) {
@@ -57,8 +61,7 @@ TEST_F(ExtentsSuite, SmallFileWritingToEnd) {
 
     FileLayout<2> layout{ storage_ };
 
-    layout.allocate(files);
-    layout.format();
+    ASSERT_TRUE(layout.format(files));
 
     auto file = layout.open(file_log_startup_fd, OpenMode::Write);
     ASSERT_TRUE(file);
@@ -85,8 +88,7 @@ TEST_F(ExtentsSuite, LargeFileWritingToEnd) {
 
     FileLayout<2> layout{ storage_ };
 
-    layout.allocate(files);
-    layout.format();
+    ASSERT_TRUE(layout.format(files));
 
     auto file = layout.open(file_data_fk, OpenMode::Write);
     ASSERT_TRUE(file);
@@ -113,8 +115,7 @@ TEST_F(ExtentsSuite, LargeFileAppending) {
 
     FileLayout<2> layout{ storage_ };
 
-    layout.allocate(files);
-    layout.format();
+    ASSERT_TRUE(layout.format(files));
 
     constexpr uint64_t OneMegabyte = 1024 * 1024;
 
@@ -161,8 +162,7 @@ TEST_F(ExtentsSuite, Seeking) {
 
     FileLayout<2> layout{ storage_ };
 
-    layout.allocate(files);
-    layout.format();
+    ASSERT_TRUE(layout.format(files));
 
     constexpr uint64_t OneMegabyte = 1024 * 1024;
     auto file = layout.open(file_data_fk, OpenMode::Write);
@@ -198,8 +198,7 @@ TEST_F(ExtentsSuite, SeekMiddleOfFile) {
 
     FileLayout<2> layout{ storage_ };
 
-    layout.allocate(files);
-    layout.format();
+    ASSERT_TRUE(layout.format(files));
 
     constexpr uint64_t OneMegabyte = 1024 * 1024;
     auto file = layout.open(file_data_fk, OpenMode::Write);
@@ -233,8 +232,7 @@ TEST_F(ExtentsSuite, RollingWriteStrategyOneRollover) {
 
     FileLayout<2> layout{ storage_ };
 
-    layout.allocate(files);
-    layout.format();
+    ASSERT_TRUE(layout.format(files));
 
     auto file = layout.open(file_data_fk, OpenMode::Write);
     PatternHelper helper;
@@ -260,8 +258,7 @@ TEST_F(ExtentsSuite, RollingWriteStrategyTwoRollovers) {
 
     FileLayout<2> layout{ storage_ };
 
-    layout.allocate(files);
-    layout.format();
+    ASSERT_TRUE(layout.format(files));
 
     auto file = layout.open(file_data_fk, OpenMode::Write);
 
@@ -288,8 +285,7 @@ TEST_F(ExtentsSuite, RollingWriteStrategyIndexWraparound) {
 
     FileLayout<2> layout{ storage_ };
 
-    layout.allocate(files);
-    layout.format();
+    ASSERT_TRUE(layout.format(files));
 
     auto file = layout.open(file_data_fk, OpenMode::Write);
 
