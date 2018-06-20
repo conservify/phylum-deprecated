@@ -457,6 +457,7 @@ int32_t SimpleFile::flush() {
     auto linked = BLOCK_INDEX_INVALID;
     auto writing_tail_sector = tail_sector();
     auto addr = head_;
+
     if (writing_tail_sector) {
         // Check to see if we're at the end of our allocated space.
         linked = head_.block + 1;

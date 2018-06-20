@@ -3,5 +3,6 @@
 
 #include "phylum/platform.h"
 #include "phylum/file_system.h"
+#include "phylum/preallocated.h"
 
 #endif

@@ -7,8 +7,8 @@ set(LIBRARIES SPI)
 
 file(GLOB SOURCE_FILES *.cpp ../../src/*.cpp ../../src/phylum/*.h ../../src/backends/arduino_sd/*.cpp)
 
-arduino(phylum-arduino-zero "${SOURCE_FILES}" "${LIBRARIES}")
+arduino(phylum-arduino-zero-prealloc "${SOURCE_FILES}" "${LIBRARIES}")
 
 add_definitions("-DPHYLUM_DEBUG")
 
-target_include_directories(phylum-arduino-zero PUBLIC ./ ../../src ../../src/backends/arduino_sd)
+target_include_directories(phylum-arduino-zero-prealloc PUBLIC ./ ../../src ../../src/backends/arduino_sd)
