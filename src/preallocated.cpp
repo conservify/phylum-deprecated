@@ -93,7 +93,14 @@ static T *tail_info(uint8_t(&buffer)[N]) {
 }
 
 bool FileIndex::format() {
+    auto caching = SectorCachingStorage{ *storage_ };
+    auto layout = get_index_layout(caching, { file_->index.start, 0 });
+
     if (!storage_->erase(file_->index.start)) {
+        return false;
+    }
+
+    if (!layout.write_head(file_->index.start)) {
         return false;
     }
 

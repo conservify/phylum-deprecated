@@ -333,6 +333,20 @@ protected:
 };
 
 TEST_F(FileIndexSuite, LargeIndex) {
-    FileAllocation allocation{ { 1, 10000 }, { 0, 1} };
+    FileAllocation allocation{ { 1, 10000 }, { 0, 1 } };
     FileIndex index{ &storage_, &allocation };
+    BlockHelper helper{ storage_ };
+
+    ASSERT_TRUE(index.format());
+
+    ASSERT_EQ(helper.number_of_blocks(BlockType::Index, 0, 10000), 1);
+
+    auto addr = BlockAddress{ 100000, 0 };
+
+    for (auto i = 0; i < 1024 * 1024; ++i) {
+        index.append(i * 1024, addr);
+        addr.add(1024);
+    }
+
+    ASSERT_EQ(helper.number_of_blocks(BlockType::Index, 0, 10000), 3329);
 }
