@@ -30,6 +30,7 @@ bool LinuxMemoryBackend::open() {
 
     size_ = (uint64_t)geometry_.number_of_sectors() * geometry_.sector_size;
     ptr_ = (uint8_t *)malloc(size_);
+    assert(ptr_ != nullptr);
 
     // TODO: This helps make tests more deterministic. To simulate garbage in a
     // test, do so explicitly.
