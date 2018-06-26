@@ -1,5 +1,7 @@
 #include "debug_log.h"
 
+#ifndef ARDUINO
+
 namespace phylum {
 
 void StorageLog ::append(LogEntry &&entry) {
@@ -42,3 +44,5 @@ std::ostream& operator<<(std::ostream& os, const StorageLog& l) {
 }
 
 }
+
+#endif // ARDUINO

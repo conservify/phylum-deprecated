@@ -1,3 +1,5 @@
+#ifdef ARDUINO
+
 #include <Arduino.h>
 #include <SPI.h>
 
@@ -420,3 +422,5 @@ uint8_t sd_raw_erase(sd_raw_t *sd, uint32_t firstBlock, uint32_t lastBlock) {
     #endif
     return true;
 }
+
+#endif // ARDUINO

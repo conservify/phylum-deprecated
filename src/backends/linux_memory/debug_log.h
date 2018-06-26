@@ -1,6 +1,8 @@
 #ifndef __PHYLUM_LINUX_MEMORY_DEBUG_LOG_H_
 #define __PHYLUM_LINUX_MEMORY_DEBUG_LOG_H_
 
+#ifndef ARDUINO
+
 #include <cassert>
 #include <cstring>
 #include <cstdlib>
@@ -109,4 +111,6 @@ public:
 
 }
 
-#endif
+#endif // ARDUINO
+
+#endif // __PHYLUM_LINUX_MEMORY_DEBUG_LOG_H_

@@ -1,6 +1,8 @@
 #ifndef SD_RAW_H_INCLUDED
 #define SD_RAW_H_INCLUDED
 
+#ifdef ARDUINO
+
 #include <stdint.h>
 
 typedef struct sd_raw_t {
@@ -83,4 +85,6 @@ uint8_t const SPI_HALF_SPEED = 1;
 // Set SCK rate to F_CPU/8. Sd2Card::setSckRate().
 uint8_t const SPI_QUARTER_SPEED = 2;
 
-#endif
+#endif // ARDUINO
+
+#endif // SD_RAW_H_INCLUDED

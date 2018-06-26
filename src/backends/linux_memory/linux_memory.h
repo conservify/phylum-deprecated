@@ -1,6 +1,8 @@
 #ifndef __PHYLUM_LINUX_MEMORY_H_INCLUDED
 #define __PHYLUM_LINUX_MEMORY_H_INCLUDED
 
+#ifndef ARDUINO
+
 #include <phylum/phylum.h>
 #include <phylum/private.h>
 #include <phylum/backend.h>
@@ -47,4 +49,6 @@ public:
 
 }
 
-#endif
+#endif // ARDUINO
+
+#endif // __PHYLUM_LINUX_MEMORY_H_INCLUDED

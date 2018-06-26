@@ -1,6 +1,8 @@
 #ifndef SD_RAW_INTERNAL_H_INCLUDED
 #define SD_RAW_INTERNAL_H_INCLUDED
 
+#ifdef ARDUINO
+
 uint8_t sd_raw_flush(sd_raw_t *sd, uint16_t timeoutMs);
 uint8_t sd_wait_start_block(sd_raw_t *sd);
 uint8_t sd_raw_command(sd_raw_t *sd, uint8_t command, uint32_t arg);
@@ -205,4 +207,6 @@ union csd_t {
     csd2_t v2;
 };
 
-#endif
+#endif // ARDUINO
+
+#endif // SD_RAW_INTERNAL_H_INCLUDED

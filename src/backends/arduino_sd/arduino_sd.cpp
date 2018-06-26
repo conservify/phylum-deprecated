@@ -1,3 +1,5 @@
+#ifdef ARDUINO
+
 #include <Arduino.h>
 
 #include <cstdarg>
@@ -72,3 +74,5 @@ bool ArduinoSdBackend::write(BlockAddress addr, void *d, size_t n) {
 }
 
 }
+
+#endif // ARDUINO

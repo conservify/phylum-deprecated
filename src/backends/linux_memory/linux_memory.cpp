@@ -1,5 +1,7 @@
 #include "linux_memory.h"
 
+#ifndef ARDUINO
+
 namespace phylum {
 
 
@@ -107,3 +109,5 @@ bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
 }
 
 }
+
+#endif // ARDUINO
