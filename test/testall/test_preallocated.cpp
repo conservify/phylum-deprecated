@@ -168,7 +168,7 @@ TEST_F(PreallocatedSuite, LargeFileAppending) {
     ASSERT_EQ(OneMegabyte * 2, verified);
 }
 
-TEST_F(PreallocatedSuite, Seeking) {
+TEST_F(PreallocatedSuite, SeekingEndCalculatesFileSize) {
     FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
     FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Append,  0   };
 
@@ -200,6 +200,36 @@ TEST_F(PreallocatedSuite, Seeking) {
     reading.close();
 
     ASSERT_EQ(verified, OneMegabyte);
+}
+
+TEST_F(PreallocatedSuite, SeekingToFileWithUnwrittenTailBlock) {
+    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
+    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Append,  0   };
+
+    static FileDescriptor* files[] = {
+        &file_system_area_fd,
+        &file_data_fk
+    };
+
+    FileLayout<2> layout{ storage_ };
+
+    ASSERT_TRUE(layout.format(files));
+
+    auto file = layout.open(file_data_fk, OpenMode::Write);
+    PatternHelper helper;
+    while (true) {
+        helper.write(file, 1);
+
+        auto addr = file.head();
+        addr.add(SectorSize);
+        if (addr.tail_sector(geometry_)) {
+            break;
+        }
+    }
+    file.close();
+
+    auto reading = layout.open(file_data_fk);
+    reading.seek(UINT64_MAX);
 }
 
 TEST_F(PreallocatedSuite, SeekMiddleOfFile) {

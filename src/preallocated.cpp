@@ -568,6 +568,10 @@ uint32_t SimpleFile::truncated() const {
     return truncated_;
 }
 
+BlockAddress SimpleFile::head() const {
+    return head_;
+}
+
 FileIndex &SimpleFile::index() {
     return index_;
 }
@@ -616,6 +620,7 @@ SimpleFile::SeekInfo SimpleFile::seek(block_index_t starting_block, uint64_t max
     // end of the file or we've passed `max` bytes.
     auto &g = geometry();
     auto addr = BlockAddress::tail_sector_of(starting_block, g);
+    auto scanned_block = false;
     while (true) {
         if (!storage_->read(addr, buffer_, sizeof(buffer_))) {
             return { };
@@ -633,6 +638,10 @@ SimpleFile::SeekInfo SimpleFile::seek(block_index_t starting_block, uint64_t max
                 blocks++;
             }
             else {
+                if (scanned_block) {
+                    break;
+                }
+                scanned_block = true;
                 addr = BlockAddress{ addr.block, SectorSize };
             }
         }
@@ -651,6 +660,7 @@ SimpleFile::SeekInfo SimpleFile::seek(block_index_t starting_block, uint64_t max
             else {
                 bytes += max;
                 addr.add(max);
+                sdebug() << "Max" << endl;
                 break;
             }
         }

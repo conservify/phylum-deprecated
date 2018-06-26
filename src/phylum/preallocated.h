@@ -181,7 +181,7 @@ private:
     FileIndex index_;
 
 public:
-    static constexpr block_index_t IndexFrequency = 4;
+    static constexpr block_index_t IndexFrequency = 8;
 
     SimpleFile() {
     }
@@ -211,6 +211,8 @@ public:
     uint64_t tell() const;
 
     uint32_t truncated() const;
+
+    BlockAddress head() const;
 
     FileIndex &index();
 
