@@ -329,6 +329,10 @@ bool SimpleFile::seek(uint64_t position) {
         length_ = end.position + info.bytes;
     }
 
+    #if PHYLUM_DEBUG > 1
+    sdebug() << "Seek: length=" << length_ << " position=" << position << " endp=" << end.position << " info=" << info.bytes << " head=" << head_ << " start=" << file_->data.start << endl;
+    #endif
+
     return true;
 }
 
@@ -482,11 +486,17 @@ int32_t SimpleFile::read(uint8_t *ptr, size_t size) {
     return copying;
 }
 
-int32_t SimpleFile::write(uint8_t *ptr, size_t size) {
+int32_t SimpleFile::write(uint8_t *ptr, size_t size, bool atomic) {
     auto to_write = size;
     auto wrote = 0;
 
     assert(!readonly_);
+
+    // All 'atomic' writes have to be smaller than the smallest sector we can
+    // write, which in our case is the block tail sector since that header is large.
+    if (atomic) {
+        assert(size <= SectorSize - sizeof(FileBlockTail));
+    }
 
     // If the head is invalid, seek to the end of the file.
     if (!head_.valid()) {
@@ -503,6 +513,15 @@ int32_t SimpleFile::write(uint8_t *ptr, size_t size) {
         auto overhead = tail_sector() ? sizeof(FileBlockTail) : sizeof(FileSectorTail);
         auto remaining = sizeof(buffer_) - overhead - buffpos_;
         auto copying = to_write > remaining ? remaining : to_write;
+
+        if (atomic) {
+            if (copying != size) {
+                if (flush() == 0) {
+                    return wrote;
+                }
+                continue;
+            }
+        }
 
         if (remaining == 0) {
             if (flush() == 0) {
