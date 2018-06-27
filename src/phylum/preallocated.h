@@ -250,6 +250,7 @@ private:
     struct SeekInfo {
         BlockAddress address;
         int32_t bytes;
+        int32_t bytes_in_block;
         int32_t blocks;
     };
 

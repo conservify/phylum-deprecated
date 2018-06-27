@@ -94,6 +94,38 @@ TEST_F(PreallocatedSuite, SmallFileWritingToEnd) {
     ASSERT_EQ(total, verified);
 }
 
+TEST_F(PreallocatedSuite, WriteBlockInTwoSeparateOpensWritesCorrectBytesInBlock) {
+    FileDescriptor file_system_area_fd = { "system",      WriteStrategy::Append,  100 };
+    FileDescriptor file_log_startup_fd = { "startup.log", WriteStrategy::Append,  100 };
+
+    static FileDescriptor* files[] = {
+        &file_system_area_fd,
+        &file_log_startup_fd,
+    };
+
+    FileLayout<2> layout{ storage_ };
+
+    ASSERT_TRUE(layout.format(files));
+
+    PatternHelper helper;
+
+    auto ideal_block_size = SectorSize * 16;
+    auto file1 = layout.open(file_log_startup_fd, OpenMode::Write);
+    helper.write(file1, ideal_block_size / 2 / helper.size());
+    file1.close();
+
+    auto file2 = layout.open(file_log_startup_fd, OpenMode::Write);
+    helper.write(file2, ideal_block_size / 2 / helper.size());
+    file2.close();
+
+    auto verified = helper.verify_file(layout, file_log_startup_fd);
+
+    ASSERT_EQ(verified, ideal_block_size);
+
+    auto file = layout.open(file_log_startup_fd, OpenMode::Read);
+    ASSERT_EQ(verified, file.size());
+}
+
 TEST_F(PreallocatedSuite, LargeFileWritingToEnd) {
     FileDescriptor file_system_area_fd = { "system",  WriteStrategy::Append,  100 };
     FileDescriptor file_data_fk =        { "data.fk", WriteStrategy::Append,  0   };
@@ -192,8 +224,6 @@ TEST_F(PreallocatedSuite, SeekingEndCalculatesFileSize) {
     ASSERT_EQ(total, OneMegabyte);
 
     auto reading = layout.open(file_data_fk);
-    ASSERT_EQ(reading.size(), (uint64_t)0);
-    reading.seek(UINT64_MAX);
     ASSERT_EQ(reading.size(), (uint64_t)OneMegabyte);
     reading.seek(0);
     auto verified = helper.read(reading);
@@ -257,7 +287,7 @@ TEST_F(PreallocatedSuite, SeekMiddleOfFile) {
 
     auto middle_on_pattern_edge = ((OneMegabyte / 2) / helper.size()) * helper.size();
     auto reading = layout.open(file_data_fk);
-    ASSERT_EQ(reading.size(), (uint64_t)0);
+    ASSERT_EQ(reading.size(), (uint64_t)OneMegabyte);
     ASSERT_TRUE(reading.seek(middle_on_pattern_edge));
     ASSERT_EQ(reading.tell(), middle_on_pattern_edge);
     auto verified = helper.read(reading);

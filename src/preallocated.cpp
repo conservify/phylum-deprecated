@@ -323,12 +323,87 @@ bool SimpleFile::seek(uint64_t position) {
     head_ = info.address;
     head_.add(-seek_offset_);
     blocks_since_save_ = info.blocks;
+    bytes_in_block_ = info.bytes_in_block;
     position_ += info.bytes;
     if (position == UINT64_MAX) {
         length_ = end.position + info.bytes;
     }
 
     return true;
+}
+
+SimpleFile::SeekInfo SimpleFile::seek(block_index_t starting_block, uint64_t max, bool verify_head_block) {
+    auto bytes = 0;
+    auto bytes_in_block = 0;
+    auto blocks = 0;
+
+    // This is used just to sanity check that the block we were given has
+    // actually been begun. For example, the very first block won't have been.
+    if (verify_head_block) {
+        FileBlockHead head;
+        if (!storage_->read({ starting_block, 0 }, &head, sizeof(FileBlockHead))) {
+            return { };
+        }
+
+        if (!head.valid()) {
+            return { { starting_block, 0 }, 0, 0 };
+        }
+    }
+
+    // Start walking the file from the given starting block until we reach the
+    // end of the file or we've passed `max` bytes.
+    auto &g = geometry();
+    auto addr = BlockAddress::tail_sector_of(starting_block, g);
+    auto scanned_block = false;
+    while (true) {
+        if (!storage_->read(addr, buffer_, sizeof(buffer_))) {
+            return { };
+        }
+
+        // Check to see if our desired location is in this block, otherwise we
+        // can just skip this one entirely.
+        if (addr.tail_sector(g)) {
+            FileBlockTail tail;
+            memcpy(&tail, tail_info<FileBlockTail>(buffer_), sizeof(FileBlockTail));
+            if (is_valid_block(tail.block.linked_block) && max > tail.bytes_in_block) {
+                addr = BlockAddress::tail_sector_of(tail.block.linked_block, g);
+                bytes += tail.bytes_in_block;
+                max -= tail.bytes_in_block;
+                bytes_in_block = 0;
+                blocks++;
+            }
+            else {
+                if (scanned_block) {
+                    break;
+                }
+                scanned_block = true;
+                bytes_in_block = 0;
+                addr = BlockAddress{ addr.block, SectorSize };
+            }
+        }
+        else {
+            FileSectorTail tail;
+            memcpy(&tail, tail_info<FileSectorTail>(buffer_), sizeof(FileSectorTail));
+
+            if (tail.bytes == 0 || tail.bytes == SECTOR_INDEX_INVALID) {
+                break;
+            }
+            if (max > tail.bytes) {
+                bytes += tail.bytes;
+                bytes_in_block += tail.bytes;
+                max -= tail.bytes;
+                addr.add(SectorSize);
+            }
+            else {
+                bytes += max;
+                bytes_in_block += max;
+                addr.add(max);
+                break;
+            }
+        }
+    }
+
+    return { addr, bytes, bytes_in_block, blocks };
 }
 
 int32_t SimpleFile::read(uint8_t *ptr, size_t size) {
@@ -611,75 +686,6 @@ block_index_t SimpleFile::rollover() {
     truncated_ += info.truncated;
 
     return file_->data.start;
-}
-
-SimpleFile::SeekInfo SimpleFile::seek(block_index_t starting_block, uint64_t max, bool verify_head_block) {
-    auto bytes = 0;
-    auto blocks = 0;
-
-    // This is used just to sanity check that the block we were given has
-    // actually been begun. For example, the very first block won't have been.
-    if (verify_head_block) {
-        FileBlockHead head;
-        if (!storage_->read({ starting_block, 0 }, &head, sizeof(FileBlockHead))) {
-            return { };
-        }
-
-        if (!head.valid()) {
-            return { { starting_block, 0 }, 0, 0 };
-        }
-    }
-
-    // Start walking the file from the given starting block until we reach the
-    // end of the file or we've passed `max` bytes.
-    auto &g = geometry();
-    auto addr = BlockAddress::tail_sector_of(starting_block, g);
-    auto scanned_block = false;
-    while (true) {
-        if (!storage_->read(addr, buffer_, sizeof(buffer_))) {
-            return { };
-        }
-
-        // Check to see if our desired location is in this block, otherwise we
-        // can just skip this one entirely.
-        if (addr.tail_sector(g)) {
-            FileBlockTail tail;
-            memcpy(&tail, tail_info<FileBlockTail>(buffer_), sizeof(FileBlockTail));
-            if (is_valid_block(tail.block.linked_block) && max > tail.bytes_in_block) {
-                addr = BlockAddress::tail_sector_of(tail.block.linked_block, g);
-                bytes += tail.bytes_in_block;
-                max -= tail.bytes_in_block;
-                blocks++;
-            }
-            else {
-                if (scanned_block) {
-                    break;
-                }
-                scanned_block = true;
-                addr = BlockAddress{ addr.block, SectorSize };
-            }
-        }
-        else {
-            FileSectorTail tail;
-            memcpy(&tail, tail_info<FileSectorTail>(buffer_), sizeof(FileSectorTail));
-
-            if (tail.bytes == 0 || tail.bytes == SECTOR_INDEX_INVALID) {
-                break;
-            }
-            if (max > tail.bytes) {
-                bytes += tail.bytes;
-                max -= tail.bytes;
-                addr.add(SectorSize);
-            }
-            else {
-                bytes += max;
-                addr.add(max);
-                break;
-            }
-        }
-    }
-
-    return { addr, bytes, blocks };
 }
 
 BlockAddress SimpleFile::initialize(block_index_t block, block_index_t previous) {
