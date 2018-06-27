@@ -331,6 +331,7 @@ public:
 
 class FileOpener {
 public:
+    virtual uint64_t file_size(FileDescriptor &fd) = 0;
     virtual SimpleFile open(FileDescriptor &fd, OpenMode mode) = 0;
 
 };
@@ -418,6 +419,16 @@ public:
     }
 
 public:
+    virtual uint64_t file_size(FileDescriptor &fd) override {
+        auto file = open(fd, OpenMode::Read);
+        if (!file) {
+            return 0;
+        }
+        auto size = file.size();
+        file.close();
+        return size;
+    }
+
     virtual SimpleFile open(FileDescriptor &fd, OpenMode mode = OpenMode::Read) override {
         for (size_t i = 0; i < SIZE; ++i) {
             if (fds_[i] == &fd) {

@@ -536,7 +536,21 @@ int32_t SimpleFile::flush() {
 }
 
 bool SimpleFile::initialize() {
-    return index().initialize();
+    if (!index().initialize()) {
+        return false;
+    }
+
+    if (!seek(UINT64_MAX)) {
+        return false;
+    }
+
+    if (readonly_) {
+        if (!seek(0)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 bool SimpleFile::format() {
