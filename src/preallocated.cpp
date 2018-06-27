@@ -660,7 +660,6 @@ SimpleFile::SeekInfo SimpleFile::seek(block_index_t starting_block, uint64_t max
             else {
                 bytes += max;
                 addr.add(max);
-                sdebug() << "Max" << endl;
                 break;
             }
         }
