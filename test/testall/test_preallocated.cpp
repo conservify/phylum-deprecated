@@ -120,7 +120,7 @@ TEST_F(PreallocatedSuite, WriteBlockInTwoSeparateOpensWritesCorrectBytesInBlock)
 
     auto verified = helper.verify_file(layout, file_log_startup_fd);
 
-    ASSERT_EQ(verified, ideal_block_size);
+    ASSERT_EQ(verified, (uint64_t)ideal_block_size);
 
     auto file = layout.open(file_log_startup_fd, OpenMode::Read);
     ASSERT_EQ(verified, file.size());
@@ -374,6 +374,40 @@ TEST_F(PreallocatedSuite, RollingWriteStrategyIndexWraparound) {
     auto skip = helper.size() - (file.truncated() - (file.truncated() / helper.size()) * helper.size());
     auto verified = helper.verify_file(layout, file_data_fk, skip);
     ASSERT_EQ(file.size(), verified + skip);
+}
+
+struct TestStruct {
+    uint32_t time;
+    uint64_t position;
+};
+
+TEST_F(PreallocatedSuite, WriteAFewBlocksAndReadLastBlock) {
+    FileDescriptor file_log_startup_fd = { "startup.log", WriteStrategy::Append,  100 };
+
+    static FileDescriptor* files[] = {
+        &file_log_startup_fd,
+    };
+
+    FileLayout<1> layout{ storage_ };
+
+    ASSERT_TRUE(layout.format(files));
+
+    for (uint32_t i = 0; i < 4; ++i) {
+        TestStruct test = { i, i };
+        auto writing = layout.open(file_log_startup_fd, OpenMode::Write);
+        writing.write((uint8_t *)&test, sizeof(TestStruct));
+        ASSERT_EQ(sizeof(TestStruct) * (i + 1), writing.size());
+        writing.close();
+    }
+
+    TestStruct test = { 0, 0 };
+    auto reading = layout.open(file_log_startup_fd, OpenMode::Read);
+
+    reading.seek(sizeof(TestStruct) * 3);
+    ASSERT_EQ(sizeof(TestStruct) * 3, reading.tell());
+    ASSERT_EQ(reading.read((uint8_t *)&test, sizeof(TestStruct)), (int32_t)sizeof(TestStruct));
+    ASSERT_EQ(sizeof(TestStruct) * 4, reading.tell());
+    reading.close();
 }
 
 class FileIndexSuite : public ::testing::Test {

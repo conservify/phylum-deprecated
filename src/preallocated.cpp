@@ -307,6 +307,7 @@ bool SimpleFile::seek(uint64_t position) {
     if (!index().seek(position, end)) {
         return false;
     }
+
     if (end.valid()) {
         head_ = end.address;
         position_ = end.position;
@@ -322,6 +323,7 @@ bool SimpleFile::seek(uint64_t position) {
     seek_offset_ = info.address.sector_offset(geometry());
     head_ = info.address;
     head_.add(-seek_offset_);
+
     blocks_since_save_ = info.blocks;
     bytes_in_block_ = info.bytes_in_block;
     position_ += info.bytes;
@@ -392,7 +394,7 @@ SimpleFile::SeekInfo SimpleFile::seek(block_index_t starting_block, uint64_t max
             if (tail.bytes == 0 || tail.bytes == SECTOR_INDEX_INVALID) {
                 break;
             }
-            if (max > tail.bytes) {
+            if (max >= tail.bytes) {
                 bytes += tail.bytes;
                 bytes_in_block += tail.bytes;
                 max -= tail.bytes;
