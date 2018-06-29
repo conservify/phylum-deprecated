@@ -1,7 +1,6 @@
 #ifndef __PHYLUM_PREALLOCATED_H_INCLUDED
 #define __PHYLUM_PREALLOCATED_H_INCLUDED
 
-#include <algorithm>
 #include <cinttypes>
 
 #include "phylum/private.h"

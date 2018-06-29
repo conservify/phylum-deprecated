@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "phylum/phylum.h"
 #include "phylum/preallocated.h"
 
