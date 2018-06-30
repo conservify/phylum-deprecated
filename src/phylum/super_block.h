@@ -64,8 +64,11 @@ protected:
 
 };
 
-struct SuperBlock {
+struct MinimumSuperBlock {
     SuperBlockLink link{ BlockType::SuperBlock };
+};
+
+struct SuperBlock : public MinimumSuperBlock  {
     AllocatorState allocator;
     timestamp_t last_gc{ 0 };
     block_index_t tree{ 0 };
