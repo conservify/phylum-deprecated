@@ -78,6 +78,12 @@ private:
     bool write(SectorAddress addr, SuperBlock &sb);
     bool write(SectorAddress addr, PendingWrite write);
 
+private:
+    void link_tail(SuperBlockLink link);
+    bool read_tail(SectorAddress addr);
+    bool write_fresh(SectorAddress addr);
+    PendingWrite prepare_write();
+
 };
 
 }
