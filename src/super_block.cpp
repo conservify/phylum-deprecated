@@ -5,13 +5,13 @@
 namespace phylum {
 
 constexpr uint16_t SuperBlockStartSector = 0;
-constexpr block_index_t SuperBlockManager::AnchorBlocks[];
+constexpr block_index_t WanderingBlockManager::AnchorBlocks[];
 
-SuperBlockManager::SuperBlockManager(StorageBackend &storage, BlockManager &blocks) :
+WanderingBlockManager::WanderingBlockManager(StorageBackend &storage, BlockManager &blocks) :
     storage_(&storage), blocks_(&blocks) {
 }
 
-bool SuperBlockManager::walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where) {
+bool WanderingBlockManager::walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where) {
     link = { };
     where.invalid();
 
@@ -50,7 +50,7 @@ bool SuperBlockManager::walk(block_index_t desired, SuperBlockLink &link, Sector
     return false;
 }
 
-bool SuperBlockManager::locate() {
+bool WanderingBlockManager::locate() {
     SuperBlockLink link;
     SectorAddress where;
 
@@ -65,7 +65,7 @@ bool SuperBlockManager::locate() {
     return read_tail(location_);
 }
 
-bool SuperBlockManager::find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where) {
+bool WanderingBlockManager::find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where) {
     for (auto s = SuperBlockStartSector; s < storage_->geometry().sectors_per_block(); ++s) {
         SuperBlockLink link;
 
@@ -87,7 +87,7 @@ bool SuperBlockManager::find_link(block_index_t block, SuperBlockLink &found, Se
     return true;
 }
 
-bool SuperBlockManager::create() {
+bool WanderingBlockManager::create() {
     block_index_t super_block_block = BLOCK_INDEX_INVALID;
     SuperBlockLink link;
     link.chained_block = BLOCK_INDEX_INVALID;
@@ -140,7 +140,7 @@ bool SuperBlockManager::create() {
     return locate();
 }
 
-bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, PendingWrite pending) {
+bool WanderingBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, PendingWrite pending) {
     // Move to the following sector and see if we need to perform the rollover.
     addr.sector++;
 
@@ -202,7 +202,7 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
     return true;
 }
 
-bool SuperBlockManager::save() {
+bool WanderingBlockManager::save() {
     auto write = prepare_write();
 
     SectorAddress actually_wrote;
@@ -215,20 +215,23 @@ bool SuperBlockManager::save() {
     return true;
 }
 
-int32_t SuperBlockManager::chain_length() {
+int32_t WanderingBlockManager::chain_length() {
     return 2;
 }
 
-bool SuperBlockManager::read(SectorAddress addr, SuperBlockLink &link) {
+bool WanderingBlockManager::read(SectorAddress addr, SuperBlockLink &link) {
     return storage_->read({ addr, 0 }, &link, sizeof(SuperBlockLink));
 }
 
-bool SuperBlockManager::write(SectorAddress addr, SuperBlockLink &link) {
+bool WanderingBlockManager::write(SectorAddress addr, SuperBlockLink &link) {
     return storage_->write({ addr, 0 }, &link, sizeof(SuperBlockLink));
 }
 
-bool SuperBlockManager::write(SectorAddress addr, PendingWrite write) {
+bool WanderingBlockManager::write(SectorAddress addr, PendingWrite write) {
     return storage_->write({ addr, 0 }, write.ptr, write.n);
+}
+
+SuperBlockManager::SuperBlockManager(StorageBackend &storage, BlockManager &blocks) : WanderingBlockManager(storage, blocks) {
 }
 
 void SuperBlockManager::link_tail(SuperBlockLink link) {
@@ -264,7 +267,7 @@ bool SuperBlockManager::write_fresh(SectorAddress addr) {
     return true;
 }
 
-SuperBlockManager::PendingWrite SuperBlockManager::prepare_write() {
+WanderingBlockManager::PendingWrite SuperBlockManager::prepare_write() {
     sb_.link.header.timestamp++;
     sb_.allocator = blocks_->state();
 
