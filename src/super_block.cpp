@@ -62,7 +62,7 @@ bool WanderingBlockManager::locate() {
 
     location_ = where;
 
-    return read_tail(location_);
+    return read_super(location_);
 }
 
 bool WanderingBlockManager::find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where) {
@@ -106,7 +106,7 @@ bool WanderingBlockManager::create() {
         // First of these blocks is actually where the super block goes.
         if (i == 0) {
             super_block_block  = block;
-            link_tail(link);
+            link_super(link);
         }
         else {
             if (!write({ block, SuperBlockStartSector }, link)) {
@@ -133,7 +133,7 @@ bool WanderingBlockManager::create() {
         link.header.timestamp--;
     }
 
-    if (!write_fresh({ super_block_block, SuperBlockStartSector })) {
+    if (!write_fresh_super({ super_block_block, SuperBlockStartSector })) {
         return false;
     }
 
@@ -203,7 +203,7 @@ bool WanderingBlockManager::rollover(SectorAddress addr, SectorAddress &relocate
 }
 
 bool WanderingBlockManager::save() {
-    auto write = prepare_write();
+    auto write = prepare_super();
 
     SectorAddress actually_wrote;
     if (!rollover(location_, actually_wrote, write)) {
@@ -234,12 +234,12 @@ bool WanderingBlockManager::write(SectorAddress addr, PendingWrite write) {
 SuperBlockManager::SuperBlockManager(StorageBackend &storage, BlockManager &blocks) : WanderingBlockManager(storage, blocks) {
 }
 
-void SuperBlockManager::link_tail(SuperBlockLink link) {
+void SuperBlockManager::link_super(SuperBlockLink link) {
     sb_.link = link;
     sb_.link.header.type = BlockType::SuperBlock;
 }
 
-bool SuperBlockManager::read_tail(SectorAddress addr) {
+bool SuperBlockManager::read_super(SectorAddress addr) {
     if (!read(addr, sb_)) {
         return false;
     }
@@ -249,7 +249,7 @@ bool SuperBlockManager::read_tail(SectorAddress addr) {
     return true;
 }
 
-bool SuperBlockManager::write_fresh(SectorAddress addr) {
+bool SuperBlockManager::write_fresh_super(SectorAddress addr) {
     // We pull allocator state after doing the above allocations to ensure the
     // first state we write is correct.
     sb_.tree = BLOCK_INDEX_INVALID;
@@ -267,7 +267,7 @@ bool SuperBlockManager::write_fresh(SectorAddress addr) {
     return true;
 }
 
-WanderingBlockManager::PendingWrite SuperBlockManager::prepare_write() {
+WanderingBlockManager::PendingWrite SuperBlockManager::prepare_super() {
     sb_.link.header.timestamp++;
     sb_.allocator = blocks_->state();
 

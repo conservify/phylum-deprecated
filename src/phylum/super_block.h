@@ -16,20 +16,6 @@ struct SuperBlockLink {
     }
 };
 
-struct SuperBlock {
-    SuperBlockLink link{ BlockType::SuperBlock };
-    AllocatorState allocator;
-    timestamp_t last_gc{ 0 };
-    block_index_t tree{ 0 };
-    block_index_t journal{ BLOCK_INDEX_INVALID };
-    block_index_t free{ BLOCK_INDEX_INVALID };
-    BlockAddress leaf{ BLOCK_INDEX_INVALID };
-    BlockAddress index{ BLOCK_INDEX_INVALID };
-
-    SuperBlock() {
-    }
-};
-
 class WanderingBlockManager {
 private:
     static constexpr block_index_t AnchorBlocks[] = { 1, 2 };
@@ -71,11 +57,25 @@ private:
     bool write(SectorAddress addr, PendingWrite write);
 
 protected:
-    virtual void link_tail(SuperBlockLink link) = 0;
-    virtual bool read_tail(SectorAddress addr) = 0;
-    virtual bool write_fresh(SectorAddress addr) = 0;
-    virtual PendingWrite prepare_write() = 0;
+    virtual void link_super(SuperBlockLink link) = 0;
+    virtual bool read_super(SectorAddress addr) = 0;
+    virtual bool write_fresh_super(SectorAddress addr) = 0;
+    virtual PendingWrite prepare_super() = 0;
 
+};
+
+struct SuperBlock {
+    SuperBlockLink link{ BlockType::SuperBlock };
+    AllocatorState allocator;
+    timestamp_t last_gc{ 0 };
+    block_index_t tree{ 0 };
+    block_index_t journal{ BLOCK_INDEX_INVALID };
+    block_index_t free{ BLOCK_INDEX_INVALID };
+    BlockAddress leaf{ BLOCK_INDEX_INVALID };
+    BlockAddress index{ BLOCK_INDEX_INVALID };
+
+    SuperBlock() {
+    }
 };
 
 class SuperBlockManager : public WanderingBlockManager {
@@ -98,10 +98,10 @@ protected:
     bool read(SectorAddress addr, SuperBlock &sb);
     bool write(SectorAddress addr, SuperBlock &sb);
 
-    virtual void link_tail(SuperBlockLink link) override;
-    virtual bool read_tail(SectorAddress addr) override;
-    virtual bool write_fresh(SectorAddress addr) override;
-    virtual PendingWrite prepare_write() override;
+    virtual void link_super(SuperBlockLink link) override;
+    virtual bool read_super(SectorAddress addr) override;
+    virtual bool write_fresh_super(SectorAddress addr) override;
+    virtual PendingWrite prepare_super() override;
 
 };
 
