@@ -5,13 +5,13 @@
 namespace phylum {
 
 constexpr uint16_t SuperBlockStartSector = 0;
-constexpr block_index_t SuperBlockManager::AnchorBlocks[];
+constexpr block_index_t WanderingBlockManager::AnchorBlocks[];
 
-SuperBlockManager::SuperBlockManager(StorageBackend &storage, BlockManager &blocks) :
+WanderingBlockManager::WanderingBlockManager(StorageBackend &storage, BlockManager &blocks) :
     storage_(&storage), blocks_(&blocks) {
 }
 
-bool SuperBlockManager::walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where) {
+bool WanderingBlockManager::walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where) {
     link = { };
     where.invalid();
 
@@ -50,7 +50,7 @@ bool SuperBlockManager::walk(block_index_t desired, SuperBlockLink &link, Sector
     return false;
 }
 
-bool SuperBlockManager::locate() {
+bool WanderingBlockManager::locate() {
     SuperBlockLink link;
     SectorAddress where;
 
@@ -62,16 +62,10 @@ bool SuperBlockManager::locate() {
 
     location_ = where;
 
-    if (!read(location_, sb_)) {
-        return false;
-    }
-
-    blocks_->state(sb_.allocator);
-
-    return true;
+    return read_super(location_);
 }
 
-bool SuperBlockManager::find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where) {
+bool WanderingBlockManager::find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where) {
     for (auto s = SuperBlockStartSector; s < storage_->geometry().sectors_per_block(); ++s) {
         SuperBlockLink link;
 
@@ -93,7 +87,7 @@ bool SuperBlockManager::find_link(block_index_t block, SuperBlockLink &found, Se
     return true;
 }
 
-bool SuperBlockManager::create() {
+bool WanderingBlockManager::create() {
     block_index_t super_block_block = BLOCK_INDEX_INVALID;
     SuperBlockLink link;
     link.chained_block = BLOCK_INDEX_INVALID;
@@ -112,8 +106,7 @@ bool SuperBlockManager::create() {
         // First of these blocks is actually where the super block goes.
         if (i == 0) {
             super_block_block  = block;
-            sb_.link = link;
-            sb_.link.header.type = BlockType::SuperBlock;
+            link_super(link);
         }
         else {
             if (!write({ block, SuperBlockStartSector }, link)) {
@@ -140,24 +133,14 @@ bool SuperBlockManager::create() {
         link.header.timestamp--;
     }
 
-    // We pull allocator state after doing the above allocations to ensure the
-    // first state we write is correct.
-    sb_.tree = BLOCK_INDEX_INVALID;
-    sb_.journal = blocks_->allocate(BlockType::Journal);
-    sb_.free = blocks_->allocate(BlockType::Free);
-    sb_.allocator = blocks_->state();
-
-    assert(sb_.journal != BLOCK_INDEX_INVALID);
-    assert(sb_.free != BLOCK_INDEX_INVALID);
-
-    if (!write({ super_block_block, SuperBlockStartSector }, sb_)) {
+    if (!write_fresh_super({ super_block_block, SuperBlockStartSector })) {
         return false;
     }
 
     return locate();
 }
 
-bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, PendingWrite pending) {
+bool WanderingBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, PendingWrite pending) {
     // Move to the following sector and see if we need to perform the rollover.
     addr.sector++;
 
@@ -219,18 +202,11 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
     return true;
 }
 
-bool SuperBlockManager::save() {
-    sb_.link.header.timestamp++;
-    sb_.allocator = blocks_->state();
-
-    auto sb_write = PendingWrite{
-        BlockType::SuperBlock,
-        &sb_,
-        sizeof(SuperBlock)
-    };
+bool WanderingBlockManager::save() {
+    auto write = prepare_super();
 
     SectorAddress actually_wrote;
-    if (!rollover(location_, actually_wrote, sb_write)) {
+    if (!rollover(location_, actually_wrote, write)) {
         return false;
     }
 
@@ -239,16 +215,67 @@ bool SuperBlockManager::save() {
     return true;
 }
 
-int32_t SuperBlockManager::chain_length() {
+int32_t WanderingBlockManager::chain_length() {
     return 2;
 }
 
-bool SuperBlockManager::read(SectorAddress addr, SuperBlockLink &link) {
+bool WanderingBlockManager::read(SectorAddress addr, SuperBlockLink &link) {
     return storage_->read({ addr, 0 }, &link, sizeof(SuperBlockLink));
 }
 
-bool SuperBlockManager::write(SectorAddress addr, SuperBlockLink &link) {
+bool WanderingBlockManager::write(SectorAddress addr, SuperBlockLink &link) {
     return storage_->write({ addr, 0 }, &link, sizeof(SuperBlockLink));
+}
+
+bool WanderingBlockManager::write(SectorAddress addr, PendingWrite write) {
+    return storage_->write({ addr, 0 }, write.ptr, write.n);
+}
+
+SuperBlockManager::SuperBlockManager(StorageBackend &storage, BlockManager &blocks) : WanderingBlockManager(storage, blocks) {
+}
+
+void SuperBlockManager::link_super(SuperBlockLink link) {
+    sb_.link = link;
+    sb_.link.header.type = BlockType::SuperBlock;
+}
+
+bool SuperBlockManager::read_super(SectorAddress addr) {
+    if (!read(addr, sb_)) {
+        return false;
+    }
+
+    blocks_->state(sb_.allocator);
+
+    return true;
+}
+
+bool SuperBlockManager::write_fresh_super(SectorAddress addr) {
+    // We pull allocator state after doing the above allocations to ensure the
+    // first state we write is correct.
+    sb_.tree = BLOCK_INDEX_INVALID;
+    sb_.journal = blocks_->allocate(BlockType::Journal);
+    sb_.free = blocks_->allocate(BlockType::Free);
+    sb_.allocator = blocks_->state();
+
+    assert(sb_.journal != BLOCK_INDEX_INVALID);
+    assert(sb_.free != BLOCK_INDEX_INVALID);
+
+    if (!write(addr, sb_)) {
+        return false;
+    }
+
+    return true;
+}
+
+WanderingBlockManager::PendingWrite SuperBlockManager::prepare_super() {
+    sb_.link.header.timestamp++;
+    sb_.allocator = blocks_->state();
+
+    return PendingWrite{
+        BlockType::SuperBlock,
+        &sb_,
+        sizeof(SuperBlock)
+    };
 }
 
 bool SuperBlockManager::read(SectorAddress addr, SuperBlock &sb) {
@@ -257,10 +284,6 @@ bool SuperBlockManager::read(SectorAddress addr, SuperBlock &sb) {
 
 bool SuperBlockManager::write(SectorAddress addr, SuperBlock &sb) {
     return storage_->write({ addr, 0 }, &sb, sizeof(SuperBlock));
-}
-
-bool SuperBlockManager::write(SectorAddress addr, PendingWrite write) {
-    return storage_->write({ addr, 0 }, write.ptr, write.n);
 }
 
 }
