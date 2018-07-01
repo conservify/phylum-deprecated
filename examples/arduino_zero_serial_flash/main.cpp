@@ -70,6 +70,8 @@ void setup() {
         if (!sbm.save()) {
             fail();
         }
+
+        sdebug() << "New Location: " << sbm.location() << endl;
     }
 
     while (true) {

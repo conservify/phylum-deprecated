@@ -10,7 +10,6 @@ file(GLOB SOURCE_FILES *.cpp ../../src/*.cpp ../../src/phylum/*.h ../../src/back
 arduino(phylum-arduino-zero-serial-flash "${SOURCE_FILES}" "${LIBRARIES}")
 
 # add_definitions("-DPHYLUM_DEBUG")
-
-add_definitions("-DPHYLUM_ARDUINO_DEBUG")
+# add_definitions("-DPHYLUM_ARDUINO_DEBUG")
 
 target_include_directories(phylum-arduino-zero-serial-flash PUBLIC ./ ../../src ../../src/backends/arduino_serial_flash)

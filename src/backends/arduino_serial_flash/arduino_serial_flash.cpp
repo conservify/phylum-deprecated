@@ -26,6 +26,10 @@ bool ArduinoSerialFlashBackend::initialize(uint8_t cs) {
 
     auto capacity = serial_flash_.capacity(id);
     auto block_size = serial_flash_.blockSize();
+    if (capacity == 0 || block_size == 0) {
+        return false;
+    }
+
     auto sectors_per_page = 4;
     auto pages_per_block = block_size / (sectors_per_page * SectorSize);
     auto number_of_blocks = capacity / block_size;
@@ -40,7 +44,7 @@ bool ArduinoSerialFlashBackend::initialize(uint8_t cs) {
         serial_flash_.eraseAll();
     }
 
-    return block_size > 0;
+    return true;
 }
 
 bool ArduinoSerialFlashBackend::open() {
