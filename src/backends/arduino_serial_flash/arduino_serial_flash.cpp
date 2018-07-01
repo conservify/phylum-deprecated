@@ -30,9 +30,9 @@ bool ArduinoSerialFlashBackend::initialize(uint8_t cs) {
         return false;
     }
 
-    auto sectors_per_page = 4;
-    auto pages_per_block = block_size / (sectors_per_page * SectorSize);
-    auto number_of_blocks = capacity / block_size;
+    auto sectors_per_page = (page_index_t)4;
+    auto pages_per_block = (page_index_t)(block_size / (sectors_per_page * SectorSize));
+    auto number_of_blocks = (block_index_t)(capacity / block_size);
 
     geometry_ = Geometry{ number_of_blocks, pages_per_block, sectors_per_page, SectorSize };
 
