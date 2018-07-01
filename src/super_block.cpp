@@ -7,7 +7,7 @@ namespace phylum {
 constexpr uint16_t SuperBlockStartSector = 0;
 constexpr block_index_t WanderingBlockManager::AnchorBlocks[];
 
-WanderingBlockManager::WanderingBlockManager(StorageBackend &storage, BlockManager &blocks) :
+WanderingBlockManager::WanderingBlockManager(StorageBackend &storage, ReusableBlockAllocator &blocks) :
     storage_(&storage), blocks_(&blocks) {
 }
 
@@ -244,7 +244,7 @@ bool SuperBlockManager::read_super(SectorAddress addr) {
         return false;
     }
 
-    blocks_->state(sb_.allocator);
+    reinterpret_cast<BlockManager*>(blocks_)->state(sb_.allocator);
 
     return true;
 }
@@ -255,7 +255,7 @@ bool SuperBlockManager::write_fresh_super(SectorAddress addr) {
     sb_.tree = BLOCK_INDEX_INVALID;
     sb_.journal = blocks_->allocate(BlockType::Journal);
     sb_.free = blocks_->allocate(BlockType::Free);
-    sb_.allocator = blocks_->state();
+    sb_.allocator = reinterpret_cast<BlockManager*>(blocks_)->state();
 
     assert(sb_.journal != BLOCK_INDEX_INVALID);
     assert(sb_.free != BLOCK_INDEX_INVALID);
@@ -269,7 +269,7 @@ bool SuperBlockManager::write_fresh_super(SectorAddress addr) {
 
 WanderingBlockManager::PendingWrite SuperBlockManager::prepare_super() {
     sb_.link.header.timestamp++;
-    sb_.allocator = blocks_->state();
+    sb_.allocator = reinterpret_cast<BlockManager*>(blocks_)->state();
 
     return PendingWrite{
         BlockType::SuperBlock,

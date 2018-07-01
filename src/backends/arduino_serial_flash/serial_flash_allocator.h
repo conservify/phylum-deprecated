@@ -11,7 +11,7 @@
 
 namespace phylum {
 
-class SerialFlashAllocator : public BlockManager {
+class SerialFlashAllocator : public ReusableBlockAllocator {
 private:
     static constexpr size_t MapSize = 64 / 8;
     uint8_t map_[MapSize]{ 0 };
@@ -22,10 +22,8 @@ public:
     SerialFlashAllocator(ArduinoSerialFlashBackend &storage);
 
 public:
+    virtual bool initialize();
     virtual block_index_t allocate(BlockType type) override;
-    virtual bool initialize(Geometry &geometry) override;
-    virtual AllocatorState state() override;
-    virtual void state(AllocatorState state) override;
     virtual void free(block_index_t block) override;
 
 };

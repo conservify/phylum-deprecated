@@ -35,7 +35,7 @@ block_index_t SerialFlashAllocator::allocate(BlockType type) {
     return BLOCK_INDEX_INVALID;
 }
 
-bool SerialFlashAllocator::initialize(Geometry &geometry) {
+bool SerialFlashAllocator::initialize() {
     memset(map_, 0, sizeof(map_));
 
     for (auto block = 3; block < storage_->geometry().number_of_blocks; ++block) {
@@ -62,15 +62,6 @@ bool SerialFlashAllocator::initialize(Geometry &geometry) {
     set_block_taken(map_, 2);
 
     return true;
-}
-
-AllocatorState SerialFlashAllocator::state() {
-    // Unused
-    return { };
-}
-
-void SerialFlashAllocator::state(AllocatorState state) {
-    // Unused
 }
 
 void SerialFlashAllocator::free(block_index_t block) {

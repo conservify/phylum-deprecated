@@ -6,6 +6,11 @@
 
 using namespace phylum;
 
+struct SimpleState : MinimumSuperBlock {
+};
+
+using OurStateManager = SerialFlashStateManager<SimpleState>;
+
 static void fail() {
     Serial.println("Fail!");
     while (true) {
@@ -42,11 +47,11 @@ void setup() {
     sdebug() << "Initialize Allocator" << endl;
 
     SerialFlashAllocator allocator{ storage };
-    if (!allocator.initialize(storage.geometry())) {
+    if (!allocator.initialize()) {
         fail();
     }
 
-    SuperBlockManager sbm{ storage, allocator };
+    OurStateManager sbm{ storage, allocator };
 
     sdebug() << "Initialize FS" << endl;
 

@@ -26,6 +26,11 @@ public:
     virtual block_index_t allocate(BlockType type) = 0;
 };
 
+class ReusableBlockAllocator : public BlockAllocator {
+public:
+    virtual void free(block_index_t block) = 0;
+};
+
 class EmptyAllocator : public BlockAllocator {
 public:
     virtual block_index_t allocate(BlockType type) override {
@@ -33,12 +38,11 @@ public:
     }
 };
 
-class BlockManager : public BlockAllocator {
+class BlockManager : public ReusableBlockAllocator {
 public:
     virtual bool initialize(Geometry &geometry) = 0;
     virtual AllocatorState state() = 0;
     virtual void state(AllocatorState state) = 0;
-    virtual void free(block_index_t block) = 0;
 
 };
 
