@@ -197,7 +197,7 @@ bool WanderingBlockManager::rollover(SectorAddress addr, SectorAddress &relocate
         return false;
     }
 
-    blocks_->free(addr.block);
+    blocks_->free(addr.block, link.header.timestamp);
 
     return true;
 }

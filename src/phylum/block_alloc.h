@@ -28,7 +28,7 @@ public:
 
 class ReusableBlockAllocator : public BlockAllocator {
 public:
-    virtual void free(block_index_t block) = 0;
+    virtual void free(block_index_t block, block_age_t age) = 0;
 };
 
 class EmptyAllocator : public BlockAllocator {
@@ -59,7 +59,7 @@ public:
     virtual AllocatorState state() override;
     virtual void state(AllocatorState state) override;
     virtual block_index_t allocate(BlockType type) override;
-    virtual void free(block_index_t block) override;
+    virtual void free(block_index_t block, block_age_t age) override;
 
 };
 
@@ -106,7 +106,7 @@ public:
     virtual AllocatorState state() override;
     virtual void state(AllocatorState state) override;
     virtual block_index_t allocate(BlockType type) override;
-    virtual void free(block_index_t block) override;
+    virtual void free(block_index_t block, block_age_t age) override;
 
 };
 #endif

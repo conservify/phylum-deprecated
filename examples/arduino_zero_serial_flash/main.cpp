@@ -71,7 +71,7 @@ void setup() {
 
     sdebug() << "Ready!" << endl;
 
-    for (auto i = 0; i < 128; ++i) {
+    for (auto i = 0; i < 1024; ++i) {
         if (!sbm.save()) {
             fail();
         }

@@ -70,7 +70,7 @@ bool ArduinoSerialFlashBackend::erase(block_index_t block) {
 
 bool ArduinoSerialFlashBackend::read(BlockAddress addr, void *d, size_t n) {
     auto address = get_sf_address(geometry_, addr);
-    #ifdef PHYLUM_ARDUINO_DEBUG
+    #if PHYLUM_ARDUINO_DEBUG > 1
     sdebug() << "Read(" << addr << " " << n << " " << address << ")" << endl;
     #endif
     serial_flash_.read(address, d, n);
@@ -79,7 +79,7 @@ bool ArduinoSerialFlashBackend::read(BlockAddress addr, void *d, size_t n) {
 
 bool ArduinoSerialFlashBackend::write(BlockAddress addr, void *d, size_t n) {
     auto address = get_sf_address(geometry_, addr);
-    #ifdef PHYLUM_ARDUINO_DEBUG
+    #if PHYLUM_ARDUINO_DEBUG > 1
     sdebug() << "Write(" << addr << " " << n << " " << address << ")" << endl;
     #endif
     serial_flash_.write(address, d, n);
