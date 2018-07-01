@@ -1,5 +1,6 @@
 build
 .gdb_history
+gitdeps
 GPATH
 GRTAGS
 GSYMS

@@ -2,7 +2,7 @@ BUILD ?= build
 
 all: build
 
-build:
+build: gitdeps
 	mkdir -p $(BUILD)
 	cd build && cmake ../ && make
 
@@ -21,5 +21,8 @@ test-00: build
 
 test-ff: build
 	env GTEST_COLOR=1 build/test/testall/testall -VV
+
+gitdeps:
+	simple-deps --config examples/arduino_zero_serial_flash/arduino-libraries
 
 .PHONY: build clean

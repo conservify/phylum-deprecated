@@ -1,2 +1,3 @@
 add_subdirectory(arduino_zero_tree)
 add_subdirectory(arduino_zero_prealloc)
+add_subdirectory(arduino_zero_serial_flash)
