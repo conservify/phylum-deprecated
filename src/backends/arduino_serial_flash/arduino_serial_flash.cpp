@@ -10,13 +10,13 @@
 namespace phylum {
 
 static inline uint32_t get_sf_address(const Geometry &g, BlockAddress a) {
-    return (a.block * g.pages_per_block * g.sectors_per_page * SectorSize) + a.position;
+    return (a.block * g.pages_per_block * g.sectors_per_page * g.sector_size) + a.position;
 }
 
 ArduinoSerialFlashBackend::ArduinoSerialFlashBackend() {
 }
 
-bool ArduinoSerialFlashBackend::initialize(uint8_t cs) {
+bool ArduinoSerialFlashBackend::initialize(uint8_t cs, sector_index_t sector_size) {
     if (!serial_flash_.begin(cs)) {
         return false;
     }
@@ -31,10 +31,10 @@ bool ArduinoSerialFlashBackend::initialize(uint8_t cs) {
     }
 
     auto sectors_per_page = (page_index_t)4;
-    auto pages_per_block = (page_index_t)(block_size / (sectors_per_page * SectorSize));
+    auto pages_per_block = (page_index_t)(block_size / (sectors_per_page * sector_size));
     auto number_of_blocks = (block_index_t)(capacity / block_size);
 
-    geometry_ = Geometry{ number_of_blocks, pages_per_block, sectors_per_page, SectorSize };
+    geometry_ = Geometry{ number_of_blocks, pages_per_block, sectors_per_page, sector_size };
 
     #ifdef PHYLUM_ARDUINO_DEBUG
     sdebug() << "Initialized: " << geometry_ << endl;

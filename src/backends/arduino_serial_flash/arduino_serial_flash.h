@@ -20,7 +20,7 @@ public:
     ArduinoSerialFlashBackend();
 
 public:
-    bool initialize(uint8_t cs);
+    bool initialize(uint8_t cs, sector_index_t sector_size = 512);
 
 public:
     bool open() override;
