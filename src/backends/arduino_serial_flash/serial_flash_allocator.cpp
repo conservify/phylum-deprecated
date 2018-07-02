@@ -1,5 +1,7 @@
 #include "serial_flash_allocator.h"
 
+#define PHYLUM_ARDUINO_DEBUG
+
 #ifdef ARDUINO
 
 namespace phylum {
@@ -39,7 +41,11 @@ block_index_t SerialFlashAllocator::allocate(BlockType type) {
 bool SerialFlashAllocator::initialize() {
     ScanInfo info;
 
-    return scan(false, info);
+    if (!scan(false, info)) {
+        return false;
+    }
+
+    return true;
 }
 
 bool SerialFlashAllocator::scan(bool free_only, ScanInfo &info) {
@@ -63,7 +69,7 @@ bool SerialFlashAllocator::scan(bool free_only, ScanInfo &info) {
         if (taken) {
             set_block_taken(map_, block);
             #ifdef PHYLUM_ARDUINO_DEBUG
-            sdebug() << "Block " << (uint32_t)block << " is taken." << endl;
+            sdebug() << "Block " << (uint32_t)block << " is taken. (" << header.type << ")" << endl;
             #endif
         }
         else {

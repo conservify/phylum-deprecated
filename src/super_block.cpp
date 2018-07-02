@@ -11,7 +11,7 @@ WanderingBlockManager::WanderingBlockManager(StorageBackend &storage, ReusableBl
     storage_(&storage), blocks_(&blocks) {
 }
 
-bool WanderingBlockManager::walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where) {
+bool WanderingBlockManager::walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where, block_index_t *visited) {
     link = { };
     where.invalid();
 
@@ -33,6 +33,10 @@ bool WanderingBlockManager::walk(block_index_t desired, SuperBlockLink &link, Se
     }
 
     for (auto i = 0; i < chain_length() + 1; ++i) {
+        if (visited != nullptr) {
+            visited[i] = link.chained_block;
+        }
+
         if (!find_link(link.chained_block, link, where)) {
             return false;
         }

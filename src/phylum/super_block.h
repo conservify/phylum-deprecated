@@ -48,7 +48,7 @@ protected:
 
 private:
     int32_t chain_length();
-    bool walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where);
+    bool walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where, block_index_t *visited = nullptr);
     bool find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where);
 
     bool rollover(SectorAddress addr, SectorAddress &new_location, PendingWrite write);

@@ -45,10 +45,11 @@ bool ArduinoSerialFlashBackend::initialize(uint8_t cs, sector_index_t sector_siz
     sdebug() << "Initialized: " << geometry_ << endl;
     #endif
 
-    if (false) {
-        serial_flash_.eraseAll();
-    }
+    return true;
+}
 
+bool ArduinoSerialFlashBackend::erase() {
+    serial_flash_.eraseAll();
     return true;
 }
 
