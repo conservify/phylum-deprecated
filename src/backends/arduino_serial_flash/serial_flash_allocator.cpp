@@ -1,7 +1,5 @@
 #include "serial_flash_allocator.h"
 
-#define PHYLUM_ARDUINO_DEBUG
-
 #ifdef ARDUINO
 
 namespace phylum {
