@@ -34,6 +34,11 @@ bool ArduinoSerialFlashBackend::initialize(uint8_t cs, sector_index_t sector_siz
     auto pages_per_block = (page_index_t)(block_size / (sectors_per_page * sector_size));
     auto number_of_blocks = (block_index_t)(capacity / block_size);
 
+    if (number_of_blocks > MaximumBlocks) {
+        sdebug() << "Limited number of blocks to " << MaximumBlocks << " from " << number_of_blocks << endl;
+        number_of_blocks = MaximumBlocks;
+    }
+
     geometry_ = Geometry{ number_of_blocks, pages_per_block, sectors_per_page, sector_size };
 
     #ifdef PHYLUM_ARDUINO_DEBUG

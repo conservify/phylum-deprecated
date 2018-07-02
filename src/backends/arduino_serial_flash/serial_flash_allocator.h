@@ -13,7 +13,7 @@ namespace phylum {
 
 class SerialFlashAllocator : public ReusableBlockAllocator {
 private:
-    static constexpr size_t MapSize = 64 / 8;
+    static constexpr size_t MapSize = ArduinoSerialFlashBackend::MaximumBlocks / 8;
     uint8_t map_[MapSize]{ 0 };
 
     ArduinoSerialFlashBackend *storage_;

@@ -12,6 +12,9 @@
 namespace phylum {
 
 class ArduinoSerialFlashBackend : public StorageBackend {
+public:
+    static constexpr size_t MaximumBlocks = 64;
+
 private:
     SerialFlashChip serial_flash_;
     Geometry geometry_;
