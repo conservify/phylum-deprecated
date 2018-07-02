@@ -27,7 +27,8 @@ block_index_t SequentialBlockAllocator::allocate(BlockType type) {
     return block_++;
 }
 
-void SequentialBlockAllocator::free(block_index_t block, block_age_t age) {
+bool SequentialBlockAllocator::free(block_index_t block, block_age_t age) {
+    return true;
 }
 
 #ifndef ARDUINO
@@ -76,8 +77,10 @@ block_index_t QueueBlockAllocator::allocate(BlockType type) {
     return block;
 }
 
-void QueueBlockAllocator::free(block_index_t block, block_age_t age) {
+bool QueueBlockAllocator::free(block_index_t block, block_age_t age) {
     free_.push(block);
+
+    return true;
 }
 
 #endif

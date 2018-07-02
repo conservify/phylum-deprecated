@@ -95,9 +95,10 @@ bool SerialFlashAllocator::scan(bool free_only, ScanInfo &info) {
     return true;
 }
 
-void SerialFlashAllocator::free(block_index_t block, block_age_t age) {
+bool SerialFlashAllocator::free(block_index_t block, block_age_t age) {
     if (!storage_->erase(block)) {
         sdebug() << "Erase failed! (" << (uint32_t)block << ")" << endl;
+        return false;
     }
 
     BlockHead header;
@@ -106,9 +107,12 @@ void SerialFlashAllocator::free(block_index_t block, block_age_t age) {
     header.type = BlockType::Unallocated;
     if (!storage_->write({ (block_index_t)block, 0 }, &header, sizeof(BlockHead))) {
         sdebug() << "Write erased block failed! (" << (uint32_t)block << ")" << endl;
+        return false;
     }
 
     set_block_free(map_, block);
+
+    return true;
 }
 
 }

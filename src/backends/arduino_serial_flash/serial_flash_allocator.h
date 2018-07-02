@@ -24,7 +24,7 @@ public:
 public:
     virtual bool initialize();
     virtual block_index_t allocate(BlockType type) override;
-    virtual void free(block_index_t block, block_age_t age) override;
+    virtual bool free(block_index_t block, block_age_t age) override;
 
 private:
     struct ScanInfo {
