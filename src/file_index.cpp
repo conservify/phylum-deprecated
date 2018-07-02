@@ -146,11 +146,12 @@ FileIndex::ReindexInfo FileIndex::append(uint32_t position, BlockAddress address
         return reindex(position, address);
     }
 
+    entries_++;
+
     auto caching = SectorCachingStorage{ *storage_ };
     auto allocator = ExtentAllocator{ file_->index, head_.block + 1 };
     auto layout = get_index_layout(caching, allocator, head_);
-
-    auto record = IndexRecord{ position, address, version_ };
+    auto record = IndexRecord{ position, address, version_, entries_ };
     if (!layout.append(record)) {
         return { };
     }

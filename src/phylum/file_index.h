@@ -29,6 +29,8 @@ struct IndexRecord {
     uint64_t position;
     BlockAddress address;
     uint16_t version;
+    uint32_t entries;
+    uint32_t reserved[2];
 
     bool valid() {
         return address.valid() && !address.zero();
@@ -47,6 +49,7 @@ private:
     BlockAddress beginning_;
     BlockAddress head_;
     BlockAddress end_;
+    uint32_t entries_{ 0 };
 
 public:
     FileIndex() {
