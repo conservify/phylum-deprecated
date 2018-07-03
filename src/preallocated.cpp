@@ -422,7 +422,7 @@ bool SimpleFile::index(BlockAddress address) {
 }
 
 block_index_t SimpleFile::rollover() {
-    auto info = index().reindex(length_, { file_->data.start, SectorSize });
+    auto info = index().append(length_, { file_->data.start, SectorSize }, true);
     if (!info) {
         return BLOCK_INDEX_INVALID;
     }

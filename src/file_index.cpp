@@ -162,11 +162,11 @@ bool FileIndex::seek(uint64_t position, IndexRecord &selected) {
     return true;
 }
 
-FileIndex::ReindexInfo FileIndex::append(uint32_t position, BlockAddress address) {
+FileIndex::ReindexInfo FileIndex::append(uint32_t position, BlockAddress address, bool rollover) {
     assert(beginning_.valid());
     assert(head_.valid());
 
-    if (version_ >= 1) {
+    if (rollover || version_ >= 1) {
         return reindex(position, address);
     }
 

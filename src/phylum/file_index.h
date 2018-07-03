@@ -84,11 +84,12 @@ public:
 
     bool seek(uint64_t position, IndexRecord &recod);
 
-    ReindexInfo append(uint32_t position, BlockAddress address);
-
-    ReindexInfo reindex(uint64_t length, BlockAddress new_end);
+    ReindexInfo append(uint32_t position, BlockAddress address, bool rollover = false);
 
     void dump();
+
+private:
+    ReindexInfo reindex(uint64_t length, BlockAddress new_end);
 
 };
 
