@@ -21,6 +21,10 @@ struct Extent {
         return { start + nblocks - 1, g.block_size() - SectorSize };
     }
 
+    BlockAddress beginning() const {
+        return { start, 0 };
+    }
+
     BlockAddress end(const Geometry &g) const {
         return { start + nblocks, 0 };
     }

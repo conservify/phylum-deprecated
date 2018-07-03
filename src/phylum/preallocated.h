@@ -99,8 +99,6 @@ private:
 
     bool index(BlockAddress address);
 
-    block_index_t rollover();
-
     struct SeekInfo {
         BlockAddress address;
         int32_t bytes;

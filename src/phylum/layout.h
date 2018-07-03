@@ -222,14 +222,8 @@ public:
         return true;
     }
 
-    bool write_head(block_index_t block, block_index_t linked = BLOCK_INDEX_INVALID) {
+    bool write_head(block_index_t block, THead &head) {
         auto address = BlockAddress{ block, 0 };
-
-        assert(type_ != BlockType::Error);
-
-        THead head(type_);
-        head.fill();
-        head.block.linked_block = linked;
 
         if (!storage_.erase(block)) {
             return false;
@@ -243,6 +237,16 @@ public:
         }
 
         return true;
+    }
+
+    bool write_head(block_index_t block, block_index_t linked = BLOCK_INDEX_INVALID) {
+        assert(type_ != BlockType::Error);
+
+        THead head(type_);
+        head.fill();
+        head.block.linked_block = linked;
+
+        return write_head(block, head);
     }
 
 private:

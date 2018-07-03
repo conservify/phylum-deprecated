@@ -10,8 +10,30 @@
 using namespace phylum;
 
 class FileIndexSuite : public ::testing::Test {
+};
+
+class StandardFileIndexSuite : public FileIndexSuite {
+protected:
+    Geometry geometry_{ 1024, 4, 4, 512 };
+    LinuxMemoryBackend storage_;
+    FileAllocation fa_{ { 1, 1023 }, { 0, 0 } };
+    BlockHelper helper_{ storage_ };
+
+protected:
+    void SetUp() override {
+        ASSERT_TRUE(storage_.initialize(geometry_));
+        ASSERT_TRUE(storage_.open());
+    }
 
 };
+
+TEST_F(StandardFileIndexSuite, FormatNew) {
+    FileIndex index{ &storage_, &fa_ };
+
+    ASSERT_TRUE(index.format());
+
+    ASSERT_EQ(helper_.number_of_blocks(BlockType::Index), 1);
+}
 
 TEST_F(FileIndexSuite, LargeIndex) {
     auto number_of_index_entries = 1024 * 1024;
@@ -38,5 +60,5 @@ TEST_F(FileIndexSuite, LargeIndex) {
         addr.add(1024);
     }
 
-    ASSERT_EQ(helper.number_of_blocks(BlockType::Index, 0, blocks_required - 1), 4388);
+    ASSERT_EQ(helper.number_of_blocks(BlockType::Index, 0, blocks_required - 1), 2190);
 }

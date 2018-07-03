@@ -294,16 +294,7 @@ int32_t SimpleFile::flush() {
         // Check to see if we're at the end of our allocated space.
         linked = head_.block + 1;
         if (!file_->data.contains(linked)) {
-            switch (fd_->strategy) {
-            case WriteStrategy::Append: {
-                linked = BLOCK_INDEX_INVALID;
-                break;
-            }
-            case WriteStrategy::Rolling: {
-                linked = rollover();
-                break;
-            }
-            }
+            linked = BLOCK_INDEX_INVALID;
         }
 
         FileBlockTail tail;
@@ -339,7 +330,7 @@ int32_t SimpleFile::flush() {
             // Every N blocks we save our offset in the tree. This affects how much
             // seeking needs to happen when, seeking.
             blocks_since_save_++;
-            if (blocks_since_save_ >= IndexFrequency) {
+            if (blocks_since_save_ >= (int8_t)IndexFrequency) {
                 if (!index(head_)) {
                     return 0;
                 }
@@ -413,26 +404,11 @@ FileIndex &SimpleFile::index() {
 }
 
 bool SimpleFile::index(BlockAddress address) {
-    auto info = index().append(length_, head_);
-    blocks_since_save_ = 0;
-    length_ = info.length;
-    position_ = info.length;
-    truncated_ += info.truncated;
-    return true;
-}
-
-block_index_t SimpleFile::rollover() {
-    auto info = index().append(length_, { file_->data.start, SectorSize }, true);
-    if (!info) {
-        return BLOCK_INDEX_INVALID;
+    if (!index().append(length_, head_)) {
+        return false;
     }
-
-    blocks_since_save_ = -1; // HACK
-    length_ = info.length;
-    position_ = info.length;
-    truncated_ += info.truncated;
-
-    return file_->data.start;
+    blocks_since_save_ = 0;
+    return true;
 }
 
 BlockAddress SimpleFile::initialize(block_index_t block, block_index_t previous) {
@@ -490,8 +466,8 @@ bool FilePreallocator::allocate(uint8_t id, FileDescriptor *fd, FileAllocation &
 
 block_index_t FilePreallocator::blocks_required_for_index(block_index_t nblocks) {
     auto indices_per_block = effective_index_block_size(geometry()) / sizeof(IndexRecord);
-    auto indices = (nblocks / 8) + 1;
-    return std::max((uint64_t)1, indices / indices_per_block);
+    auto index_entries = (nblocks / SimpleFile::IndexFrequency) + 1;
+    return std::max((uint64_t)1, index_entries / indices_per_block);
 }
 
 block_index_t FilePreallocator::blocks_required_for_data(uint64_t opaque_size) {

@@ -20,24 +20,21 @@ protected:
         ASSERT_TRUE(storage_.open());
     }
 
-    void TearDown() override {
-    }
-
 };
 
-TEST_F(PreallocatedSuite, StandardLayoutAllocating) {
-    FileDescriptor file_system_area_fd =   { "system",        WriteStrategy::Append,  100 };
-    FileDescriptor file_log_startup_fd =   { "startup.log",   WriteStrategy::Append,  100 };
-    FileDescriptor file_log_now_fd =       { "now.log",       WriteStrategy::Rolling, 100 };
-    FileDescriptor file_log_emergency_fd = { "emergency.log", WriteStrategy::Append,  100 };
-    FileDescriptor file_data_fk =          { "data.fk",       WriteStrategy::Append,  0   };
+TEST_F(PreallocatedSuite, FormattingStandardLayout) {
+    FileDescriptor file_system_area_fd =   { "system",        100 };
+    FileDescriptor file_log_startup_fd =   { "startup.log",   100 };
+    FileDescriptor file_log_now_fd =       { "now.log",       100 };
+    FileDescriptor file_log_emergency_fd = { "emergency.log", 100 };
+    FileDescriptor file_data_fd =          { "data.fk",       0   };
 
     static FileDescriptor* files[] = {
         &file_system_area_fd,
         &file_log_startup_fd,
         &file_log_now_fd,
         &file_log_emergency_fd,
-        &file_data_fk
+        &file_data_fd
     };
 
     FileLayout<5> layout{ storage_ };
@@ -67,79 +64,60 @@ TEST_F(PreallocatedSuite, StandardLayoutAllocating) {
     ASSERT_EQ(layout.allocation(1), FileAllocation{ });
 }
 
-TEST_F(PreallocatedSuite, SmallFileWritingToEnd) {
-    FileDescriptor file_system_area_fd = { "system",      WriteStrategy::Append,  100 };
-    FileDescriptor file_log_startup_fd = { "startup.log", WriteStrategy::Append,  100 };
-
-    static FileDescriptor* files[] = {
-        &file_system_area_fd,
-        &file_log_startup_fd,
-    };
-
-    FileLayout<2> layout{ storage_ };
+TEST_F(PreallocatedSuite, WritingSmallFileToItsEnd) {
+    FileDescriptor data_file = { "data.fk", 100 };
+    static FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
 
-    auto file = layout.open(file_log_startup_fd, OpenMode::Write);
+    auto file = layout.open(data_file, OpenMode::Write);
     ASSERT_TRUE(file);
 
     PatternHelper helper;
     auto total = helper.write(file, (1024 * 1024) / helper.size());
+    file.close();
 
     ASSERT_EQ(total, file.maximum_size());
 
-    file.close();
-
-    auto verified = helper.verify_file(layout, file_log_startup_fd);
+    auto verified = helper.verify_file(layout, data_file);
     ASSERT_EQ(total, verified);
 }
 
 TEST_F(PreallocatedSuite, WriteBlockInTwoSeparateOpensWritesCorrectBytesInBlock) {
-    FileDescriptor file_system_area_fd = { "system",      WriteStrategy::Append,  100 };
-    FileDescriptor file_log_startup_fd = { "startup.log", WriteStrategy::Append,  100 };
-
-    static FileDescriptor* files[] = {
-        &file_system_area_fd,
-        &file_log_startup_fd,
-    };
-
-    FileLayout<2> layout{ storage_ };
+    FileDescriptor data_file = { "data.fk", 100 };
+    static FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
 
     PatternHelper helper;
 
     auto ideal_block_size = SectorSize * 16;
-    auto file1 = layout.open(file_log_startup_fd, OpenMode::Write);
+    auto file1 = layout.open(data_file, OpenMode::Write);
     helper.write(file1, ideal_block_size / 2 / helper.size());
     file1.close();
 
-    auto file2 = layout.open(file_log_startup_fd, OpenMode::Write);
+    auto file2 = layout.open(data_file, OpenMode::Write);
     helper.write(file2, ideal_block_size / 2 / helper.size());
     file2.close();
 
-    auto verified = helper.verify_file(layout, file_log_startup_fd);
+    auto verified = helper.verify_file(layout, data_file);
 
     ASSERT_EQ(verified, (uint64_t)ideal_block_size);
 
-    auto file = layout.open(file_log_startup_fd, OpenMode::Read);
+    auto file = layout.open(data_file, OpenMode::Read);
     ASSERT_EQ(verified, file.size());
 }
 
-TEST_F(PreallocatedSuite, LargeFileWritingToEnd) {
-    FileDescriptor file_system_area_fd = { "system",  WriteStrategy::Append,  100 };
-    FileDescriptor file_data_fk =        { "data.fk", WriteStrategy::Append,  0   };
-
-    static FileDescriptor* files[] = {
-        &file_system_area_fd,
-        &file_data_fk
-    };
-
-    FileLayout<2> layout{ storage_ };
+TEST_F(PreallocatedSuite, WritingOneMegabyteToFile) {
+    FileDescriptor data_file = { "data.fk", 0 };
+    static FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
 
-    auto file = layout.open(file_data_fk, OpenMode::Write);
+    auto file = layout.open(data_file, OpenMode::Write);
     ASSERT_TRUE(file);
 
     PatternHelper helper;
@@ -149,20 +127,14 @@ TEST_F(PreallocatedSuite, LargeFileWritingToEnd) {
 
     ASSERT_EQ(total, (uint64_t)1024 * 1024);
 
-    auto verified = helper.verify_file(layout, file_data_fk);
+    auto verified = helper.verify_file(layout, data_file);
     ASSERT_EQ(total, verified);
 }
 
-TEST_F(PreallocatedSuite, LargeFileAppending) {
-    FileDescriptor file_system_area_fd = { "system",  WriteStrategy::Append,  100 };
-    FileDescriptor file_data_fk =        { "data.fk", WriteStrategy::Append,  0   };
-
-    static FileDescriptor* files[] = {
-        &file_system_area_fd,
-        &file_data_fk
-    };
-
-    FileLayout<2> layout{ storage_ };
+TEST_F(PreallocatedSuite, AppendingOneMegabyteTwoOneMegabyte) {
+    FileDescriptor data_file = { "data.fk", 0 };
+    static FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
 
@@ -170,7 +142,7 @@ TEST_F(PreallocatedSuite, LargeFileAppending) {
 
     PatternHelper helper;
     {
-        auto file = layout.open(file_data_fk, OpenMode::Write);
+        auto file = layout.open(data_file, OpenMode::Write);
         ASSERT_TRUE(file);
         ASSERT_EQ(file.size(), (uint64_t)0);
 
@@ -183,7 +155,7 @@ TEST_F(PreallocatedSuite, LargeFileAppending) {
     }
 
     {
-        auto file = layout.open(file_data_fk, OpenMode::Write);
+        auto file = layout.open(data_file, OpenMode::Write);
         ASSERT_TRUE(file);
         ASSERT_TRUE(file.seek(UINT64_MAX));
         ASSERT_EQ(file.size(), OneMegabyte);
@@ -196,25 +168,19 @@ TEST_F(PreallocatedSuite, LargeFileAppending) {
         ASSERT_EQ(total, OneMegabyte);
     }
 
-    auto verified = helper.verify_file(layout, file_data_fk);
+    auto verified = helper.verify_file(layout, data_file);
     ASSERT_EQ(OneMegabyte * 2, verified);
 }
 
 TEST_F(PreallocatedSuite, SeekingEndCalculatesFileSize) {
-    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
-    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Append,  0   };
-
-    static FileDescriptor* files[] = {
-        &file_system_area_fd,
-        &file_data_fk
-    };
-
-    FileLayout<2> layout{ storage_ };
+    FileDescriptor data_file = { "data.fk", 0 };
+    static FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
 
     constexpr uint64_t OneMegabyte = 1024 * 1024;
-    auto file = layout.open(file_data_fk, OpenMode::Write);
+    auto file = layout.open(data_file, OpenMode::Write);
     ASSERT_EQ(file.size(), (uint64_t)0);
     PatternHelper helper;
     auto total = helper.write(file, (int32_t)OneMegabyte / helper.size());
@@ -223,7 +189,7 @@ TEST_F(PreallocatedSuite, SeekingEndCalculatesFileSize) {
     ASSERT_EQ(file.size(), OneMegabyte);
     ASSERT_EQ(total, OneMegabyte);
 
-    auto reading = layout.open(file_data_fk);
+    auto reading = layout.open(data_file);
     ASSERT_EQ(reading.size(), (uint64_t)OneMegabyte);
     reading.seek(0);
     auto verified = helper.read(reading);
@@ -232,20 +198,14 @@ TEST_F(PreallocatedSuite, SeekingEndCalculatesFileSize) {
     ASSERT_EQ(verified, OneMegabyte);
 }
 
-TEST_F(PreallocatedSuite, SeekingToFileWithUnwrittenTailBlock) {
-    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
-    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Append,  0   };
-
-    static FileDescriptor* files[] = {
-        &file_system_area_fd,
-        &file_data_fk
-    };
-
-    FileLayout<2> layout{ storage_ };
+TEST_F(PreallocatedSuite, SeekingInFileWithUnwrittenTailBlock) {
+    FileDescriptor data_file = { "data.fk", 0 };
+    static FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
 
-    auto file = layout.open(file_data_fk, OpenMode::Write);
+    auto file = layout.open(data_file, OpenMode::Write);
     PatternHelper helper;
     while (true) {
         helper.write(file, 1);
@@ -258,25 +218,19 @@ TEST_F(PreallocatedSuite, SeekingToFileWithUnwrittenTailBlock) {
     }
     file.close();
 
-    auto reading = layout.open(file_data_fk);
+    auto reading = layout.open(data_file);
     reading.seek(UINT64_MAX);
 }
 
 TEST_F(PreallocatedSuite, SeekMiddleOfFile) {
-    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
-    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Append,  0   };
-
-    static FileDescriptor* files[] = {
-        &file_system_area_fd,
-        &file_data_fk
-    };
-
-    FileLayout<2> layout{ storage_ };
+    FileDescriptor data_file = { "data.fk", 0 };
+    static FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
 
     constexpr uint64_t OneMegabyte = 1024 * 1024;
-    auto file = layout.open(file_data_fk, OpenMode::Write);
+    auto file = layout.open(data_file, OpenMode::Write);
     ASSERT_EQ(file.size(), (uint64_t)0);
     PatternHelper helper;
     auto total = helper.write(file, (int32_t)OneMegabyte / helper.size());
@@ -286,7 +240,7 @@ TEST_F(PreallocatedSuite, SeekMiddleOfFile) {
     ASSERT_EQ(total, OneMegabyte);
 
     auto middle_on_pattern_edge = ((OneMegabyte / 2) / helper.size()) * helper.size();
-    auto reading = layout.open(file_data_fk);
+    auto reading = layout.open(data_file);
     ASSERT_EQ(reading.size(), (uint64_t)OneMegabyte);
     ASSERT_TRUE(reading.seek(middle_on_pattern_edge));
     ASSERT_EQ(reading.tell(), middle_on_pattern_edge);
@@ -296,112 +250,28 @@ TEST_F(PreallocatedSuite, SeekMiddleOfFile) {
     ASSERT_EQ(verified, OneMegabyte / 2);
 }
 
-TEST_F(PreallocatedSuite, RollingWriteStrategyOneRollover) {
-    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
-    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Rolling, 100 };
-
-    static FileDescriptor* files[] = {
-        &file_system_area_fd,
-        &file_data_fk
-    };
-
-    FileLayout<2> layout{ storage_ };
-
-    ASSERT_TRUE(layout.format(files));
-
-    auto file = layout.open(file_data_fk, OpenMode::Write);
-    PatternHelper helper;
-    auto total = helper.write(file, ((file.maximum_size() + 4096) / helper.size()));
-
-    file.close();
-
-    ASSERT_EQ(total, helper.bytes_written());
-
-    auto skip = helper.size() - (file.truncated() - (file.truncated() / helper.size()) * helper.size());
-    auto verified = helper.verify_file(layout, file_data_fk, skip);
-    ASSERT_EQ(file.size(), verified + skip);
-}
-
-TEST_F(PreallocatedSuite, RollingWriteStrategyTwoRollovers) {
-    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
-    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Rolling, 100 };
-
-    static FileDescriptor* files[] = {
-        &file_system_area_fd,
-        &file_data_fk
-    };
-
-    FileLayout<2> layout{ storage_ };
-
-    ASSERT_TRUE(layout.format(files));
-
-    auto file = layout.open(file_data_fk, OpenMode::Write);
-
-    PatternHelper helper;
-    auto total = helper.write(file, ((file.maximum_size() * 2 + 4096) / helper.size()));
-
-    file.close();
-
-    ASSERT_EQ(total, helper.bytes_written());
-
-    auto skip = helper.size() - (file.truncated() - (file.truncated() / helper.size()) * helper.size());
-    auto verified = helper.verify_file(layout, file_data_fk, skip);
-    ASSERT_EQ(file.size(), verified + skip);
-}
-
-TEST_F(PreallocatedSuite, RollingWriteStrategyIndexWraparound) {
-    FileDescriptor file_system_area_fd =   { "system",  WriteStrategy::Append,  100 };
-    FileDescriptor file_data_fk =          { "data.fk", WriteStrategy::Rolling, 100 };
-
-    static FileDescriptor* files[] = {
-        &file_system_area_fd,
-        &file_data_fk
-    };
-
-    FileLayout<2> layout{ storage_ };
-
-    ASSERT_TRUE(layout.format(files));
-
-    auto file = layout.open(file_data_fk, OpenMode::Write);
-
-    PatternHelper helper;
-    auto total = helper.write(file, ((file.maximum_size() * 40) / helper.size()));
-
-    file.close();
-
-    ASSERT_EQ(total, helper.bytes_written());
-
-    auto skip = helper.size() - (file.truncated() - (file.truncated() / helper.size()) * helper.size());
-    auto verified = helper.verify_file(layout, file_data_fk, skip);
-    ASSERT_EQ(file.size(), verified + skip);
-}
-
 struct TestStruct {
     uint32_t time;
     uint64_t position;
 };
 
 TEST_F(PreallocatedSuite, WriteAFewBlocksAndReadLastBlock) {
-    FileDescriptor file_log_startup_fd = { "startup.log", WriteStrategy::Append, 100 };
-
-    static FileDescriptor* files[] = {
-        &file_log_startup_fd,
-    };
-
+    FileDescriptor data_file = { "data.fk", 100 };
+    static FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
 
     for (uint32_t i = 0; i < 4; ++i) {
         TestStruct test = { i, i };
-        auto writing = layout.open(file_log_startup_fd, OpenMode::Write);
+        auto writing = layout.open(data_file, OpenMode::Write);
         writing.write((uint8_t *)&test, sizeof(TestStruct));
         ASSERT_EQ(sizeof(TestStruct) * (i + 1), writing.size());
         writing.close();
     }
 
     TestStruct test = { 0, 0 };
-    auto reading = layout.open(file_log_startup_fd, OpenMode::Read);
+    auto reading = layout.open(data_file, OpenMode::Read);
 
     reading.seek(sizeof(TestStruct) * 3);
     ASSERT_EQ(sizeof(TestStruct) * 3, reading.tell());
@@ -410,32 +280,9 @@ TEST_F(PreallocatedSuite, WriteAFewBlocksAndReadLastBlock) {
     reading.close();
 }
 
-template<typename Predicate>
-inline static int32_t undo_everything_after(LinuxMemoryBackend &storage, Predicate predicate, bool log = false) {
-    auto c = 0;
-    auto seen = false;
-    for (auto &l : storage.log().entries()) {
-        if (predicate(l)) {
-            seen = true;
-        }
-        if (seen && l.can_undo()) {
-            if (log) {
-                sdebug() << "Undo: " << l << endl;
-            }
-            l.undo();
-            c++;
-        }
-    }
-    return c;
-}
-
 TEST_F(PreallocatedSuite, ResilienceIndexWriteFails) {
-    FileDescriptor file_log_startup_fd = { "startup.log", WriteStrategy::Append, 100 };
-
-    static FileDescriptor* files[] = {
-        &file_log_startup_fd,
-    };
-
+    FileDescriptor data_file = { "data.fk", 100 };
+    static FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
@@ -444,7 +291,7 @@ TEST_F(PreallocatedSuite, ResilienceIndexWriteFails) {
     // Makes finding the mid file index write easier, drops the initial format from the log.
     storage_.log().clear();
 
-    auto file = layout.open(file_log_startup_fd, OpenMode::Write);
+    auto file = layout.open(data_file, OpenMode::Write);
     ASSERT_TRUE(file);
 
     PatternHelper helper;
@@ -462,10 +309,10 @@ TEST_F(PreallocatedSuite, ResilienceIndexWriteFails) {
 
     ASSERT_GT(undo_everything_after(storage_, f), 1);
 
-    auto verified = helper.verify_file(layout, file_log_startup_fd);
+    auto verified = helper.verify_file(layout, data_file);
     ASSERT_EQ((uint32_t)61120, verified);
 
-    file = layout.open(file_log_startup_fd, OpenMode::Write);
+    file = layout.open(data_file, OpenMode::Write);
     helper.write(file, (70 * 1024 - 61120) / helper.size());
     file.close();
 
@@ -477,45 +324,3 @@ TEST_F(PreallocatedSuite, ResilienceIndexWriteFails) {
     // write. Which, I don't think is a huge deal.
 }
 
-TEST_F(PreallocatedSuite, DISABLED_ResilienceReindexWriteFails) {
-    FileDescriptor file_log_startup_fd = { "startup.log", WriteStrategy::Rolling, 100 };
-
-    static FileDescriptor* files[] = {
-        &file_log_startup_fd,
-    };
-
-    FileLayout<1> layout{ storage_ };
-
-    ASSERT_TRUE(layout.format(files));
-
-    // storage_.log().logging(true);
-
-    storage_.log().copy_on_write(true);
-    // Makes finding the mid file index write easier, drops the initial format from the log.
-    storage_.log().clear();
-
-    {
-        auto file = layout.open(file_log_startup_fd, OpenMode::Write);
-        PatternHelper helper;
-        helper.write(file, (110 * 1024) / helper.size());
-        file.close();
-
-        auto f = [&](LogEntry &e) -> bool {
-                    if (e.type() == OperationType::Write) {
-                        auto block = file.allocation().index.start;
-                        BlockAddress reindex_entry{ block, 96 + SectorSize };
-                        if (e.address() == reindex_entry) {
-                            return true;
-                        }
-                    }
-                    return false;
-        };
-
-        ASSERT_GT(undo_everything_after(storage_, f, true), 1);
-    }
-
-    {
-        auto file = layout.open(file_log_startup_fd, OpenMode::Write);
-        ASSERT_EQ(file.size(), file.maximum_size());
-    }
-}

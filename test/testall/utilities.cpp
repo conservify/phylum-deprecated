@@ -101,8 +101,10 @@ int32_t BlockHelper::number_of_blocks(BlockType type, block_index_t first, block
         storage_->read(head_addr, &head, sizeof(BlockHead));
         storage_->read(tail_addr, &tail, sizeof(BlockTail));
 
-        if (head.type == type) {
-            c++;
+        if (head.valid()) {
+            if (head.type == type) {
+                c++;
+            }
         }
     }
 

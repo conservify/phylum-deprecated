@@ -34,7 +34,8 @@ bool LinuxMemoryBackend::open() {
 
     // TODO: This helps make tests more deterministic. To simulate garbage in a
     // test, do so explicitly.
-    memset(ptr_, EraseByte, geometry_.block_size());
+    // memset(ptr_, EraseByte, size_);
+    randomize();
 
     log_.logging(false);
     log_.append(LogEntry{ OperationType::Opened, ptr_ });

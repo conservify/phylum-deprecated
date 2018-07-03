@@ -22,6 +22,11 @@ std::map<uint64_t, uint64_t> random_data();
 
 namespace phylum {
 
+template<typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args&&... args) {
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
 class BlockHelper {
 private:
     struct BlockInfo {
@@ -47,6 +52,14 @@ public:
     int32_t number_of_chains(BlockType type, block_index_t first = 0, block_index_t last = BLOCK_INDEX_INVALID);
 
     int32_t number_of_blocks(BlockType type, block_index_t first = 0, block_index_t last = BLOCK_INDEX_INVALID);
+
+    template<typename T>
+    std::unique_ptr<T> get_block(block_index_t block) {
+        std::unique_ptr<T> p = make_unique<T>();
+        assert(storage_->read({ block, 0 }, p.get(), sizeof(T)));
+        return p;
+    }
+
 };
 
 class DataHelper {
@@ -171,6 +184,25 @@ inline static size_t undo_back_to(LinuxMemoryBackend &storage, OperationType typ
             if (l.type() == type) {
                 break;
             }
+        }
+    }
+    return c;
+}
+
+template<typename Predicate>
+inline static int32_t undo_everything_after(LinuxMemoryBackend &storage, Predicate predicate, bool log = false) {
+    auto c = 0;
+    auto seen = false;
+    for (auto &l : storage.log().entries()) {
+        if (predicate(l)) {
+            seen = true;
+        }
+        if (seen && l.can_undo()) {
+            if (log) {
+                sdebug() << "Undo: " << l << endl;
+            }
+            l.undo();
+            c++;
         }
     }
     return c;

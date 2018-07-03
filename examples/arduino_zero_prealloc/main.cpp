@@ -123,11 +123,11 @@ void setup() {
 
     sdebug() << "Initialize FS" << endl;
 
-    FileDescriptor file_system_area_fd =   { "system",        WriteStrategy::Append,  100 };
-    FileDescriptor file_log_startup_fd =   { "startup.log",   WriteStrategy::Append,  100 };
-    FileDescriptor file_log_now_fd =       { "now.log",       WriteStrategy::Rolling, 100 };
-    FileDescriptor file_log_emergency_fd = { "emergency.log", WriteStrategy::Append,  100 };
-    FileDescriptor file_data_fk =          { "data.fk",       WriteStrategy::Append,  0   };
+    FileDescriptor file_system_area_fd =   { "system",        100 };
+    FileDescriptor file_log_startup_fd =   { "startup.log",   100 };
+    FileDescriptor file_log_now_fd =       { "now.log",       100 };
+    FileDescriptor file_log_emergency_fd = { "emergency.log", 100 };
+    FileDescriptor file_data_fk =          { "data.fk",       0   };
 
     static FileDescriptor* files[] = {
         &file_system_area_fd,
