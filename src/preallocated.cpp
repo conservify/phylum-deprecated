@@ -28,9 +28,9 @@ static T *tail_info(uint8_t(&buffer)[N]) {
     return reinterpret_cast<T*>(buffer + tail_offset);
 }
 
-bool SimpleFile::seek(uint64_t position) {
+bool SimpleFile::seek(uint64_t desired) {
     IndexRecord end;
-    if (!index().seek(position, end)) {
+    if (!index().seek(desired, end)) {
         return false;
     }
 
@@ -44,7 +44,7 @@ bool SimpleFile::seek(uint64_t position) {
         return true;
     }
 
-    auto info = seek(head_.block, position - end.position);
+    auto info = seek(head_.block, desired - end.position);
 
     seek_offset_ = info.address.sector_offset(geometry());
     head_ = info.address;
@@ -53,12 +53,13 @@ bool SimpleFile::seek(uint64_t position) {
     blocks_since_save_ = info.blocks;
     bytes_in_block_ = info.bytes_in_block;
     position_ += info.bytes;
-    if (position == UINT64_MAX) {
+    if (desired == UINT64_MAX) {
         length_ = end.position + info.bytes;
     }
 
     #if PHYLUM_DEBUG > 1
-    sdebug() << "Seek: length=" << length_ << " position=" << position << " endp=" << end.position << " info=" << info.bytes << " head=" << head_ << " start=" << file_->data.start << endl;
+    sdebug() << "Seek: length=" << length_ << " position=" << position_ << " desired=" << desired <<
+                " endp=" << end.position << " info=" << info.bytes << " head=" << head_ << " start=" << file_->data.start << endl;
     #endif
 
     return true;

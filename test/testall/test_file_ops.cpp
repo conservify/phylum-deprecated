@@ -308,7 +308,6 @@ TEST_F(FileOpsSuite, Write128BlocksAndSeekToEoF) {
 
     storage_.log().clear();
 
-    storage_.log().logging(true);
     auto reading = fs_.open("test.bin", true);
     ASSERT_EQ(reading.seek(Seek::End), (int32_t)total_writing);
     ASSERT_EQ(storage_.log().size(), 19);

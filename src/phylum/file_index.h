@@ -11,6 +11,7 @@ namespace phylum {
 
 struct IndexBlockHead {
     BlockHead block;
+    uint64_t position;
     uint32_t reserved[4];
 
     IndexBlockHead() : block(BlockType::Index) {
@@ -47,11 +48,9 @@ class FileIndex {
     static constexpr size_t NumberOfRegions = 2;
 
 private:
-    StorageBackend *storage_;
+    StorageBackend *storage_{ nullptr };
     FileAllocation *file_{ nullptr };
-    BlockAddress beginning_;
     BlockAddress head_;
-    BlockAddress end_;
 
 public:
     FileIndex();
@@ -75,11 +74,7 @@ inline ostreamtype& operator<<(ostreamtype& os, const IndexRecord &f) {
 }
 
 inline ostreamtype& operator<<(ostreamtype& os, const FileIndex &e) {
-    return os << "FileIndex<" <<
-        " beginning=" << e.beginning_ <<
-        " end=" << e.end_ <<
-        " head=" << e.head_ <<
-        ">";
+    return os << "FileIndex<head=" << e.head_ << ">";
 }
 
 }

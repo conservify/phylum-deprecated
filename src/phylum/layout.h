@@ -48,7 +48,14 @@ public:
 
     template<typename TEntry>
     bool append(TEntry entry) {
-        auto address = find_available(sizeof(TEntry));
+        THead head(type_);
+        head.fill();
+        return append(entry, head);
+    }
+
+    template<typename TEntry>
+    bool append(TEntry entry, THead &head) {
+        auto address = find_available(sizeof(TEntry), head);
 
         if (!address.valid()) {
             return false;
@@ -130,10 +137,17 @@ public:
     }
 
     BlockAddress find_available(size_t required) {
+        THead head(type_);
+        head.fill();
+        return find_available(required, head);
+    }
+
+    BlockAddress find_available(size_t required, THead head) {
         if (invalid_address() || should_move_to_following_block(required)) {
             assert(type_ != BlockType::Error);
             auto new_block = allocator_.allocate(type_);
-            if (!write_head(new_block, address_.block)) {
+            head.block.linked_block = address_.block;
+            if (!write_head(new_block, head)) {
                 return { };
             }
 

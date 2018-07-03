@@ -248,6 +248,9 @@ TEST_F(PreallocatedSuite, SeekMiddleOfFile) {
     reading.close();
 
     ASSERT_EQ(verified, OneMegabyte / 2);
+
+    ASSERT_TRUE(reading.seek(0));
+    ASSERT_EQ(reading.tell(), (uint64_t)0);
 }
 
 struct TestStruct {
@@ -277,6 +280,9 @@ TEST_F(PreallocatedSuite, WriteAFewBlocksAndReadLastBlock) {
     ASSERT_EQ(sizeof(TestStruct) * 3, reading.tell());
     ASSERT_EQ(reading.read((uint8_t *)&test, sizeof(TestStruct)), (int32_t)sizeof(TestStruct));
     ASSERT_EQ(sizeof(TestStruct) * 4, reading.tell());
+    ASSERT_TRUE(reading.seek(0));
+    ASSERT_EQ(reading.tell(), (uint64_t)0);
+
     reading.close();
 }
 

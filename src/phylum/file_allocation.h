@@ -36,6 +36,22 @@ struct Extent {
     bool operator!=(const Extent &other) const {
         return !(*this == other);
     }
+
+    block_index_t middle_block() const {
+        return start + (nblocks / 2);
+    }
+
+    Extent first_half() const {
+        return { start, (nblocks / 2) };
+    }
+
+    Extent second_half() const {
+        return { start + (nblocks / 2), (nblocks / 2) };
+    }
+
+    bool empty() const {
+        return nblocks == 0;
+    }
 };
 
 struct FileAllocation {
