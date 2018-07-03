@@ -9,7 +9,7 @@ using namespace phylum;
 
 class SuperBlockSuite : public ::testing::Test {
 protected:
-    static constexpr int32_t anchor_overflow_iterations = 15 * 15 * 15 * 15 + 6;
+    static constexpr int32_t anchor_overflow_iterations = 16 * 16 * 16 * 16 + 6;
 
 protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
@@ -82,7 +82,7 @@ TEST_F(SuperBlockSuite, AnchorAreaRollover) {
     ASSERT_TRUE(sbm_.locate());
 
     ASSERT_NE(sbm_.location().block, old.block);
-    ASSERT_EQ(sbm_.location().sector, 7);
+    ASSERT_EQ(sbm_.location().sector, 6);
 }
 
 TEST_F(SuperBlockSuite, AnchorAreaRolloverTwice) {
@@ -97,7 +97,7 @@ TEST_F(SuperBlockSuite, AnchorAreaRolloverTwice) {
     ASSERT_TRUE(sbm_.locate());
 
     ASSERT_NE(sbm_.location().block, old.block);
-    ASSERT_EQ(sbm_.location().sector, 14);
+    ASSERT_EQ(sbm_.location().sector, 12);
 }
 
 class SuperBlockSequentialAllocatorSuite : public ::testing::Test {
@@ -136,4 +136,39 @@ TEST_F(SuperBlockSequentialAllocatorSuite, SaveAndLoadAllocatorState) {
     ASSERT_TRUE(sbm_.locate());
 
     ASSERT_EQ(allocator_.state().head, (block_index_t)9);
+}
+
+TEST_F(SuperBlockSuite, ResilienceSaveInterrupted) {
+    ASSERT_TRUE(sbm_.create());
+
+    for (auto i = 0; i < 5; ++i) {
+        ASSERT_TRUE(sbm_.save());
+    }
+
+    ASSERT_EQ(sbm_.location().sector, 5);
+
+    storage_.log().undo(1);
+
+    ASSERT_TRUE(sbm_.locate());
+
+    ASSERT_EQ(sbm_.location().sector, 4);
+}
+
+TEST_F(SuperBlockSuite, ResilienceBlockRolloverInterrupted) {
+    ASSERT_TRUE(sbm_.create());
+
+    auto old = sbm_.location();
+
+    storage_.log().copy_on_write(true);
+
+    for (auto i = 0; i < 18; ++i) {
+        ASSERT_TRUE(sbm_.save());
+    }
+
+    undo_back_to(storage_, OperationType::EraseBlock);
+
+    ASSERT_TRUE(sbm_.locate());
+
+    ASSERT_EQ(sbm_.location().block, old.block);
+    ASSERT_EQ(sbm_.location().sector, 15);
 }

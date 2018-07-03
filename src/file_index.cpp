@@ -62,9 +62,15 @@ bool FileIndex::initialize() {
     auto caching = SectorCachingStorage{ *storage_ };
     auto layout = get_index_layout(caching, { file_->index.start, 0 });
     auto skipped = false;
+    auto expected_entries = 0;
+    auto entries = 0;
 
     version_ = INVALID_VERSION;
     beginning_ = layout.address();
+
+    #if PHYLUM_DEBUG > 1
+    sdebug() << "Initializing: " << *this << endl;
+    #endif
 
     IndexRecord record;
     while (layout.walk<IndexRecord>(record)) {
@@ -84,12 +90,24 @@ bool FileIndex::initialize() {
                     continue;
                 }
                 beginning_ = layout.address();
+                entries_ = 1;
+                entries = 1;
             }
             version_ = record.version;
         }
         else if (version_ == record.version) {
             end_ = layout.address();
+            entries_++;
+            entries++;
         }
+
+        if (entries > expected_entries) {
+            expected_entries = entries;
+        }
+    }
+
+    if (entries != expected_entries) {
+        assert(entries < expected_entries);
     }
 
     head_ = layout.address();
@@ -179,7 +197,7 @@ FileIndex::ReindexInfo FileIndex::reindex(uint64_t length, BlockAddress new_end)
 
     #ifdef PHYLUM_DEBUG
     sdebug() << "Reindex: version=" << version_ << " " << reading.address() << " -> " << writing.address() <<
-        " length = " << length << " end = " << new_end << endl;
+        " length-before = " << length << " new-end = " << new_end << " entries = " << entries_ << endl;
     #endif
 
     uint64_t offset = 0;

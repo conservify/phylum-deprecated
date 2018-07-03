@@ -339,7 +339,7 @@ int32_t SimpleFile::flush() {
             // Every N blocks we save our offset in the tree. This affects how much
             // seeking needs to happen when, seeking.
             blocks_since_save_++;
-            if (blocks_since_save_ == IndexFrequency) {
+            if (blocks_since_save_ >= IndexFrequency) {
                 if (!index(head_)) {
                     return 0;
                 }

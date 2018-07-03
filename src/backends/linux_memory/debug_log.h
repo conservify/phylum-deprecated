@@ -46,10 +46,7 @@ public:
     }
 
     virtual ~LogEntry() {
-        if (copy_ != nullptr) {
-            free(copy_);
-            copy_ = nullptr;
-        }
+        free_backup();
     }
 
 public:
@@ -57,21 +54,22 @@ public:
         return type_;
     }
 
-    void backup() {
-        assert(copy_ == nullptr);
-
-        if (ptr_ != nullptr) {
-            copy_ = (uint8_t *)malloc(size_);
-            memcpy(copy_, ptr_, size_);
-        }
+    BlockAddress address() {
+        return address_;
     }
 
-    void undo() {
-        assert(copy_ != nullptr);
+    bool for_block(block_index_t block) {
+        return address_.block == block;
+    }
 
-        if (ptr_ != nullptr) {
-            memcpy(ptr_, copy_, size_);
-        }
+    void backup();
+
+    void undo();
+
+    void free_backup();
+
+    bool can_undo() {
+        return type_ == OperationType::Write || type_ == OperationType::EraseBlock;
     }
 
 public:
@@ -82,11 +80,13 @@ public:
 class StorageLog {
 private:
     bool copy_on_write_{ false };
-    std::list<LogEntry> entries_;
     bool logging_{ false };
+    std::list<LogEntry> entries_;
 
 public:
     void append(LogEntry &&entry);
+
+    void undo(size_t number);
 
     void logging(bool logging) {
         logging_ = logging;
@@ -102,6 +102,10 @@ public:
 
     void copy_on_write(bool enabled) {
         copy_on_write_ = enabled;
+    }
+
+    std::list<LogEntry> &entries() {
+        return entries_;
     }
 
 public:

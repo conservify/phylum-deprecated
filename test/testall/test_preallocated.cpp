@@ -382,7 +382,7 @@ struct TestStruct {
 };
 
 TEST_F(PreallocatedSuite, WriteAFewBlocksAndReadLastBlock) {
-    FileDescriptor file_log_startup_fd = { "startup.log", WriteStrategy::Append,  100 };
+    FileDescriptor file_log_startup_fd = { "startup.log", WriteStrategy::Append, 100 };
 
     static FileDescriptor* files[] = {
         &file_log_startup_fd,
@@ -410,3 +410,112 @@ TEST_F(PreallocatedSuite, WriteAFewBlocksAndReadLastBlock) {
     reading.close();
 }
 
+template<typename Predicate>
+inline static int32_t undo_everything_after(LinuxMemoryBackend &storage, Predicate predicate, bool log = false) {
+    auto c = 0;
+    auto seen = false;
+    for (auto &l : storage.log().entries()) {
+        if (predicate(l)) {
+            seen = true;
+        }
+        if (seen && l.can_undo()) {
+            if (log) {
+                sdebug() << "Undo: " << l << endl;
+            }
+            l.undo();
+            c++;
+        }
+    }
+    return c;
+}
+
+TEST_F(PreallocatedSuite, ResilienceIndexWriteFails) {
+    FileDescriptor file_log_startup_fd = { "startup.log", WriteStrategy::Append, 100 };
+
+    static FileDescriptor* files[] = {
+        &file_log_startup_fd,
+    };
+
+    FileLayout<1> layout{ storage_ };
+
+    ASSERT_TRUE(layout.format(files));
+
+    storage_.log().copy_on_write(true);
+    // Makes finding the mid file index write easier, drops the initial format from the log.
+    storage_.log().clear();
+
+    auto file = layout.open(file_log_startup_fd, OpenMode::Write);
+    ASSERT_TRUE(file);
+
+    PatternHelper helper;
+    helper.write(file, (70 * 1024) / helper.size());
+    file.close();
+
+    auto f = [&](LogEntry &e) -> bool {
+                 if (e.type() == OperationType::Write) {
+                     if (e.for_block(file.allocation().index.start)) {
+                         return true;
+                     }
+                 }
+                 return false;
+    };
+
+    ASSERT_GT(undo_everything_after(storage_, f), 1);
+
+    auto verified = helper.verify_file(layout, file_log_startup_fd);
+    ASSERT_EQ((uint32_t)61120, verified);
+
+    file = layout.open(file_log_startup_fd, OpenMode::Write);
+    helper.write(file, (70 * 1024 - 61120) / helper.size());
+    file.close();
+
+    // This is a little larger than 70 * 1024 because the file was truncated in
+    // the middle of a pattern, so it's 64 bytes more.
+    ASSERT_EQ((uint32_t)(71616), file.size());
+
+    // This will yield an index record on the block after the one we failed to
+    // write. Which, I don't think is a huge deal.
+}
+
+TEST_F(PreallocatedSuite, DISABLED_ResilienceReindexWriteFails) {
+    FileDescriptor file_log_startup_fd = { "startup.log", WriteStrategy::Rolling, 100 };
+
+    static FileDescriptor* files[] = {
+        &file_log_startup_fd,
+    };
+
+    FileLayout<1> layout{ storage_ };
+
+    ASSERT_TRUE(layout.format(files));
+
+    // storage_.log().logging(true);
+
+    storage_.log().copy_on_write(true);
+    // Makes finding the mid file index write easier, drops the initial format from the log.
+    storage_.log().clear();
+
+    {
+        auto file = layout.open(file_log_startup_fd, OpenMode::Write);
+        PatternHelper helper;
+        helper.write(file, (110 * 1024) / helper.size());
+        file.close();
+
+        auto f = [&](LogEntry &e) -> bool {
+                    if (e.type() == OperationType::Write) {
+                        auto block = file.allocation().index.start;
+                        BlockAddress reindex_entry{ block, 96 + SectorSize };
+                        if (e.address() == reindex_entry) {
+                            return true;
+                        }
+                    }
+                    return false;
+        };
+
+        ASSERT_GT(undo_everything_after(storage_, f, true), 1);
+    }
+
+    {
+        auto file = layout.open(file_log_startup_fd, OpenMode::Write);
+        ASSERT_EQ(file.size(), file.maximum_size());
+    }
+}

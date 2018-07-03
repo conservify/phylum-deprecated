@@ -26,6 +26,8 @@ set(PROJECT_INCLUDES
 
 # find_package(PNG REQUIRED)
 
+# add_definitions("-DPHYLUM_DEBUG=3")
+
 add_executable(testall ${SRCS})
 target_include_directories(testall PUBLIC "${PROJECT_INCLUDES}")
 target_compile_options(testall PUBLIC -Wall -pedantic)

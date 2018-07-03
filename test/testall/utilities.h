@@ -16,6 +16,7 @@
 #include <phylum/block_alloc.h>
 #include <phylum/file_system.h>
 #include <phylum/preallocated.h>
+#include <backends/linux_memory/linux_memory.h>
 
 std::map<uint64_t, uint64_t> random_data();
 
@@ -144,6 +145,36 @@ public:
     }
 
 };
+
+template <typename T>
+class iterate_backwards {
+public:
+    explicit iterate_backwards(T &t) : t(t) {}
+    typename T::reverse_iterator begin() { return t.rbegin(); }
+    typename T::reverse_iterator end()   { return t.rend(); }
+
+private:
+    T &t;
+};
+
+template<typename T>
+iterate_backwards<T> backwards(T &t) {
+    return iterate_backwards<T>(t);
+}
+
+inline static size_t undo_back_to(LinuxMemoryBackend &storage, OperationType type) {
+    size_t c = 0;
+    for (auto &l : backwards(storage.log().entries())) {
+        if (l.can_undo()) {
+            l.undo();
+            c++;
+            if (l.type() == type) {
+                break;
+            }
+        }
+    }
+    return c;
+}
 
 }
 

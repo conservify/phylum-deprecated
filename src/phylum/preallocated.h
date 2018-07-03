@@ -64,6 +64,10 @@ public:
 
     BlockAddress head() const;
 
+    FileAllocation &allocation() const {
+        return *file_;
+    }
+
     FileIndex &index();
 
 public:

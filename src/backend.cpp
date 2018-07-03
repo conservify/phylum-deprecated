@@ -9,17 +9,17 @@ bool SectorCachingStorage::read(BlockAddress addr, void *d, size_t n) {
     auto sector = addr.sector(geometry());
     auto offset = addr.sector_offset(geometry());
     if (sector_ != sector) {
+        #if PHYLUM_DEBUG > 3
+        sdebug() << "SectorCache: MISS " << addr << endl;
+        #endif
         if (!target.read({ sector, 0 }, buffer_, SectorSize)) {
             return false;
         }
         sector_ = sector;
-        #if PHYLUM_DEBUG > 3
-        sdebug() << "SectorCache: MISS " << sector << endl;
-        #endif
     }
     else {
-        #if PHYLUM_DEBUG > 3
-        sdebug() << "SectorCache: HIT " << sector << endl;
+        #if PHYLUM_DEBUG >= 3
+        sdebug() << "SectorCache: HIT " << addr << endl;
         #endif
     }
 

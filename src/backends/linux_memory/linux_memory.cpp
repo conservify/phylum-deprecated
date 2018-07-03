@@ -102,9 +102,11 @@ bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
 
     auto p = ptr_ + o;
     verify_erased(addr, p, n);
-    memcpy(p, d, n);
 
+    // Do this before the memcpy so that a backup can be made.
     log_.append(LogEntry{ OperationType::Write, addr, p, n });
+
+    memcpy(p, d, n);
 
     return true;
 }
