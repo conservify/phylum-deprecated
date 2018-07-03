@@ -31,7 +31,13 @@ get_index_layout(StorageBackend &storage, BlockAllocator &allocator, BlockAddres
 
 static inline BlockLayout<IndexBlockHead, IndexBlockTail>
 get_index_layout(StorageBackend &storage, BlockAddress address) {
-    return get_index_layout(storage, empty_allocator, address);
+        return get_index_layout(storage, empty_allocator, address);
+}
+
+FileIndex::FileIndex() {
+}
+
+FileIndex::FileIndex(StorageBackend *storage, FileAllocation *file) : storage_(storage), file_(file) {
 }
 
 bool FileIndex::format() {

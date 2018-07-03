@@ -52,11 +52,8 @@ private:
     uint32_t entries_{ 0 };
 
 public:
-    FileIndex() {
-    }
-
-    FileIndex(StorageBackend *storage, FileAllocation *file) : storage_(storage), file_(file) {
-    }
+    FileIndex();
+    FileIndex(StorageBackend *storage, FileAllocation *file);
 
     friend ostreamtype& operator<<(ostreamtype& os, const FileIndex &e);
 
