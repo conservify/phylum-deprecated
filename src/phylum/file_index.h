@@ -11,6 +11,7 @@ namespace phylum {
 
 struct IndexBlockHead {
     BlockHead block;
+    uint32_t reserved[4];
 
     IndexBlockHead() : block(BlockType::Index) {
     }
@@ -30,6 +31,7 @@ struct IndexBlockHead {
 struct IndexRecord {
     uint64_t position;
     BlockAddress address;
+    uint32_t reserved[4];
 
     bool valid() {
         return address.valid() && !address.zero();
@@ -38,6 +40,7 @@ struct IndexRecord {
 
 struct IndexBlockTail {
     BlockTail block;
+    uint32_t reserved[4];
 };
 
 class FileIndex {

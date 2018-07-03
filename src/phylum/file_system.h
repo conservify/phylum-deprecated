@@ -17,6 +17,8 @@ class FileSystem;
 struct FileBlockHead {
     BlockHead block;
     file_id_t file_id{ FILE_ID_INVALID };
+    uint64_t position{ 0 }; // NOTE: Unused for now.
+    uint32_t reserved[4];   // NOTE: Unused for now.
 
     FileBlockHead() : block(BlockType::File) {
     }
@@ -39,6 +41,8 @@ struct FileSectorTail {
 struct FileBlockTail {
     FileSectorTail sector;
     uint32_t bytes_in_block{ 0 };
+    uint64_t position{ 0 }; // NOTE: Unused for now.
+    uint32_t reserved[4];   // NOTE: Unused for now.
     BlockTail block;
 };
 

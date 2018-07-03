@@ -310,15 +310,15 @@ TEST_F(PreallocatedSuite, ResilienceIndexWriteFails) {
     ASSERT_GT(undo_everything_after(storage_, f), 1);
 
     auto verified = helper.verify_file(layout, data_file);
-    ASSERT_EQ((uint32_t)61120, verified);
+    ASSERT_EQ((uint32_t)60896, verified);
 
     file = layout.open(data_file, OpenMode::Write);
-    helper.write(file, (70 * 1024 - 61120) / helper.size());
+    helper.write(file, (70 * 1024 - 60896) / helper.size());
     file.close();
 
     // This is a little larger than 70 * 1024 because the file was truncated in
     // the middle of a pattern, so it's 64 bytes more.
-    ASSERT_EQ((uint32_t)(71616), file.size());
+    ASSERT_EQ((uint32_t)(71648), file.size());
 
     // This will yield an index record on the block after the one we failed to
     // write. Which, I don't think is a huge deal.

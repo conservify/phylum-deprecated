@@ -60,5 +60,9 @@ TEST_F(FileIndexSuite, LargeIndex) {
         addr.add(1024);
     }
 
-    ASSERT_EQ(helper.number_of_blocks(BlockType::Index, 0, blocks_required - 1), 2190);
+    sdebug() << index << endl;
+
+    ASSERT_EQ(helper.number_of_blocks(BlockType::Index, 0, blocks_required - 1), 4388);
+
+    ASSERT_TRUE(index.initialize());
 }
