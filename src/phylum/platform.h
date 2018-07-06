@@ -5,14 +5,14 @@
 #include <cstdlib>
 #include <cstdarg>
 #include <cstdio>
-#include <cstring>
 
 #ifdef ARDUINO
 #include <Arduino.h>
 #undef min
 #undef max
 #else
-#include <iostream>
+#undef min
+#undef max
 #include <string>
 #include <ostream>
 #endif
