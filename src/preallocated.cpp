@@ -367,6 +367,10 @@ bool SimpleFile::initialize() {
     return true;
 }
 
+bool SimpleFile::erase() {
+    return format();
+}
+
 bool SimpleFile::format() {
     if (!index_.format()) {
         return false;

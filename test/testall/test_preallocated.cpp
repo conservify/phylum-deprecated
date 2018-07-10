@@ -84,6 +84,34 @@ TEST_F(PreallocatedSuite, WritingSmallFileToItsEnd) {
     ASSERT_EQ(total, verified);
 }
 
+TEST_F(PreallocatedSuite, WritingAndThenErasing) {
+    FileDescriptor data_file = { "data.fk", 100 };
+    static FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
+
+    ASSERT_TRUE(layout.format(files));
+
+    auto file = layout.open(data_file, OpenMode::Write);
+    ASSERT_TRUE(file);
+
+    PatternHelper helper;
+    auto total = helper.write(file, (1024 * 1024) / helper.size());
+    ASSERT_EQ(file.size(), file.maximum_size());
+    file.close();
+
+    ASSERT_EQ(total, file.maximum_size());
+
+    auto verified = helper.verify_file(layout, data_file);
+    ASSERT_EQ(total, verified);
+
+    ASSERT_TRUE(layout.erase(data_file));
+
+    auto file2 = layout.open(data_file, OpenMode::Write);
+    ASSERT_TRUE(file2);
+    ASSERT_EQ(file2.size(), (uint64_t)0);
+    ASSERT_EQ(file2.tell(), (uint64_t)0);
+}
+
 TEST_F(PreallocatedSuite, WriteBlockInTwoSeparateOpensWritesCorrectBytesInBlock) {
     FileDescriptor data_file = { "data.fk", 100 };
     static FileDescriptor* files[] = { &data_file };

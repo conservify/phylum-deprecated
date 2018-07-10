@@ -79,6 +79,8 @@ public:
 
     int32_t flush();
 
+    bool erase();
+
     void close() {
         flush();
     }
@@ -139,6 +141,7 @@ class FileOpener {
 public:
     virtual uint64_t file_size(FileDescriptor &fd) = 0;
     virtual SimpleFile open(FileDescriptor &fd, OpenMode mode) = 0;
+    virtual bool erase(FileDescriptor &fd) = 0;
 
 };
 
@@ -244,6 +247,16 @@ public:
             }
         }
         return SimpleFile{ nullptr, nullptr, nullptr, OpenMode::Read };
+    }
+
+    virtual bool erase(FileDescriptor &fd) override {
+        for (size_t i = 0; i < SIZE; ++i) {
+            if (fds_[i] == &fd) {
+                auto file = SimpleFile{ storage_, fds_[i], &allocations_[i], OpenMode::Write };
+                return file.erase();
+            }
+        }
+        return true;
     }
 
 private:
