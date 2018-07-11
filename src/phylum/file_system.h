@@ -17,6 +17,7 @@ class FileSystem;
 struct FileBlockHead {
     BlockHead block;
     file_id_t file_id{ FILE_ID_INVALID };
+    uint32_t version{ 0 };
     uint64_t position{ 0 }; // NOTE: Unused for now.
     uint32_t reserved[4];   // NOTE: Unused for now.
 

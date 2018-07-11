@@ -74,6 +74,8 @@ TEST_F(PreallocatedSuite, WritingSmallFileToItsEnd) {
     auto file = layout.open(data_file, OpenMode::Write);
     ASSERT_TRUE(file);
 
+    ASSERT_EQ(file.version(), (uint32_t)1);
+
     PatternHelper helper;
     auto total = helper.write(file, (1024 * 1024) / helper.size());
     file.close();
@@ -99,7 +101,8 @@ TEST_F(PreallocatedSuite, WritingAndThenErasing) {
     ASSERT_EQ(file.size(), file.maximum_size());
     file.close();
 
-    ASSERT_EQ(total, file.maximum_size());
+    ASSERT_EQ(file.maximum_size(), total);
+    ASSERT_EQ(file.version(), (uint32_t)1);
 
     auto verified = helper.verify_file(layout, data_file);
     ASSERT_EQ(total, verified);
@@ -108,8 +111,58 @@ TEST_F(PreallocatedSuite, WritingAndThenErasing) {
 
     auto file2 = layout.open(data_file, OpenMode::Write);
     ASSERT_TRUE(file2);
+    ASSERT_EQ(file2.version(), (uint32_t)2);
     ASSERT_EQ(file2.size(), (uint64_t)0);
     ASSERT_EQ(file2.tell(), (uint64_t)0);
+}
+
+TEST_F(PreallocatedSuite, ErasingTwice) {
+    FileDescriptor data_file = { "data.fk", 100 };
+    static FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
+    PatternHelper helper;
+
+    ASSERT_TRUE(layout.format(files));
+
+    auto file1 = layout.open(data_file, OpenMode::Write);
+    helper.write(file1, 1024 / helper.size());
+    ASSERT_EQ(file1.version(), (uint32_t)1);
+    file1.close();
+
+    ASSERT_TRUE(layout.erase(data_file));
+
+    auto file2 = layout.open(data_file, OpenMode::Write);
+    helper.write(file2, 1024 / helper.size());
+    ASSERT_EQ(file2.version(), (uint32_t)2);
+    file2.close();
+
+    ASSERT_TRUE(layout.erase(data_file));
+
+    auto file3 = layout.open(data_file, OpenMode::Write);
+    helper.write(file3, 1024 / helper.size());
+    ASSERT_EQ(file3.version(), (uint32_t)3);
+    file3.close();
+}
+
+TEST_F(PreallocatedSuite, FormattingLeavesVersions) {
+    FileDescriptor data_file = { "data.fk", 100 };
+    static FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
+    PatternHelper helper;
+
+    ASSERT_TRUE(layout.format(files));
+
+    auto file1 = layout.open(data_file, OpenMode::Write);
+    helper.write(file1, 1024 / helper.size());
+    ASSERT_EQ(file1.version(), (uint32_t)1);
+    file1.close();
+
+    ASSERT_TRUE(layout.format(files));
+
+    auto file2 = layout.open(data_file, OpenMode::Write);
+    helper.write(file2, 1024 / helper.size());
+    ASSERT_EQ(file2.version(), (uint32_t)1);
+    file2.close();
 }
 
 TEST_F(PreallocatedSuite, WriteBlockInTwoSeparateOpensWritesCorrectBytesInBlock) {

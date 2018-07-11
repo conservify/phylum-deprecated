@@ -41,12 +41,14 @@ bool SimpleFile::seek(uint64_t desired) {
     else {
         head_ = { file_->data.start, 0 };
         length_ = 0;
+        version_ = 1;
         return true;
     }
 
     auto info = seek(head_.block, desired - end.position);
 
     seek_offset_ = info.address.sector_offset(geometry());
+    version_ = info.version;
     head_ = info.address;
     head_.add(-seek_offset_);
 
@@ -69,6 +71,7 @@ SimpleFile::SeekInfo SimpleFile::seek(block_index_t starting_block, uint64_t max
     auto bytes = 0;
     auto bytes_in_block = 0;
     auto blocks = 0;
+    auto version = (uint32_t)1;
 
     // This is used just to sanity check that the block we were given has
     // actually been begun. For example, the very first block won't have been.
@@ -79,8 +82,10 @@ SimpleFile::SeekInfo SimpleFile::seek(block_index_t starting_block, uint64_t max
         }
 
         if (!head.valid()) {
-            return { { starting_block, 0 }, 0, 0 };
+            return { { starting_block, 0 }, version, 0, 0 };
         }
+
+        version = head.version;
     }
 
     // Start walking the file from the given starting block until we reach the
@@ -136,7 +141,7 @@ SimpleFile::SeekInfo SimpleFile::seek(block_index_t starting_block, uint64_t max
         }
     }
 
-    return { addr, bytes, bytes_in_block, blocks };
+    return { addr, version, bytes, bytes_in_block, blocks };
 }
 
 int32_t SimpleFile::read(uint8_t *ptr, size_t size) {
@@ -350,6 +355,14 @@ int32_t SimpleFile::flush() {
 }
 
 bool SimpleFile::initialize() {
+    length_ = 0;
+    position_ = 0;
+    buffpos_ = 0;
+    buffavailable_ = 0;
+    seek_offset_ = 0;
+    bytes_in_block_ = 0;
+    blocks_since_save_ = 0;
+
     if (!index().initialize()) {
         return false;
     }
@@ -368,20 +381,31 @@ bool SimpleFile::initialize() {
 }
 
 bool SimpleFile::erase() {
+    if (!initialize()) {
+        sdebug() << "Initialize failed during erase" << endl;
+    }
+
     return format();
 }
 
 bool SimpleFile::format() {
+    version_++;
+
     if (!index_.format()) {
         return false;
     }
 
     head_ = initialize(file_->data.start, BLOCK_INDEX_INVALID);
+
+    if (!initialize()) {
+        return false;
+    }
+
     if (!index(head_)) {
         return false;
     }
 
-    return initialize();
+    return true;
 }
 
 uint64_t SimpleFile::maximum_size() const {
@@ -394,10 +418,6 @@ uint64_t SimpleFile::size() const {
 
 uint64_t SimpleFile::tell() const {
     return position_;
-}
-
-uint32_t SimpleFile::truncated() const {
-    return truncated_;
 }
 
 BlockAddress SimpleFile::head() const {
@@ -421,6 +441,7 @@ BlockAddress SimpleFile::initialize(block_index_t block, block_index_t previous)
 
     head.fill();
     head.file_id = id_;
+    head.version = version_;
     head.block.linked_block = previous;
 
     if (!storage_->erase(block)) {

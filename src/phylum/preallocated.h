@@ -24,7 +24,7 @@ private:
     uint32_t bytes_in_block_{ 0 };
     uint32_t position_{ 0 };
     uint32_t length_{ 0 };
-    uint32_t truncated_{ 0 };
+    uint32_t version_{ 0 };
     int8_t blocks_since_save_{ 0 };
     bool readonly_{ false };
     BlockAddress head_;
@@ -70,6 +70,10 @@ public:
 
     FileIndex &index();
 
+    uint32_t version() const {
+        return version_;
+    }
+
 public:
     bool seek(uint64_t position);
 
@@ -103,6 +107,7 @@ private:
 
     struct SeekInfo {
         BlockAddress address;
+        uint32_t version;
         int32_t bytes;
         int32_t bytes_in_block;
         int32_t blocks;
