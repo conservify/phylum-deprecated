@@ -142,9 +142,14 @@ private:
 
 };
 
+struct FileStat {
+    uint64_t size;
+    uint32_t version;
+};
+
 class FileOpener {
 public:
-    virtual uint64_t file_size(FileDescriptor &fd) = 0;
+    virtual FileStat stat(FileDescriptor &fd) = 0;
     virtual SimpleFile open(FileDescriptor &fd, OpenMode mode) = 0;
     virtual bool erase(FileDescriptor &fd) = 0;
 
@@ -233,14 +238,15 @@ public:
     }
 
 public:
-    virtual uint64_t file_size(FileDescriptor &fd) override {
+    virtual FileStat stat(FileDescriptor &fd) override {
         auto file = open(fd, OpenMode::Read);
         if (!file) {
-            return 0;
+            return { 0, 0 };
         }
         auto size = file.size();
+        auto version = file.version();
         file.close();
-        return size;
+        return { size, version };
     }
 
     virtual SimpleFile open(FileDescriptor &fd, OpenMode mode = OpenMode::Read) override {

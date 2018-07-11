@@ -32,7 +32,7 @@ constexpr uint32_t POSITION_INDEX_INVALID = ((uint32_t)-1);
 constexpr file_id_t FILE_ID_INVALID = ((file_id_t)-1);
 
 struct BlockMagic {
-    static constexpr char MagicKey[] = "phylummm";
+    static constexpr char MagicKey[] = "phylum00";
 
     char key[sizeof(MagicKey)] = { 0 };
 
