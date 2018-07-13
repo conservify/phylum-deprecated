@@ -13,7 +13,7 @@ static inline uint32_t get_sf_address(const Geometry &g, BlockAddress a) {
     return (a.block * g.pages_per_block * g.sectors_per_page * g.sector_size) + a.position;
 }
 
-ArduinoSerialFlashBackend::ArduinoSerialFlashBackend() {
+ArduinoSerialFlashBackend::ArduinoSerialFlashBackend(StorageBackendCallbacks &callbacks) : callbacks_(&callbacks) {
 }
 
 bool ArduinoSerialFlashBackend::initialize(uint8_t cs, sector_index_t sector_size) {
@@ -50,6 +50,18 @@ bool ArduinoSerialFlashBackend::initialize(uint8_t cs, sector_index_t sector_siz
 
 bool ArduinoSerialFlashBackend::erase() {
     serial_flash_.eraseAll();
+
+    auto started = millis();
+    auto tick = millis();
+    while (!serial_flash_.ready()) {
+        if (millis() - tick > 1000) {
+            if (!callbacks_->busy(millis() - started)) {
+                return false;
+            }
+            tick = millis();
+        }
+    }
+
     return true;
 }
 

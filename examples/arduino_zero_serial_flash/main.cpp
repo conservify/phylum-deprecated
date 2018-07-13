@@ -35,7 +35,8 @@ void setup() {
 
     sdebug() << "Initialize Storage" << endl;
 
-    ArduinoSerialFlashBackend storage;
+    NoopStorageBackendCallbacks callbacks;
+    ArduinoSerialFlashBackend storage{ callbacks };
     if (!storage.initialize(4)) {
         fail();
     }
