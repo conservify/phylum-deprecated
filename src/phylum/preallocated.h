@@ -222,6 +222,10 @@ public:
                 return false;
             }
 
+            if (!entry.fd.compatible(fds[i])) {
+                return false;
+            }
+
             memcpy(&allocations_[i], &entry.alloc, sizeof(FileAllocation));
         }
 

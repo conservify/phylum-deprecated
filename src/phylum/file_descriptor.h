@@ -17,6 +17,14 @@ struct FileDescriptor {
         strncpy(this->name, name, sizeof(this->name));
         this->name[sizeof(this->name) - 1] = 0;
     }
+
+    bool compatible(FileDescriptor *other) {
+        if (maximum_size != other->maximum_size) {
+            return false;
+        }
+
+        return strcmp(name, other->name) == 0;
+    }
 };
 
 enum class OpenMode {
