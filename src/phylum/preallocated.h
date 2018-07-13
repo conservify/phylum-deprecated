@@ -54,6 +54,10 @@ public:
         return file_ != nullptr;
     }
 
+    FileDescriptor &fd() const;
+
+    bool in_final_block() const;
+
     uint64_t maximum_size() const;
 
     uint64_t size() const;

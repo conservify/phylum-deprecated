@@ -408,6 +408,14 @@ bool SimpleFile::format() {
     return true;
 }
 
+FileDescriptor &SimpleFile::fd() const {
+    return *fd_;
+}
+
+bool SimpleFile::in_final_block() const {
+    return (head_.block + 1) == file_->data.start + file_->data.nblocks;
+}
+
 uint64_t SimpleFile::maximum_size() const {
     return file_->data.nblocks * effective_file_block_size(geometry());
 }
