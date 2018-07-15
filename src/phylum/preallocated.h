@@ -83,7 +83,7 @@ public:
 
     int32_t read(uint8_t *ptr, size_t size);
 
-    int32_t write(uint8_t *ptr, size_t size, bool atomic = false);
+    int32_t write(uint8_t *ptr, size_t size, bool span_sectors = true, bool span_blocks = true);
 
     int32_t flush();
 

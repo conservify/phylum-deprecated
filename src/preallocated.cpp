@@ -220,7 +220,7 @@ int32_t SimpleFile::read(uint8_t *ptr, size_t size) {
     return copying;
 }
 
-int32_t SimpleFile::write(uint8_t *ptr, size_t size, bool atomic) {
+int32_t SimpleFile::write(uint8_t *ptr, size_t size, bool span_sectors, bool span_blocks) {
     auto to_write = size;
     auto wrote = 0;
 
@@ -228,18 +228,28 @@ int32_t SimpleFile::write(uint8_t *ptr, size_t size, bool atomic) {
 
     // All 'atomic' writes have to be smaller than the smallest sector we can
     // write, which in our case is the block tail sector since that header is large.
-    if (atomic) {
+    if (!span_sectors) {
         assert(size <= SectorSize - sizeof(FileBlockTail));
     }
 
     // If the head is invalid, seek to the end of the file.
     if (!head_.valid()) {
-        if (!seek(UINT64_MAX)) {
-            return 0;
-        }
+        return 0;
+    }
 
-        if (!head_.valid()) {
-            return 0;
+    // Don't let writes span blocks.
+    if (!span_blocks && bytes_in_block_ > 0) {
+        auto block_size = effective_file_block_size(storage_->geometry());
+        auto remaining_in_block = block_size - bytes_in_block_;
+        if (remaining_in_block < size) {
+            if (flush() == 0) {
+                return 0;
+            }
+
+            // If the head is invalid, seek to the end of the file.
+            if (!head_.valid()) {
+                return 0;
+            }
         }
     }
 
@@ -248,7 +258,7 @@ int32_t SimpleFile::write(uint8_t *ptr, size_t size, bool atomic) {
         auto remaining = sizeof(buffer_) - overhead - buffpos_;
         auto copying = to_write > remaining ? remaining : to_write;
 
-        if (atomic) {
+        if (!span_sectors) {
             if (copying != size) {
                 if (flush() == 0) {
                     return wrote;
