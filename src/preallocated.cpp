@@ -288,6 +288,12 @@ int32_t SimpleFile::write(uint8_t *ptr, size_t size, bool span_sectors, bool spa
         }
     }
 
+    if (buffpos_ > 0) {
+        if (mode_ == OpenMode::MultipleWrites) {
+            save_sector(false);
+        }
+    }
+
     return wrote;
 }
 

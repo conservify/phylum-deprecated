@@ -411,12 +411,11 @@ TEST_F(PreallocatedSuite, ResilienceIndexWriteFails) {
     // write. Which, I don't think is a huge deal.
 }
 
-TEST_F(PreallocatedSuite, AggressiveWrites) {
-    uint8_t buffer[64] = { 0 };
-
+TEST_F(PreallocatedSuite, MultipleWritesMode) {
     FileDescriptor data_file = { "data.fk", 100 };
     FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
+    PatternHelper helper;
 
     storage_.verification(VerificationMode::Appending);
 
@@ -424,7 +423,24 @@ TEST_F(PreallocatedSuite, AggressiveWrites) {
 
     auto file = layout.open(data_file, OpenMode::MultipleWrites);
 
-    file.write(buffer, sizeof(buffer));
+    storage_.log().clear();
 
-    ASSERT_EQ(file.size(), sizeof(buffer));
+    helper.write(file, 1);
+
+    EXPECT_EQ(storage_.log().size(), 1);
+    EXPECT_EQ(file.size(), (uint32_t)helper.size() * 1);
+
+    helper.write(file, 1);
+
+    EXPECT_EQ(file.size(), helper.size() * 2);
+    EXPECT_EQ(storage_.log().size(), 2);
+
+    storage_.log().clear();
+
+    helper.write(file, 4);
+
+    EXPECT_EQ(storage_.log().size(), 5);
+
+    auto verified = helper.verify_file(layout, data_file);
+    EXPECT_EQ((uint32_t)helper.size() * 6, verified);
 }

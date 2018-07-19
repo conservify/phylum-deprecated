@@ -94,16 +94,19 @@ static void verify_erased(BlockAddress addr, uint8_t *p, size_t n) {
 }
 
 static void verify_append(BlockAddress addr, uint8_t *p, uint8_t *src, size_t n) {
+    // NOTE: We can't do this, unfortunately, because the block tail headers change.
+    /*
     for (size_t i = 0; i < n; ++i) {
         if (*p != LinuxMemoryBackend::EraseByte) {
             if (*p != *src) {
-                sdebug() << "Corruption: " << addr << std::endl;
+                sdebug() << "Corruption: " << addr << " " << i << std::endl;
                 assert(*p == LinuxMemoryBackend::EraseByte);
             }
         }
         p++;
         src++;
     }
+    */
 }
 
 bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
