@@ -24,6 +24,7 @@ bool WanderingBlockManager::walk(block_index_t desired, SuperBlockLink &link, Se
 
     // No link in the anchor area!
     if (!where.valid()) {
+        sdebug() << "WanderingBlockManager::walk: No link in anchor" << endl;
         return false;
     }
 
@@ -51,6 +52,8 @@ bool WanderingBlockManager::walk(block_index_t desired, SuperBlockLink &link, Se
         }
     }
 
+    sdebug() << "WanderingBlockManager::walk: Failed to find" << endl;
+
     return false;
 }
 
@@ -61,12 +64,18 @@ bool WanderingBlockManager::locate() {
     location_.invalid();
 
     if (!walk(BLOCK_INDEX_INVALID, link, where)) {
+        sdebug() << "WanderingBlockManager::walk failed." << endl;
         return false;
     }
 
     location_ = where;
 
-    return read_super(location_);
+    if (!read_super(location_)) {
+        sdebug() << "WanderingBlockManager::read_super failed." << endl;
+        return false;
+    }
+
+    return true;
 }
 
 bool WanderingBlockManager::find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where) {

@@ -26,7 +26,7 @@ private:
     uint32_t length_{ 0 };
     uint32_t version_{ 0 };
     int8_t blocks_since_save_{ 0 };
-    bool readonly_{ false };
+    OpenMode mode_{ OpenMode::Read };
     BlockAddress head_;
     FileIndex index_;
 
@@ -37,11 +37,11 @@ public:
     }
 
     SimpleFile(StorageBackend *storage, FileDescriptor *fd, FileAllocation *file, OpenMode mode) :
-        storage_(storage), fd_(fd), file_(file), readonly_(mode == OpenMode::Read), index_(storage_, file) {
+        storage_(storage), fd_(fd), file_(file), mode_(mode), index_(storage_, file) {
     }
 
     ~SimpleFile() {
-        if (!readonly_) {
+        if (!read_only()) {
             close();
         }
     }
@@ -52,6 +52,10 @@ public:
 public:
     operator bool() const {
         return file_ != nullptr;
+    }
+
+    bool read_only() {
+        return mode_ == OpenMode::Read;
     }
 
     FileDescriptor &fd() const;
@@ -94,6 +98,17 @@ public:
     }
 
 private:
+    struct SavedSector {
+        int32_t saved;
+        BlockAddress head;
+
+        operator bool() {
+            return saved > 0;
+        }
+    };
+
+    SavedSector save_sector(bool flushing);
+
     const Geometry &geometry() const {
         return storage_->geometry();
     }

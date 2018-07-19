@@ -28,8 +28,9 @@ struct FileDescriptor {
 };
 
 enum class OpenMode {
-    Read,
-    Write
+    Read = 1,
+    Write = 2,
+    MultipleWrites = 4,
 };
 
 }

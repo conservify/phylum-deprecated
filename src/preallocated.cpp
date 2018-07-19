@@ -145,7 +145,7 @@ SimpleFile::SeekInfo SimpleFile::seek(block_index_t starting_block, uint64_t max
 }
 
 int32_t SimpleFile::read(uint8_t *ptr, size_t size) {
-    assert(readonly_);
+    assert(read_only());
 
     // Are we out of data to return?
     if (buffavailable_ == buffpos_) {
@@ -224,7 +224,7 @@ int32_t SimpleFile::write(uint8_t *ptr, size_t size, bool span_sectors, bool spa
     auto to_write = size;
     auto wrote = 0;
 
-    assert(!readonly_);
+    assert(!read_only());
 
     // All 'atomic' writes have to be smaller than the smallest sector we can
     // write, which in our case is the block tail sector since that header is large.
@@ -291,26 +291,23 @@ int32_t SimpleFile::write(uint8_t *ptr, size_t size, bool span_sectors, bool spa
     return wrote;
 }
 
-int32_t SimpleFile::flush() {
-    if (readonly_) {
-        return 0;
-    }
-
-    if (buffpos_ == 0 || buffavailable_ > 0) {
-        return 0;
-    }
+SimpleFile::SavedSector SimpleFile::save_sector(bool flushing) {
+    assert(!read_only());
+    assert(buffpos_ > 0 && buffavailable_ == 0);
 
     // If this is the tail sector in the block write the tail section that links
     // to the following block.
     auto linked = BLOCK_INDEX_INVALID;
     auto writing_tail_sector = tail_sector();
-    auto addr = head_;
+    auto following = head_;
 
     if (writing_tail_sector) {
-        // Check to see if we're at the end of our allocated space.
-        linked = head_.block + 1;
-        if (!file_->data.contains(linked)) {
-            linked = BLOCK_INDEX_INVALID;
+        if (flushing) {
+            // Check to see if we're at the end of our allocated space.
+            linked = head_.block + 1;
+            if (!file_->data.contains(linked)) {
+                linked = BLOCK_INDEX_INVALID;
+            }
         }
 
         FileBlockTail tail;
@@ -318,24 +315,43 @@ int32_t SimpleFile::flush() {
         tail.bytes_in_block = bytes_in_block_;
         tail.block.linked_block = linked;
         memcpy(tail_info<FileBlockTail>(buffer_), &tail, sizeof(FileBlockTail));
+        following = { linked };
     }
     else {
         FileSectorTail tail;
         tail.bytes = buffpos_;
         memcpy(tail_info<FileSectorTail>(buffer_), &tail, sizeof(FileSectorTail));
-        head_.add(SectorSize);
+        following.add(SectorSize);
+
+        // Write this full sector. No partial writes here because of the tail. Most
+        // of the time we write full sectors anyway.
+        assert(file_->data.contains(following));
     }
 
-    // Write this full sector. No partial writes here because of the tail. Most
-    // of the time we write full sectors anyway.
-    assert(file_->data.contains(addr));
+    if (!storage_->write(head_, buffer_, sizeof(buffer_))) {
+        return SavedSector{ 0, head_ };
+    }
 
-    if (!storage_->write(addr, buffer_, sizeof(buffer_))) {
+    return SavedSector{ buffpos_, following };
+}
+
+int32_t SimpleFile::flush() {
+    if (read_only()) {
+        return 0;
+    }
+
+    if (buffpos_ == 0 || buffavailable_ > 0) {
+        return 0;
+    }
+
+    auto saved = save_sector(true);
+    if (!saved) {
         return 0;
     }
 
     // We could do this in the if scope above, I like doing things "in order" though.
-    if (writing_tail_sector) {
+    if (head_.block != saved.head.block) {
+        auto linked = saved.head.block;
         if (is_valid_block(linked)) {
             head_ = initialize(linked, head_.block);
             assert(file_->data.contains(head_));
@@ -357,6 +373,9 @@ int32_t SimpleFile::flush() {
         }
 
         bytes_in_block_ = 0;
+    }
+    else {
+        head_ = saved.head;
     }
 
     auto flushed = buffpos_;
@@ -381,7 +400,7 @@ bool SimpleFile::initialize() {
         return false;
     }
 
-    if (readonly_) {
+    if (read_only()) {
         if (!seek(0)) {
             return false;
         }

@@ -29,7 +29,7 @@ TEST_F(PreallocatedSuite, FormattingStandardLayout) {
     FileDescriptor file_log_emergency_fd = { "emergency.log", 100 };
     FileDescriptor file_data_fd =          { "data.fk",       0   };
 
-    static FileDescriptor* files[] = {
+    FileDescriptor* files[] = {
         &file_system_area_fd,
         &file_log_startup_fd,
         &file_log_now_fd,
@@ -66,7 +66,7 @@ TEST_F(PreallocatedSuite, FormattingStandardLayout) {
 
 TEST_F(PreallocatedSuite, WritingSmallFileToItsEnd) {
     FileDescriptor data_file = { "data.fk", 100 };
-    static FileDescriptor* files[] = { &data_file };
+    FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
@@ -88,7 +88,7 @@ TEST_F(PreallocatedSuite, WritingSmallFileToItsEnd) {
 
 TEST_F(PreallocatedSuite, WritingAndThenErasing) {
     FileDescriptor data_file = { "data.fk", 100 };
-    static FileDescriptor* files[] = { &data_file };
+    FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
@@ -118,7 +118,7 @@ TEST_F(PreallocatedSuite, WritingAndThenErasing) {
 
 TEST_F(PreallocatedSuite, ErasingTwice) {
     FileDescriptor data_file = { "data.fk", 100 };
-    static FileDescriptor* files[] = { &data_file };
+    FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
     PatternHelper helper;
 
@@ -146,7 +146,7 @@ TEST_F(PreallocatedSuite, ErasingTwice) {
 
 TEST_F(PreallocatedSuite, FormattingLeavesVersions) {
     FileDescriptor data_file = { "data.fk", 100 };
-    static FileDescriptor* files[] = { &data_file };
+    FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
     PatternHelper helper;
 
@@ -167,7 +167,7 @@ TEST_F(PreallocatedSuite, FormattingLeavesVersions) {
 
 TEST_F(PreallocatedSuite, WriteBlockInTwoSeparateOpensWritesCorrectBytesInBlock) {
     FileDescriptor data_file = { "data.fk", 100 };
-    static FileDescriptor* files[] = { &data_file };
+    FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
@@ -193,7 +193,7 @@ TEST_F(PreallocatedSuite, WriteBlockInTwoSeparateOpensWritesCorrectBytesInBlock)
 
 TEST_F(PreallocatedSuite, WritingOneMegabyteToFile) {
     FileDescriptor data_file = { "data.fk", 0 };
-    static FileDescriptor* files[] = { &data_file };
+    FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
@@ -214,7 +214,7 @@ TEST_F(PreallocatedSuite, WritingOneMegabyteToFile) {
 
 TEST_F(PreallocatedSuite, AppendingOneMegabyteTwoOneMegabyte) {
     FileDescriptor data_file = { "data.fk", 0 };
-    static FileDescriptor* files[] = { &data_file };
+    FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
@@ -255,7 +255,7 @@ TEST_F(PreallocatedSuite, AppendingOneMegabyteTwoOneMegabyte) {
 
 TEST_F(PreallocatedSuite, SeekingEndCalculatesFileSize) {
     FileDescriptor data_file = { "data.fk", 0 };
-    static FileDescriptor* files[] = { &data_file };
+    FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
@@ -281,7 +281,7 @@ TEST_F(PreallocatedSuite, SeekingEndCalculatesFileSize) {
 
 TEST_F(PreallocatedSuite, SeekingInFileWithUnwrittenTailBlock) {
     FileDescriptor data_file = { "data.fk", 0 };
-    static FileDescriptor* files[] = { &data_file };
+    FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
@@ -305,7 +305,7 @@ TEST_F(PreallocatedSuite, SeekingInFileWithUnwrittenTailBlock) {
 
 TEST_F(PreallocatedSuite, SeekMiddleOfFile) {
     FileDescriptor data_file = { "data.fk", 0 };
-    static FileDescriptor* files[] = { &data_file };
+    FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
@@ -341,7 +341,7 @@ struct TestStruct {
 
 TEST_F(PreallocatedSuite, WriteAFewBlocksAndReadLastBlock) {
     FileDescriptor data_file = { "data.fk", 100 };
-    static FileDescriptor* files[] = { &data_file };
+    FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
@@ -369,7 +369,7 @@ TEST_F(PreallocatedSuite, WriteAFewBlocksAndReadLastBlock) {
 
 TEST_F(PreallocatedSuite, ResilienceIndexWriteFails) {
     FileDescriptor data_file = { "data.fk", 100 };
-    static FileDescriptor* files[] = { &data_file };
+    FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
 
     ASSERT_TRUE(layout.format(files));
@@ -411,3 +411,20 @@ TEST_F(PreallocatedSuite, ResilienceIndexWriteFails) {
     // write. Which, I don't think is a huge deal.
 }
 
+TEST_F(PreallocatedSuite, AggressiveWrites) {
+    uint8_t buffer[64] = { 0 };
+
+    FileDescriptor data_file = { "data.fk", 100 };
+    FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
+
+    storage_.verification(VerificationMode::Appending);
+
+    ASSERT_TRUE(layout.format(files));
+
+    auto file = layout.open(data_file, OpenMode::MultipleWrites);
+
+    file.write(buffer, sizeof(buffer));
+
+    ASSERT_EQ(file.size(), sizeof(buffer));
+}
