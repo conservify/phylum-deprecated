@@ -11,12 +11,18 @@
 
 namespace phylum {
 
+enum class VerificationMode {
+    ErasedOnly,
+    Appending
+};
+
 class LinuxMemoryBackend : public StorageBackend {
 private:
     StorageLog log_;
     Geometry geometry_;
     uint64_t size_;
     uint8_t *ptr_;
+    VerificationMode verification_{ VerificationMode::ErasedOnly };
 
 public:
     static uint8_t EraseByte;
@@ -31,6 +37,14 @@ public:
 
     StorageLog &log() {
         return log_;
+    }
+
+    VerificationMode verification() {
+        return verification_;
+    }
+
+    void verification(VerificationMode mode) {
+        verification_ = mode;
     }
 
 public:

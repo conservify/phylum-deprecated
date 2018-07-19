@@ -93,6 +93,19 @@ static void verify_erased(BlockAddress addr, uint8_t *p, size_t n) {
     }
 }
 
+static void verify_append(BlockAddress addr, uint8_t *p, uint8_t *src, size_t n) {
+    for (size_t i = 0; i < n; ++i) {
+        if (*p != LinuxMemoryBackend::EraseByte) {
+            if (*p != *src) {
+                sdebug() << "Corruption: " << addr << std::endl;
+                assert(*p == LinuxMemoryBackend::EraseByte);
+            }
+        }
+        p++;
+        src++;
+    }
+}
+
 bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
     assert(geometry_.contains(addr));
     assert(n <= geometry_.sector_size);
@@ -102,7 +115,16 @@ bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
     assert(o + n < size_);
 
     auto p = ptr_ + o;
-    verify_erased(addr, p, n);
+    switch (verification_) {
+    case VerificationMode::ErasedOnly: {
+        verify_erased(addr, p, n);
+        break;
+    }
+    case VerificationMode::Appending: {
+        verify_append(addr, p, (uint8_t *)d, n);
+        break;
+    }
+    }
 
     // Do this before the memcpy so that a backup can be made.
     log_.append(LogEntry{ OperationType::Write, addr, p, n });
