@@ -411,7 +411,7 @@ TEST_F(PreallocatedSuite, ResilienceIndexWriteFails) {
     // write. Which, I don't think is a huge deal.
 }
 
-TEST_F(PreallocatedSuite, MultipleWritesMode) {
+TEST_F(PreallocatedSuite, MultipleWritesModeSmallFile) {
     FileDescriptor data_file = { "data.fk", 100 };
     FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
@@ -432,7 +432,7 @@ TEST_F(PreallocatedSuite, MultipleWritesMode) {
 
     helper.write(file, 1);
 
-    EXPECT_EQ(file.size(), helper.size() * 2);
+    EXPECT_EQ(file.size(), (uint32_t)helper.size() * 2);
     EXPECT_EQ(storage_.log().size(), 2);
 
     storage_.log().clear();
@@ -443,4 +443,64 @@ TEST_F(PreallocatedSuite, MultipleWritesMode) {
 
     auto verified = helper.verify_file(layout, data_file);
     EXPECT_EQ((uint32_t)helper.size() * 6, verified);
+}
+
+TEST_F(PreallocatedSuite, MultipleWritesModeLargeFile) {
+    FileDescriptor data_file = { "data.fk", 100 };
+    FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
+    PatternHelper helper;
+
+    storage_.verification(VerificationMode::Appending);
+
+    ASSERT_TRUE(layout.format(files));
+
+    auto file1 = layout.open(data_file, OpenMode::MultipleWrites);
+    helper.write(file1, 128);
+    file1.close();
+
+    auto verified1 = helper.verify_file(layout, data_file);
+    EXPECT_EQ((uint32_t)helper.size() * 128, verified1);
+
+    auto file2 = layout.open(data_file, OpenMode::MultipleWrites);
+    helper.write(file2, 128);
+    file2.close();
+
+    auto verified2 = helper.verify_file(layout, data_file);
+    EXPECT_EQ((uint32_t)helper.size() * 256, verified2);
+}
+
+TEST_F(PreallocatedSuite, MultipleWritesModeIncompleteTail) {
+    FileDescriptor data_file = { "data.fk", 100 };
+    FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
+    PatternHelper helper;
+
+    storage_.verification(VerificationMode::Appending);
+
+    ASSERT_TRUE(layout.format(files));
+
+    auto file = layout.open(data_file, OpenMode::MultipleWrites);
+    auto wrote = 0;
+    while (true) {
+        helper.write(file, 1);
+        wrote++;
+
+        auto addr = file.head();
+        addr.add(SectorSize);
+        if (addr.tail_sector(geometry_)) {
+            break;
+        }
+    }
+    file.close();
+
+    auto verified1 = helper.verify_file(layout, data_file);
+    EXPECT_EQ((uint32_t)helper.size() * wrote, verified1);
+
+    helper.write(file, 1);
+    file.close();
+    wrote++;
+
+    auto verified2 = helper.verify_file(layout, data_file);
+    EXPECT_EQ((uint32_t)helper.size() * wrote, verified2);
 }

@@ -185,7 +185,7 @@ int32_t SimpleFile::read(uint8_t *ptr, size_t size) {
             }
             else {
                 // We should be in the last sector of the file.
-                assert(file_->data.final_sector(geometry()) == head_);
+                // assert(file_->data.final_sector(geometry()) == head_);
                 head_ = file_->data.end(geometry());
             }
         }
