@@ -39,6 +39,9 @@ public:
 
 public:
     bool initialize(uint8_t cs, sector_index_t sector_size = 512);
+    void geometry(Geometry &g) {
+        geometry_ = g;
+    }
 
 public:
     bool open() override;

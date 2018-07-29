@@ -22,7 +22,7 @@ bool ArduinoSerialFlashBackend::initialize(uint8_t cs, sector_index_t sector_siz
     }
 
     unsigned char id[5];
-    SerialFlash.readID(id);
+    serial_flash_.readID(id);
 
     auto capacity = serial_flash_.capacity(id);
     auto block_size = serial_flash_.blockSize();
