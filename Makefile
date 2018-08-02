@@ -11,7 +11,7 @@ clean:
 	cd build && cmake ../ && make clean
 
 veryclean:
-	rm -rf $(BUILD)
+	rm -rf $(BUILD) gitdeps
 
 test: build
 	cd build && env GTEST_COLOR=1 make test ARGS=-VV
