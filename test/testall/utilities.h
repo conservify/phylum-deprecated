@@ -15,7 +15,8 @@
 #include <phylum/backend.h>
 #include <phylum/block_alloc.h>
 #include <phylum/file_system.h>
-#include <phylum/preallocated.h>
+#include <phylum/simple_file.h>
+#include <phylum/file_layout.h>
 #include <backends/linux_memory/linux_memory.h>
 
 std::map<uint64_t, uint64_t> random_data();
