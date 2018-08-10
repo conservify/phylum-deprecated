@@ -1,10 +1,8 @@
 #include "serial_flash_allocator.h"
 
-#ifdef ARDUINO
-
 namespace phylum {
 
-SerialFlashAllocator::SerialFlashAllocator(ArduinoSerialFlashBackend &storage) : storage_(&storage) {
+SerialFlashAllocator::SerialFlashAllocator(StorageBackend &storage) : storage_(&storage) {
 }
 
 static inline bool is_block_free(uint8_t *map, block_index_t block) {
@@ -120,5 +118,3 @@ bool SerialFlashAllocator::free(block_index_t block, block_age_t age) {
 }
 
 }
-
-#endif // ARDUINO

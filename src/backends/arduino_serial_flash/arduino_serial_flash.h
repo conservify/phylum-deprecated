@@ -26,9 +26,6 @@ public:
 };
 
 class ArduinoSerialFlashBackend : public StorageBackend {
-public:
-    static constexpr size_t MaximumBlocks = 64;
-
 private:
     StorageBackendCallbacks *callbacks_;
     SerialFlashChip serial_flash_;
