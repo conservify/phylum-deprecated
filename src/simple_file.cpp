@@ -58,7 +58,9 @@ int32_t SimpleFile::write(uint8_t *ptr, size_t size, bool span_sectors, bool spa
 }
 
 bool SimpleFile::initialize() {
-    blocked_.initialize();
+    if (!blocked_.initialize()) {
+        return false;
+    }
 
     if (!index().initialize()) {
         return false;

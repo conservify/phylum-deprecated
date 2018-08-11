@@ -48,7 +48,7 @@ bool SerialFlashAllocator::scan(bool free_only, ScanInfo &info) {
     info.block = BLOCK_INDEX_INVALID;
     info.age = BLOCK_AGE_INVALID;
 
-    for (auto block = 3; block < storage_->geometry().number_of_blocks; ++block) {
+    for (auto block = (uint32_t)3; block < storage_->geometry().number_of_blocks; ++block) {
         if (free_only) {
             if (!is_block_free(map_, block)) {
                 continue;
