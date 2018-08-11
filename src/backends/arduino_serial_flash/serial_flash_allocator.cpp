@@ -44,6 +44,22 @@ bool SerialFlashAllocator::initialize() {
     return true;
 }
 
+bool SerialFlashAllocator::is_taken(block_index_t block, BlockHead &header) {
+    if (!storage_->read({ (block_index_t)block, 0 }, &header, sizeof(BlockHead))) {
+        return false;
+    }
+
+    auto valid = header.valid();
+    auto taken = valid && header.type != BlockType::Unallocated;
+
+    return taken;
+}
+
+bool SerialFlashAllocator::is_taken(block_index_t block) {
+    BlockHead header;
+    return is_taken(block, header);
+}
+
 bool SerialFlashAllocator::scan(bool free_only, ScanInfo &info) {
     info.block = BLOCK_INDEX_INVALID;
     info.age = BLOCK_AGE_INVALID;
@@ -56,13 +72,7 @@ bool SerialFlashAllocator::scan(bool free_only, ScanInfo &info) {
         }
 
         BlockHead header;
-        if (!storage_->read({ (block_index_t)block, 0 }, &header, sizeof(BlockHead))) {
-            return false;
-        }
-
-        auto valid = header.valid();
-        auto taken = valid && header.type != BlockType::Unallocated;
-        if (taken) {
+        if (is_taken(block, header)) {
             set_block_taken(map_, block);
             #ifdef PHYLUM_ARDUINO_DEBUG
             sdebug() << "Block " << (uint32_t)block << " is taken. (" << header.type << ")" << endl;
@@ -74,7 +84,7 @@ bool SerialFlashAllocator::scan(bool free_only, ScanInfo &info) {
             sdebug() << "Block " << (uint32_t)block << " is free. (age=" << header.age << ")" << endl;
             #endif
 
-            if (valid) {
+            if (header.valid()) {
                 if (header.age < info.age || info.age == BLOCK_AGE_INVALID) {
                     info.block = block;
                     info.age = header.age;

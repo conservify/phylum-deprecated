@@ -1,10 +1,11 @@
 #ifndef __PHYLUM_SERIAL_FLASH_ALLOCATOR_H_INCLUDED
 #define __PHYLUM_SERIAL_FLASH_ALLOCATOR_H_INCLUDED
 
-#include <phylum/block_alloc.h>
+#include "phylum/private.h"
+#include "phylum/block_alloc.h"
+#include "phylum/visitor.h"
 
 #include "arduino_serial_flash.h"
-#include "phylum/visitor.h"
 
 namespace phylum {
 
@@ -32,6 +33,10 @@ public:
     };
 
     bool scan(bool free_only, ScanInfo &info);
+
+    bool is_taken(block_index_t block, BlockHead &header);
+
+    bool is_taken(block_index_t block);
 
     uint32_t number_of_free_blocks();
 
