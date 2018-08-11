@@ -118,6 +118,10 @@ bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
     assert(o + n < size_);
 
     auto p = ptr_ + o;
+
+    // Do this before the memcpy so that a backup can be made.
+    log_.append(LogEntry{ OperationType::Write, addr, p, n });
+
     switch (verification_) {
     case VerificationMode::ErasedOnly: {
         verify_erased(addr, p, n);
@@ -128,9 +132,6 @@ bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
         break;
     }
     }
-
-    // Do this before the memcpy so that a backup can be made.
-    log_.append(LogEntry{ OperationType::Write, addr, p, n });
 
     memcpy(p, d, n);
 

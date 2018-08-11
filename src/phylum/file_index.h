@@ -11,7 +11,7 @@ namespace phylum {
 
 struct IndexBlockHead {
     BlockHead block;
-    uint64_t position;
+    uint64_t position{ 0 };
     uint32_t reserved[4];
 
     IndexBlockHead() : block(BlockType::Index) {

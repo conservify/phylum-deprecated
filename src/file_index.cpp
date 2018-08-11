@@ -54,6 +54,7 @@ public:
             if (!storage_->erase(region.middle_block())) {
                 return false;
             }
+
             region = region.first_half();
         }
 
@@ -231,6 +232,7 @@ bool FileIndex::seek(uint64_t position, IndexRecord &selected) {
 
 bool FileIndex::append(uint32_t position, BlockAddress address) {
     assert(head_.valid());
+    assert(address.valid());
 
     auto caching = SectorCachingStorage{ *storage_ };
     auto allocator = ExtentAllocator{ file_->index, head_.block + 1 };

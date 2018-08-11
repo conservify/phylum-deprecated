@@ -5,42 +5,40 @@
 #include "phylum/file_descriptor.h"
 #include "phylum/file_allocation.h"
 #include "phylum/file_index.h"
+#include "phylum/blocked_file.h"
 
 namespace phylum {
 
+class ExtentBlockedFile : public BlockedFile {
+private:
+    Extent data_;
+
+public:
+    ExtentBlockedFile() {
+    }
+
+    ExtentBlockedFile(StorageBackend *storage, OpenMode mode, Extent data) : BlockedFile(storage, mode), data_(data) {
+    }
+
+public:
+    block_index_t allocate() override;
+
+};
+
 class SimpleFile {
 private:
-    StorageBackend *storage_;
+    ExtentBlockedFile blocked_;
     FileDescriptor *fd_{ nullptr };
     FileAllocation *file_{ nullptr };
-    uint32_t id_{ 0 };
-    uint8_t buffer_[SectorSize];
-    uint16_t buffavailable_{ 0 };
-    uint16_t buffpos_{ 0 };
-    uint16_t seek_offset_{ 0 };
-    uint32_t bytes_in_block_{ 0 };
-    uint32_t position_{ 0 };
-    uint32_t length_{ 0 };
-    uint32_t version_{ 0 };
-    int8_t blocks_since_save_{ 0 };
-    OpenMode mode_{ OpenMode::Read };
-    BlockAddress head_;
+    uint32_t previous_index_block_{ 0 };
     FileIndex index_;
 
 public:
-    static constexpr block_index_t IndexFrequency = 8;
-
     SimpleFile() {
     }
 
     SimpleFile(StorageBackend *storage, FileDescriptor *fd, FileAllocation *file, OpenMode mode) :
-        storage_(storage), fd_(fd), file_(file), mode_(mode), index_(storage_, file) {
-    }
-
-    ~SimpleFile() {
-        if (!read_only()) {
-            close();
-        }
+        blocked_(storage, mode, file->data), fd_(fd), file_(file), index_(storage, file) {
     }
 
     template<size_t SIZE>
@@ -51,23 +49,31 @@ public:
         return file_ != nullptr;
     }
 
-    bool read_only() {
-        return mode_ == OpenMode::Read;
+    uint32_t read_only() const {
+        return blocked_.read_only();
+    }
+
+    uint32_t version() const {
+        return blocked_.version();
+    }
+
+    uint64_t maximum_size() const;
+
+    uint32_t size() const {
+        return blocked_.size();
+    }
+
+    uint32_t tell() const {
+        return blocked_.tell();
+    }
+
+    BlockAddress head() const {
+        return blocked_.head();
     }
 
     FileDescriptor &fd() const;
 
     bool in_final_block() const;
-
-    uint64_t maximum_size() const;
-
-    uint64_t size() const;
-
-    uint64_t tell() const;
-
-    uint32_t truncated() const;
-
-    BlockAddress head() const;
 
     FileAllocation &allocation() const {
         return *file_;
@@ -75,11 +81,6 @@ public:
 
     FileIndex &index();
 
-    uint32_t version() const {
-        return version_;
-    }
-
-public:
     bool seek(uint64_t position);
 
     int32_t read(uint8_t *ptr, size_t size);
@@ -90,48 +91,11 @@ public:
 
     bool erase();
 
-    void close() {
-        flush();
-    }
-
-private:
-    struct SavedSector {
-        int32_t saved;
-        BlockAddress head;
-
-        operator bool() {
-            return saved > 0;
-        }
-    };
-
-    SavedSector save_sector(bool flushing);
-
-    const Geometry &geometry() const {
-        return storage_->geometry();
-    }
-
-    bool tail_sector() const {
-        return head_.tail_sector(geometry());
-    }
-
-private:
     bool initialize();
 
     bool format();
 
-    bool index(BlockAddress address);
-
-    struct SeekInfo {
-        BlockAddress address;
-        uint32_t version;
-        int32_t bytes;
-        int32_t bytes_in_block;
-        int32_t blocks;
-    };
-
-    SeekInfo seek(block_index_t starting_block, uint64_t max, bool verify_head_block = true);
-
-    BlockAddress initialize(block_index_t block, block_index_t previous);
+    void close();
 
 };
 

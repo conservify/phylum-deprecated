@@ -190,10 +190,6 @@ public:
         return { block, sector_number(g) };
     }
 
-    BlockAddress address() {
-        return { block, position };
-    }
-
     void seek(uint32_t n) {
         position = n;
     }
@@ -202,8 +198,12 @@ public:
         position += n;
     }
 
-    bool beginning_of_block() {
+    bool is_beginning_of_block() const {
         return position == 0;
+    }
+
+    BlockAddress beginning_of_block() const {
+        return { block, 0 };
     }
 
     bool add_or_move_to_following_sector(const Geometry &g, uint32_t n) {

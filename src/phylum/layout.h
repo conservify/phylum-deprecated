@@ -103,7 +103,7 @@ public:
             }
         }
 
-        if (address_.beginning_of_block()) {
+        if (address_.is_beginning_of_block()) {
             if (!verify_head(address_)) {
                 #ifdef PHYLUM_LAYOUT_DEBUG
                 sdebug() << "layout: Invalid Head" << endl;
@@ -162,7 +162,7 @@ public:
         }
 
         // If at beginning of a block, append head. This will rarely be true.
-        if (address_.beginning_of_block()) {
+        if (address_.is_beginning_of_block()) {
             if (!write_head(address_.block)) {
                 return { };
             }
@@ -296,7 +296,7 @@ private:
         auto location = BlockAddress{ block, 0 };
         auto found = BlockAddress{ };
         while (location.remaining_in_block(g_) >= required) {
-            if (location.beginning_of_block()) {
+            if (location.is_beginning_of_block()) {
                 if (verify_block_head) {
                     if (!verify_head(location)) {
                         return { };

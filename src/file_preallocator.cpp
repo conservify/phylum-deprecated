@@ -43,7 +43,7 @@ bool FilePreallocator::allocate(uint8_t id, FileDescriptor *fd, FileAllocation &
 
 block_index_t FilePreallocator::blocks_required_for_index(block_index_t nblocks) {
     auto indices_per_block = effective_index_block_size(geometry()) / sizeof(IndexRecord);
-    auto index_entries = (nblocks / SimpleFile::IndexFrequency) + 1;
+    auto index_entries = (nblocks / BlockedFile::IndexFrequency) + 1;
     return std::max((uint64_t)1, index_entries / indices_per_block);
 }
 
