@@ -24,13 +24,15 @@ public:
     virtual block_index_t allocate(BlockType type) override;
     virtual bool free(block_index_t block, block_age_t age) override;
 
-private:
+public:
     struct ScanInfo {
         block_index_t block;
         block_age_t age;
     };
 
     bool scan(bool free_only, ScanInfo &info);
+
+    uint32_t number_of_free_blocks();
 
 };
 

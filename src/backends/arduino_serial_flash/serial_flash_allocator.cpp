@@ -117,4 +117,14 @@ bool SerialFlashAllocator::free(block_index_t block, block_age_t age) {
     return true;
 }
 
+uint32_t SerialFlashAllocator::number_of_free_blocks() {
+    uint32_t c = 0;
+    for (auto block = (uint32_t)0; block < storage_->geometry().number_of_blocks; ++block) {
+        if (is_block_free(map_, block)) {
+            c++;
+        }
+    }
+    return c;
+}
+
 }

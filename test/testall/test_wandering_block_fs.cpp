@@ -100,6 +100,8 @@ TEST_F(WanderingBlockSuite, CreatingSmallFile) {
     ASSERT_EQ(file2.tell(), (uint32_t)0);
     auto verified = helper.read(file2);
     ASSERT_EQ(verified, (uint32_t)(1024));
+
+    ASSERT_EQ(allocator_.number_of_free_blocks(), (uint32_t)25);
 }
 
 TEST_F(WanderingBlockSuite, CreatingLargeFile) {
@@ -127,4 +129,7 @@ TEST_F(WanderingBlockSuite, CreatingLargeFile) {
     ASSERT_EQ(file2.tell(), (uint32_t)0);
     auto verified = helper.read(file2);
     ASSERT_EQ(verified, (uint32_t)(1024 * 1024));
+
+    ASSERT_EQ(allocator_.number_of_free_blocks(), (uint32_t)9);
+}
 }
