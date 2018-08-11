@@ -45,6 +45,10 @@ public:
     friend class FileLayout;
 
 public:
+    BlockedFile &blocked() {
+        return blocked_;
+    }
+
     operator bool() const {
         return file_ != nullptr;
     }
