@@ -17,6 +17,7 @@ bool BlockedFile::seek(uint64_t desired) {
 bool BlockedFile::seek(BlockAddress from, uint32_t position_at_from, uint64_t desired) {
     auto info = seek_detailed(from, position_at_from, desired - position_at_from);
     if (!info.address.valid()) {
+        sdebug() << "Fail" << endl;
         return false;
     }
 
@@ -395,6 +396,7 @@ bool BlockedFile::format() {
     }
 
     head_ = initialize(allocate(), BLOCK_INDEX_INVALID);
+    beg_ = head_.beginning_of_block();
 
     return true;
 }
@@ -415,6 +417,10 @@ uint64_t BlockedFile::tell() const {
     return position_;
 }
 
+BlockAddress BlockedFile::beginning() const {
+    return beg_;
+}
+
 BlockAddress BlockedFile::head() const {
     return head_;
 }
@@ -432,12 +438,22 @@ void BlockedFile::close() {
 }
 
 bool BlockedFile::exists() {
+    if (!head_.valid()) {
+        return false;
+    }
+
     FileBlockHead head;
     if (!storage_->read(head_, &head, sizeof(FileBlockHead))) {
         return false;
     }
 
-    return head.valid() ;
+    if (!head.valid()) {
+        return false;
+    }
+
+    beg_ = head_;
+
+    return true;
 }
 
 BlockAddress BlockedFile::initialize(block_index_t block, block_index_t previous) {

@@ -116,7 +116,8 @@ public:
         return total;
     }
 
-    uint32_t read(SimpleFile &file) {
+    template<typename File>
+    uint32_t read(File &file) {
         uint8_t buffer[sizeof(data_)];
         uint64_t total = 0;
 

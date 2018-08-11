@@ -75,26 +75,56 @@ AllocatedBlockedFile Files::open(BlockAddress start, OpenMode mode) {
     return AllocatedBlockedFile{ backend_, mode, allocator_, start };
 }
 
-TEST_F(WanderingBlockSuite, CreatingFile) {
+TEST_F(WanderingBlockSuite, CreatingSmallFile) {
     ASSERT_TRUE(manager_.create());
     ASSERT_TRUE(manager_.locate());
 
     Files files{ &storage_, &allocator_ };
 
-    auto start_block = allocator_.allocate(BlockType::File);
-    auto file = files.open({ start_block, 0 }, OpenMode::Write);
+    auto file1 = files.open({ }, OpenMode::Write);
 
-    ASSERT_TRUE(file.initialize());
-    ASSERT_FALSE(file.exists());
+    ASSERT_TRUE(file1.initialize());
+    ASSERT_FALSE(file1.exists());
+    ASSERT_TRUE(file1.format());
 
-    if (!file.exists()) {
-        ASSERT_TRUE(file.format());
-    }
+    auto location = file1.beginning();
 
     PatternHelper helper;
-    auto total = helper.write(file, (1024 * 1024) / helper.size());
-    file.close();
+    auto total = helper.write(file1, (1024) / helper.size());
+    file1.close();
 
-    ASSERT_EQ(total, (uint32_t)(1024 * 1024));
+    ASSERT_EQ(total, (uint32_t)(1024));
+
+    auto file2 = files.open(location, OpenMode::Read);
+    ASSERT_TRUE(file2.exists());
+    ASSERT_EQ(file2.tell(), (uint32_t)0);
+    auto verified = helper.read(file2);
+    ASSERT_EQ(verified, (uint32_t)(1024));
 }
 
+TEST_F(WanderingBlockSuite, CreatingLargeFile) {
+    ASSERT_TRUE(manager_.create());
+    ASSERT_TRUE(manager_.locate());
+
+    Files files{ &storage_, &allocator_ };
+
+    auto file1 = files.open({ }, OpenMode::Write);
+
+    ASSERT_TRUE(file1.initialize());
+    ASSERT_FALSE(file1.exists());
+    ASSERT_TRUE(file1.format());
+
+    auto location = file1.beginning();
+
+    PatternHelper helper;
+    auto total = helper.write(file1, (1024 * 1024) / helper.size());
+    file1.close();
+
+    ASSERT_EQ(total, (uint32_t)(1024 * 1024));
+
+    auto file2 = files.open(location, OpenMode::Read);
+    ASSERT_TRUE(file2.exists());
+    ASSERT_EQ(file2.tell(), (uint32_t)0);
+    auto verified = helper.read(file2);
+    ASSERT_EQ(verified, (uint32_t)(1024 * 1024));
+}

@@ -24,6 +24,7 @@ private:
     uint32_t blocks_in_file_{ 0 };
     OpenMode mode_{ OpenMode::Read };
     BlockAddress head_;
+    BlockAddress beg_;
 
 public:
     BlockedFile() {
@@ -34,7 +35,7 @@ public:
     }
 
     BlockedFile(StorageBackend *storage, OpenMode mode, BlockAddress head) :
-        storage_(storage), mode_(mode), head_(head) {
+        storage_(storage), mode_(mode), head_(head), beg_(head) {
     }
 
     ~BlockedFile() {
@@ -53,6 +54,8 @@ public:
     uint64_t size() const;
 
     uint64_t tell() const;
+
+    BlockAddress beginning() const;
 
     BlockAddress head() const;
 
