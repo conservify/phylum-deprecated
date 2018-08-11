@@ -79,6 +79,14 @@ bool WanderingBlockManager::locate() {
 }
 
 bool WanderingBlockManager::walk(BlockVisitor *visitor) {
+    SuperBlockLink link;
+    SectorAddress where;
+
+    if (!walk(BLOCK_INDEX_INVALID, link, where, visitor)) {
+        sdebug() << "WanderingBlockManager::walk failed." << endl;
+        return false;
+    }
+
     return true;
 }
 
