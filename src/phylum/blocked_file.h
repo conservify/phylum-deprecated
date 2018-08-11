@@ -33,6 +33,10 @@ public:
         storage_(storage), mode_(mode) {
     }
 
+    BlockedFile(StorageBackend *storage, OpenMode mode, BlockAddress head) :
+        storage_(storage), mode_(mode), head_(head) {
+    }
+
     ~BlockedFile() {
         if (!read_only()) {
             close();
@@ -72,6 +76,8 @@ public:
 
     void close();
 
+    bool exists();
+
 public:
     BlockAddress end_of_file();
 
@@ -109,6 +115,23 @@ protected:
 
 public:
     virtual block_index_t allocate() = 0;
+
+};
+
+class AllocatedBlockedFile : public BlockedFile {
+private:
+    BlockAllocator *allocator_;
+
+public:
+    AllocatedBlockedFile() {
+    }
+
+    AllocatedBlockedFile(StorageBackend *storage, OpenMode mode, BlockAllocator *allocator, BlockAddress head) :
+        BlockedFile(storage, mode, head), allocator_(allocator) {
+    }
+
+public:
+    block_index_t allocate() override;
 
 };
 

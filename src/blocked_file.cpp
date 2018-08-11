@@ -6,12 +6,19 @@
 
 namespace phylum {
 
+block_index_t AllocatedBlockedFile::allocate() {
+    return allocator_->allocate(BlockType::File);
+}
+
 bool BlockedFile::seek(uint64_t desired) {
     return seek(head_, 0, desired);
 }
 
 bool BlockedFile::seek(BlockAddress from, uint32_t position_at_from, uint64_t desired) {
     auto info = seek_detailed(from, position_at_from, desired - position_at_from);
+    if (!info.address.valid()) {
+        return false;
+    }
 
     seek_offset_ = info.address.sector_offset(geometry());
     version_ = info.version;
@@ -61,7 +68,7 @@ BlockedFile::SeekInfo BlockedFile::seek_detailed(BlockAddress from, uint32_t pos
         }
 
         if (!head.valid()) {
-            return { { starting_block, 0 }, version, 0, 0 };
+            return { };
         }
 
         version = head.version;
@@ -370,7 +377,6 @@ bool BlockedFile::initialize() {
     seek_offset_ = 0;
     bytes_in_block_ = 0;
     blocks_in_file_ = 0;
-    head_ = { };
 
     return true;
 }
@@ -388,9 +394,7 @@ bool BlockedFile::format() {
         return false;
     }
 
-    auto first_block = allocate();
-
-    head_ = initialize(first_block, BLOCK_INDEX_INVALID);
+    head_ = initialize(allocate(), BLOCK_INDEX_INVALID);
 
     return true;
 }
@@ -425,6 +429,15 @@ uint32_t BlockedFile::version() const {
 
 void BlockedFile::close() {
     flush();
+}
+
+bool BlockedFile::exists() {
+    FileBlockHead head;
+    if (!storage_->read(head_, &head, sizeof(FileBlockHead))) {
+        return false;
+    }
+
+    return head.valid() ;
 }
 
 BlockAddress BlockedFile::initialize(block_index_t block, block_index_t previous) {

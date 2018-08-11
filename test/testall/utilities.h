@@ -102,7 +102,8 @@ public:
     }
 
 public:
-    uint64_t write(SimpleFile &file, uint32_t times) {
+    template<typename File>
+    uint64_t write(File &file, uint32_t times) {
         uint64_t total = 0;
         for (auto i = 0; i < (int32_t)times; ++i) {
             auto bytes = file.write(data_, sizeof(data_));
