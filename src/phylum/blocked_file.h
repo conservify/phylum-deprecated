@@ -74,6 +74,8 @@ public:
 
     int32_t flush();
 
+    bool erase_all_blocks();
+
     bool erase();
 
     bool initialize();

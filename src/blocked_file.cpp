@@ -87,9 +87,7 @@ BlockedFile::SeekInfo BlockedFile::seek(BlockAddress from, uint32_t position_at_
         // Check to see if our desired location is in this block, otherwise we
         // can just skip this one entirely.
         if (addr.tail_sector(g)) {
-            if (visitor != nullptr) {
-                visitor->block(addr.block);
-            }
+            auto this_block = addr.block;
 
             FileBlockTail tail;
             memcpy(&tail, tail_info<FileBlockTail>(buffer_), sizeof(FileBlockTail));
@@ -107,6 +105,10 @@ BlockedFile::SeekInfo BlockedFile::seek(BlockAddress from, uint32_t position_at_
                 scanned_block = true;
                 bytes_in_block = 0;
                 addr = BlockAddress{ addr.block, SectorSize };
+            }
+
+            if (visitor != nullptr) {
+                visitor->block(this_block);
             }
         }
         else {
@@ -397,10 +399,39 @@ bool BlockedFile::initialize() {
     return true;
 }
 
-bool BlockedFile::erase() {
-    initialize();
+bool BlockedFile::erase_all_blocks() {
+    class Eraser : public BlockVisitor {
+    private:
+        StorageBackend *backend_;
 
-    return format();
+    public:
+        Eraser(StorageBackend *backend) : backend_(backend) {
+        }
+
+    public:
+        void block(block_index_t block) override {
+            backend_->erase(block);
+        }
+    };
+
+    Eraser eraser(storage_);
+
+    if (!seek(beg_, 0, UINT64_MAX, &eraser)) {
+    }
+
+    return erase();
+}
+
+bool BlockedFile::erase() {
+    if (!initialize()) {
+        return false;
+    }
+
+    if (!format()) {
+        return false;
+    }
+
+    return true;
 }
 
 bool BlockedFile::format() {
