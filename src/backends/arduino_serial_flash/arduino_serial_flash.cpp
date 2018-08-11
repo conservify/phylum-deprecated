@@ -84,6 +84,7 @@ bool ArduinoSerialFlashBackend::erase(block_index_t block) {
     sdebug() << "Erase(" << block << " " << address << ")" << endl;
     #endif
     serial_flash_.eraseBlock(address);
+    callbacks_->busy(0);
     return true;
 }
 
