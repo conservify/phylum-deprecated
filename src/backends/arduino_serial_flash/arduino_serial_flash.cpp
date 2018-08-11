@@ -1,4 +1,4 @@
-#ifdef ARDUINO
+#ifdef PHYLUM_ENABLE_SERIAL_FLASH
 
 #include <Arduino.h>
 
@@ -107,4 +107,4 @@ bool ArduinoSerialFlashBackend::write(BlockAddress addr, void *d, size_t n) {
 
 }
 
-#endif // ARDUINO
+#endif // PHYLUM_ENABLE_SERIAL_FLASH

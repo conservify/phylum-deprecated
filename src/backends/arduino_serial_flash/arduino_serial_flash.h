@@ -1,7 +1,7 @@
 #ifndef __PHYLUM_ARDUINO_SERIAL_FLASH_H_INCLUDED
 #define __PHYLUM_ARDUINO_SERIAL_FLASH_H_INCLUDED
 
-#ifdef ARDUINO
+#ifdef PHYLUM_ENABLE_SERIAL_FLASH
 
 #include <SerialFlash.h>
 
@@ -53,6 +53,6 @@ public:
 
 }
 
-#endif // ARDUINO
+#endif // PHYLUM_ENABLE_SERIAL_FLASH
 
 #endif // __PHYLUM_ARDUINO_SERIAL_FLASH_H_INCLUDED

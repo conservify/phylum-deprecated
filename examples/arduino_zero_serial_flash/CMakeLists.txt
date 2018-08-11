@@ -11,5 +11,6 @@ arduino(phylum-arduino-zero-serial-flash "${SOURCE_FILES}" "${LIBRARIES}")
 
 # add_definitions("-DPHYLUM_DEBUG")
 add_definitions("-DPHYLUM_ARDUINO_DEBUG=1")
+add_definitions("-DPHYLUM_ENABLE_SERIAL_FLASH")
 
 target_include_directories(phylum-arduino-zero-serial-flash PUBLIC ./ ../../src ../../src/backends/arduino_serial_flash)

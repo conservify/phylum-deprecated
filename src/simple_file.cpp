@@ -27,10 +27,10 @@ bool SimpleFile::seek(uint64_t desired) {
     }
 
     if (!end.valid()) {
-        return blocked_.seek({ file_->data.start, 0 }, 0, desired);
+        return blocked_.seek({ file_->data.start, 0 }, 0, desired, nullptr);
     }
 
-    return blocked_.seek(end.address, end.position, desired);
+    return blocked_.seek(end.address, end.position, desired, nullptr);
 }
 
 int32_t SimpleFile::read(uint8_t *ptr, size_t size) {

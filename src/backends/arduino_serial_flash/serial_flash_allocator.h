@@ -4,6 +4,7 @@
 #include <phylum/block_alloc.h>
 
 #include "arduino_serial_flash.h"
+#include "phylum/visitor.h"
 
 namespace phylum {
 
@@ -33,6 +34,19 @@ public:
     bool scan(bool free_only, ScanInfo &info);
 
     uint32_t number_of_free_blocks();
+
+};
+
+class TakenBlockTracker : public BlockVisitor {
+private:
+    uint8_t map_[SerialFlashAllocator::MapSize]{ 0 };
+
+public:
+    TakenBlockTracker();
+
+public:
+    void block(block_index_t block) override;
+    bool is_free(block_index_t block);
 
 };
 

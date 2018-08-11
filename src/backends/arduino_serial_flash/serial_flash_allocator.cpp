@@ -127,4 +127,22 @@ uint32_t SerialFlashAllocator::number_of_free_blocks() {
     return c;
 }
 
+TakenBlockTracker::TakenBlockTracker() {
+    for (auto block = (uint32_t)3; block < sizeof(map_) * 8; ++block) {
+        set_block_free(map_, block);
+    }
+
+    set_block_taken(map_, 0);
+    set_block_taken(map_, 1);
+    set_block_taken(map_, 2);
+}
+
+void TakenBlockTracker::block(block_index_t block) {
+    set_block_taken(map_, block);
+}
+
+bool TakenBlockTracker::is_free(block_index_t block) {
+    return is_block_free(map_, block);
+}
+
 }

@@ -4,6 +4,7 @@
 #include "phylum/backend.h"
 #include "phylum/private.h"
 #include "phylum/block_alloc.h"
+#include "phylum/visitor.h"
 
 namespace phylum {
 
@@ -42,6 +43,7 @@ public:
     bool locate();
     bool create();
     bool save();
+    bool walk(BlockVisitor *visitor);
 
 protected:
     struct PendingWrite {
@@ -52,7 +54,7 @@ protected:
 
 private:
     int32_t chain_length();
-    bool walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where, block_index_t *visited = nullptr);
+    bool walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where, BlockVisitor *visitor);
     bool find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where);
 
     bool rollover(SectorAddress addr, SectorAddress &new_location, PendingWrite write);

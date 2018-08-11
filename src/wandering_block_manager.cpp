@@ -11,7 +11,7 @@ WanderingBlockManager::WanderingBlockManager(StorageBackend &storage, ReusableBl
     storage_(&storage), blocks_(&blocks) {
 }
 
-bool WanderingBlockManager::walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where, block_index_t *visited) {
+bool WanderingBlockManager::walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where, BlockVisitor *visitor) {
     link = { };
     where.invalid();
 
@@ -34,8 +34,8 @@ bool WanderingBlockManager::walk(block_index_t desired, SuperBlockLink &link, Se
     }
 
     for (auto i = 0; i < chain_length() + 1; ++i) {
-        if (visited != nullptr) {
-            visited[i] = link.chained_block;
+        if (visitor != nullptr) {
+            visitor->block(link.chained_block);
         }
 
         if (!find_link(link.chained_block, link, where)) {
@@ -63,7 +63,7 @@ bool WanderingBlockManager::locate() {
 
     location_.invalid();
 
-    if (!walk(BLOCK_INDEX_INVALID, link, where)) {
+    if (!walk(BLOCK_INDEX_INVALID, link, where, nullptr)) {
         sdebug() << "WanderingBlockManager::walk failed." << endl;
         return false;
     }
@@ -75,6 +75,10 @@ bool WanderingBlockManager::locate() {
         return false;
     }
 
+    return true;
+}
+
+bool WanderingBlockManager::walk(BlockVisitor *visitor) {
     return true;
 }
 
@@ -192,7 +196,7 @@ bool WanderingBlockManager::rollover(SectorAddress addr, SectorAddress &relocate
     // Find the chain link that references this now obsolete location.
     SuperBlockLink link;
     SectorAddress previous;
-    if (!walk(addr.block, link, previous)) {
+    if (!walk(addr.block, link, previous, nullptr)) {
         return false;
     }
 

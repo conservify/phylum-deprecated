@@ -11,13 +11,12 @@ block_index_t AllocatedBlockedFile::allocate() {
 }
 
 bool BlockedFile::seek(uint64_t desired) {
-    return seek(head_, 0, desired);
+    return seek(head_, 0, desired, nullptr);
 }
 
-bool BlockedFile::seek(BlockAddress from, uint32_t position_at_from, uint64_t desired) {
-    auto info = seek_detailed(from, position_at_from, desired - position_at_from);
+bool BlockedFile::seek(BlockAddress from, uint32_t position_at_from, uint64_t desired, BlockVisitor *visitor) {
+    auto info = seek(from, position_at_from, desired - position_at_from, visitor, true);
     if (!info.address.valid()) {
-        sdebug() << "Fail" << endl;
         return false;
     }
 
@@ -41,7 +40,7 @@ bool BlockedFile::seek(BlockAddress from, uint32_t position_at_from, uint64_t de
     return true;
 }
 
-BlockedFile::SeekInfo BlockedFile::seek_detailed(BlockAddress from, uint32_t position_at_from, uint64_t max, bool verify_head_block) {
+BlockedFile::SeekInfo BlockedFile::seek(BlockAddress from, uint32_t position_at_from, uint64_t desired, BlockVisitor *visitor, bool verify_head_block) {
     auto bytes = 0;
     auto bytes_in_block = 0;
     auto blocks = 0;
@@ -88,12 +87,16 @@ BlockedFile::SeekInfo BlockedFile::seek_detailed(BlockAddress from, uint32_t pos
         // Check to see if our desired location is in this block, otherwise we
         // can just skip this one entirely.
         if (addr.tail_sector(g)) {
+            if (visitor != nullptr) {
+                visitor->block(addr.block);
+            }
+
             FileBlockTail tail;
             memcpy(&tail, tail_info<FileBlockTail>(buffer_), sizeof(FileBlockTail));
-            if (is_valid_block(tail.block.linked_block) && max > tail.bytes_in_block) {
+            if (is_valid_block(tail.block.linked_block) && desired > tail.bytes_in_block) {
                 addr = BlockAddress::tail_sector_of(tail.block.linked_block, g);
                 bytes += tail.bytes_in_block;
-                max -= tail.bytes_in_block;
+                desired -= tail.bytes_in_block;
                 bytes_in_block = 0;
                 blocks++;
             }
@@ -113,22 +116,34 @@ BlockedFile::SeekInfo BlockedFile::seek_detailed(BlockAddress from, uint32_t pos
             if (tail.bytes == 0 || tail.bytes == SECTOR_INDEX_INVALID) {
                 break;
             }
-            if (max >= tail.bytes) {
+            if (desired >= tail.bytes) {
                 bytes += tail.bytes;
                 bytes_in_block += tail.bytes;
-                max -= tail.bytes;
+                desired -= tail.bytes;
                 addr.add(SectorSize);
             }
             else {
-                bytes += max;
-                bytes_in_block += max;
-                addr.add(max);
+                bytes += desired;
+                bytes_in_block += desired;
+                addr.add(desired);
                 break;
             }
         }
     }
 
     return { addr, version, bytes, bytes_in_block, blocks };
+}
+
+bool BlockedFile::walk(BlockVisitor *visitor) {
+    if (!seek(0)) {
+        return false;
+    }
+
+    if (!seek(head_, 0, UINT64_MAX, visitor)) {
+        return false;
+    }
+
+    return true;
 }
 
 int32_t BlockedFile::read(uint8_t *ptr, size_t size) {

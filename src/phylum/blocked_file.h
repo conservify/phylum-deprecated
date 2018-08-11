@@ -3,6 +3,9 @@
 
 #include "phylum/backend.h"
 #include "phylum/file_index.h"
+#include "phylum/file_descriptor.h"
+#include "phylum/visitor.h"
+#include "phylum/block_alloc.h"
 
 namespace phylum {
 
@@ -61,9 +64,9 @@ public:
 
     uint32_t version() const;
 
-    bool seek(uint64_t position);
+    bool walk(BlockVisitor *visitor);
 
-    bool seek(BlockAddress from, uint32_t position_at_from, uint64_t bytes);
+    bool seek(uint64_t position);
 
     int32_t read(uint8_t *ptr, size_t size);
 
@@ -112,7 +115,9 @@ protected:
 
     SavedSector save_sector(bool flushing);
 
-    SeekInfo seek_detailed(BlockAddress from, uint32_t position_at_from, uint64_t desired, bool verify_head_block = true);
+    bool seek(BlockAddress from, uint32_t position_at_from, uint64_t bytes, BlockVisitor *visitor);
+
+    SeekInfo seek(BlockAddress from, uint32_t position_at_from, uint64_t bytes, BlockVisitor *visitor, bool verify_head_block);
 
     BlockAddress initialize(block_index_t block, block_index_t previous);
 

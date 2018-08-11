@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
 #include "phylum/super_block.h"
+#include "phylum/serial_flash_fs.h"
 #include "backends/linux_memory/linux_memory.h"
-#include "backends/arduino_serial_flash/serial_flash_allocator.h"
 
 #include "utilities.h"
 
@@ -55,24 +55,6 @@ TEST_F(WanderingBlockSuite, SavingAFewRevisions) {
     ASSERT_TRUE(manager_.locate());
 
     ASSERT_EQ(manager_.location().sector, 5);
-}
-
-class Files {
-private:
-    StorageBackend *backend_;
-    SerialFlashAllocator *allocator_;
-
-public:
-    Files(StorageBackend *backend, SerialFlashAllocator *allocator) : backend_(backend), allocator_(allocator) {
-    }
-
-public:
-    AllocatedBlockedFile open(BlockAddress start, OpenMode mode);
-
-};
-
-AllocatedBlockedFile Files::open(BlockAddress start, OpenMode mode) {
-    return AllocatedBlockedFile{ backend_, mode, allocator_, start };
 }
 
 TEST_F(WanderingBlockSuite, CreatingSmallFile) {
@@ -132,4 +114,89 @@ TEST_F(WanderingBlockSuite, CreatingLargeFile) {
 
     ASSERT_EQ(allocator_.number_of_free_blocks(), (uint32_t)9);
 }
+
+struct CountingVisitor : BlockVisitor {
+    uint32_t counter{ 0 };
+
+    void block(block_index_t block) override {
+        counter++;
+    }
+
+};
+
+TEST_F(WanderingBlockSuite, WalkingBlocksOfSmallFile) {
+    ASSERT_TRUE(manager_.create());
+    ASSERT_TRUE(manager_.locate());
+
+    Files files{ &storage_, &allocator_ };
+
+    auto file1 = files.open({ }, OpenMode::Write);
+
+    ASSERT_TRUE(file1.initialize());
+    ASSERT_FALSE(file1.exists());
+    ASSERT_TRUE(file1.format());
+
+    auto location = file1.beginning();
+
+    PatternHelper helper;
+    auto total = helper.write(file1, (1024) / helper.size());
+    file1.close();
+
+    ASSERT_EQ(total, (uint32_t)(1024));
+
+    CountingVisitor visitor;
+    auto file2 = files.open(location, OpenMode::Read);
+    file2.walk(&visitor);
+
+    ASSERT_EQ(allocator_.number_of_free_blocks(), (uint32_t)25);
+    ASSERT_EQ(visitor.counter, (uint32_t)1);
+}
+
+TEST_F(WanderingBlockSuite, WalkingBlocksOfLargeFile) {
+    ASSERT_TRUE(manager_.create());
+    ASSERT_TRUE(manager_.locate());
+
+    Files files{ &storage_, &allocator_ };
+
+    auto file1 = files.open({ }, OpenMode::Write);
+
+    ASSERT_TRUE(file1.initialize());
+    ASSERT_FALSE(file1.exists());
+    ASSERT_TRUE(file1.format());
+
+    auto location = file1.beginning();
+
+    PatternHelper helper;
+    auto total = helper.write(file1, (1024 * 1024) / helper.size());
+    file1.close();
+
+    ASSERT_EQ(total, (uint32_t)(1024 * 1024));
+
+    CountingVisitor visitor;
+    auto file2 = files.open(location, OpenMode::Read);
+    file2.walk(&visitor);
+
+    ASSERT_EQ(allocator_.number_of_free_blocks(), (uint32_t)9);
+    ASSERT_EQ(visitor.counter, (uint32_t)17);
+}
+
+TEST_F(WanderingBlockSuite, UnusedBlockReclaim) {
+    ASSERT_TRUE(manager_.create());
+    ASSERT_TRUE(manager_.locate());
+
+    for (auto i = 0; i < 128; ++i) {
+        ASSERT_TRUE(manager_.save());
+    }
+
+    Files files{ &storage_, &allocator_ };
+    auto file1 = files.open({ }, OpenMode::Write);
+    ASSERT_TRUE(file1.format());
+    auto location = file1.beginning();
+    PatternHelper helper;
+    helper.write(file1, (1024 * 256) / helper.size());
+    file1.close();
+
+    UnusedBlockReclaimer reclaimer(&files, &manager_);
+    reclaimer.walk(location);
+    reclaimer.reclaim();
 }
