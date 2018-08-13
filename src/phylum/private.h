@@ -139,6 +139,8 @@ struct Geometry {
     }
 
     bool contains(const BlockAddress addr) const;
+
+    bool valid(const BlockAddress addr) const;
 };
 
 struct BlockAddress {
@@ -295,6 +297,10 @@ inline bool is_valid_block(block_index_t block) {
 
 inline bool Geometry::contains(const BlockAddress addr) const {
     return addr.block < number_of_blocks && addr.position < block_size();
+}
+
+inline bool Geometry::valid(const BlockAddress addr) const {
+    return contains(addr);
 }
 
 inline ostreamtype& operator<<(ostreamtype& os, const SectorAddress &addr) {
