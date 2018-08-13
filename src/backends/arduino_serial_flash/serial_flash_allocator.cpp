@@ -96,9 +96,9 @@ bool SerialFlashAllocator::scan(bool free_only, ScanInfo &info) {
                 }
             }
             else {
-                if (info.age != 0) {
+                if (info.block == BLOCK_INDEX_INVALID) {
                     info.block = block;
-                    info.age = 0;
+                    info.age = BLOCK_AGE_INVALID;
                 }
             }
         }
