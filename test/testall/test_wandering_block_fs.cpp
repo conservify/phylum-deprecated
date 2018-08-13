@@ -200,3 +200,29 @@ TEST_F(WanderingBlockSuite, UnusedBlockReclaim) {
     reclaimer.walk(location);
     reclaimer.reclaim();
 }
+
+TEST_F(WanderingBlockSuite, SeekEndAndBegOfLargeFile) {
+    ASSERT_TRUE(manager_.create());
+    ASSERT_TRUE(manager_.locate());
+
+    PatternHelper helper;
+    Files files{ &storage_, &allocator_ };
+
+    // Create the file.
+    auto file1 = files.open({ }, OpenMode::Write);
+    ASSERT_TRUE(file1.format());
+    auto beginning = file1.beginning();
+    auto total = helper.write(file1, (1024 * 1024) / helper.size());
+    auto end = file1.head();
+    file1.close();
+    ASSERT_EQ(total, (uint32_t)(1024 * 1024));
+
+
+    // Now test the seeks on the file.
+    auto file2 = files.open(beginning, OpenMode::Read);
+    ASSERT_TRUE(file2.exists());
+
+    ASSERT_TRUE(file2.seek(UINT64_MAX));
+    ASSERT_TRUE(file2.seek(0));
+    ASSERT_EQ(file2.head().beginning_of_block(), beginning);
+}
