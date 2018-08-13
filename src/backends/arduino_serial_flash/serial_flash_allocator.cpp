@@ -113,12 +113,20 @@ bool SerialFlashAllocator::scan(bool free_only, ScanInfo &info) {
 }
 
 bool SerialFlashAllocator::free(block_index_t block, block_age_t age) {
+    BlockHead header;
+    if (!storage_->read({ (block_index_t)block, 0 }, &header, sizeof(BlockHead))) {
+        return false;
+    }
+
+    if (header.valid()) {
+        age = header.age + 1;
+    }
+
     if (!storage_->erase(block)) {
         sdebug() << "Erase failed! (" << (uint32_t)block << ")" << endl;
         return false;
     }
 
-    BlockHead header;
     header.fill();
     header.age = age;
     header.type = BlockType::Unallocated;

@@ -10,6 +10,10 @@ block_index_t AllocatedBlockedFile::allocate() {
     return allocator_->allocate(BlockType::File);
 }
 
+void AllocatedBlockedFile::free(block_index_t block) {
+    allocator_->free(block, 0);
+}
+
 bool BlockedFile::seek(uint64_t desired) {
     return seek(head_, 0, desired, nullptr);
 }
@@ -402,19 +406,19 @@ bool BlockedFile::initialize() {
 bool BlockedFile::erase_all_blocks() {
     class Eraser : public BlockVisitor {
     private:
-        StorageBackend *backend_;
+        BlockedFile *file_;
 
     public:
-        Eraser(StorageBackend *backend) : backend_(backend) {
+        Eraser(BlockedFile *file) : file_(file) {
         }
 
     public:
         void block(block_index_t block) override {
-            backend_->erase(block);
+            file_->free(block);
         }
     };
 
-    Eraser eraser(storage_);
+    Eraser eraser(this);
 
     if (!seek(beg_, 0, UINT64_MAX, &eraser)) {
     }

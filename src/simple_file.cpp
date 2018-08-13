@@ -19,6 +19,9 @@ block_index_t ExtentBlockedFile::allocate() {
     return block;
 }
 
+void ExtentBlockedFile::free(block_index_t block) {
+}
+
 bool SimpleFile::seek(uint64_t desired) {
     IndexRecord end;
 

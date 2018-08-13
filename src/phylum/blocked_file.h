@@ -125,23 +125,25 @@ protected:
 
 public:
     virtual block_index_t allocate() = 0;
+    virtual void free(block_index_t block) = 0;
 
 };
 
 class AllocatedBlockedFile : public BlockedFile {
 private:
-    BlockAllocator *allocator_;
+    ReusableBlockAllocator *allocator_;
 
 public:
     AllocatedBlockedFile() {
     }
 
-    AllocatedBlockedFile(StorageBackend *storage, OpenMode mode, BlockAllocator *allocator, BlockAddress head) :
+    AllocatedBlockedFile(StorageBackend *storage, OpenMode mode, ReusableBlockAllocator *allocator, BlockAddress head) :
         BlockedFile(storage, mode, head), allocator_(allocator) {
     }
 
 public:
     block_index_t allocate() override;
+    void free(block_index_t block) override;
 
 };
 
