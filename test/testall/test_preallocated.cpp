@@ -64,6 +64,22 @@ TEST_F(PreallocatedSuite, FormattingStandardLayout) {
     ASSERT_EQ(layout.allocation(1), FileAllocation{ });
 }
 
+TEST_F(PreallocatedSuite, WriteLargeBuffer) {
+    FileDescriptor data_file = { "data.fk", 100 };
+    FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
+
+    ASSERT_TRUE(layout.format(files));
+
+    auto file = layout.open(data_file, OpenMode::Write);
+    ASSERT_TRUE(file);
+
+    ASSERT_EQ(file.version(), (uint32_t)1);
+
+    uint8_t buffer[2048] = { 0 };
+    ASSERT_EQ(file.write(buffer, sizeof(buffer)), 2048);
+}
+
 TEST_F(PreallocatedSuite, WritingSmallFileToItsEnd) {
     FileDescriptor data_file = { "data.fk", 100 };
     FileDescriptor* files[] = { &data_file };

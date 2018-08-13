@@ -29,6 +29,11 @@ block_index_t SerialFlashAllocator::allocate(BlockType type) {
     sdebug() << "Allocate: " << type << " = " << (uint32_t)info.block << endl;
     #endif
 
+    if (info.block == BLOCK_INDEX_INVALID) {
+        sdebug() << "Allocate Failed" << endl;
+        assert(info.block != BLOCK_INDEX_INVALID);
+    }
+
     set_block_taken(map_, info.block);
 
     return info.block;
