@@ -15,7 +15,11 @@ void AllocatedBlockedFile::free(block_index_t block) {
 }
 
 bool BlockedFile::seek(uint64_t desired) {
-    return seek(beg_, 0, desired, nullptr);
+    auto from = beg_;
+    if (!from.valid()) {
+        from = head_;
+    }
+    return seek(from, 0, desired, nullptr);
 }
 
 bool BlockedFile::seek(BlockAddress from, uint32_t position_at_from, uint64_t desired, BlockVisitor *visitor) {

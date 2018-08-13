@@ -213,7 +213,6 @@ TEST_F(WanderingBlockSuite, SeekEndAndBegOfLargeFile) {
     ASSERT_TRUE(file1.format());
     auto beginning = file1.beginning();
     auto total = helper.write(file1, (1024 * 1024) / helper.size());
-    auto end = file1.head();
     file1.close();
     ASSERT_EQ(total, (uint32_t)(1024 * 1024));
 

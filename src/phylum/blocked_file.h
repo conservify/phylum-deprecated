@@ -6,10 +6,11 @@
 #include "phylum/file_descriptor.h"
 #include "phylum/visitor.h"
 #include "phylum/block_alloc.h"
+#include "phylum/file.h"
 
 namespace phylum {
 
-class BlockedFile {
+class BlockedFile : public File {
 public:
     static constexpr block_index_t IndexFrequency = 8;
 
@@ -54,23 +55,23 @@ public:
 
     uint32_t blocks_in_file() const;
 
-    uint64_t size() const;
+    uint64_t size() const override;
 
-    uint64_t tell() const;
+    uint64_t tell() const override;
 
     BlockAddress beginning() const;
 
     BlockAddress head() const;
 
-    uint32_t version() const;
+    uint32_t version() const override;
 
     bool walk(BlockVisitor *visitor);
 
-    bool seek(uint64_t position);
+    bool seek(uint64_t position) override;
 
-    int32_t read(uint8_t *ptr, size_t size);
+    int32_t read(uint8_t *ptr, size_t size) override;
 
-    int32_t write(uint8_t *ptr, size_t size, bool span_sectors = true, bool span_blocks = true);
+    int32_t write(uint8_t *ptr, size_t size, bool span_sectors = true, bool span_blocks = true) override;
 
     int32_t flush();
 
