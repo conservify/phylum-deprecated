@@ -1,6 +1,7 @@
 #ifndef __PHYLUM_ARDUINO_SD_H_INCLUDED
 #define __PHYLUM_ARDUINO_SD_H_INCLUDED
 
+#ifdef PHYLUM_ENABLE_SD
 #ifdef ARDUINO
 
 #include <phylum/phylum.h>
@@ -35,5 +36,6 @@ public:
 }
 
 #endif // ARDUINO
+#endif // PHYLUM_ENABLE_SD
 
 #endif // __PHYLUM_ARDUINO_SD_H_INCLUDED

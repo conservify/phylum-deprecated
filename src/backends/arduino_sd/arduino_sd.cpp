@@ -1,3 +1,4 @@
+#ifdef PHYLUM_ENABLE_SD
 #ifdef ARDUINO
 
 #include <Arduino.h>
@@ -76,3 +77,4 @@ bool ArduinoSdBackend::write(BlockAddress addr, void *d, size_t n) {
 }
 
 #endif // ARDUINO
+#endif // PHYLUM_ENABLE_SD

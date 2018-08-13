@@ -1,6 +1,7 @@
 #ifndef SD_RAW_H_INCLUDED
 #define SD_RAW_H_INCLUDED
 
+#ifdef PHYLUM_ENABLE_SD
 #ifdef ARDUINO
 
 #include <stdint.h>
@@ -86,5 +87,6 @@ uint8_t const SPI_HALF_SPEED = 1;
 uint8_t const SPI_QUARTER_SPEED = 2;
 
 #endif // ARDUINO
+#endif // PHYLUM_ENABLE_SD
 
 #endif // SD_RAW_H_INCLUDED

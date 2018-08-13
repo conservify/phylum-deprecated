@@ -1,3 +1,4 @@
+#ifdef PHYLUM_ENABLE_SD
 #ifdef ARDUINO
 
 #include <Arduino.h>
@@ -424,3 +425,4 @@ uint8_t sd_raw_erase(sd_raw_t *sd, uint32_t firstBlock, uint32_t lastBlock) {
 }
 
 #endif // ARDUINO
+#endif // PHYLUM_ENABLE_SD

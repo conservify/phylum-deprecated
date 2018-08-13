@@ -9,6 +9,7 @@ file(GLOB SOURCE_FILES *.cpp ../../src/*.cpp ../../src/phylum/*.h ../../src/back
 
 arduino(phylum-arduino-zero-tree "${SOURCE_FILES}" "${LIBRARIES}")
 
-add_definitions("-DPHYLUM_DEBUG")
+add_definitions(-DPHYLUM_DEBUG)
+add_definitions(-DPHYLUM_ENABLE_SD)
 
 target_include_directories(phylum-arduino-zero-tree PUBLIC ./ ../../src ../../src/backends/arduino_sd)
