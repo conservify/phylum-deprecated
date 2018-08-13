@@ -24,6 +24,7 @@ public:
     LogStream& print(const char *str) {
         #ifdef ARDUINO
         Serial.print(str);
+        Serial5.print(str);
         #else
         printf("%s", str);
         #endif
