@@ -49,6 +49,14 @@ bool SerialFlashAllocator::initialize() {
     return true;
 }
 
+bool SerialFlashAllocator::free_all_blocks() {
+    for (auto block = (uint32_t)0; block < storage_->geometry().number_of_blocks; ++block) {
+        free(block, 0);
+    }
+
+    return true;
+}
+
 bool SerialFlashAllocator::is_taken(block_index_t block, BlockHead &header) {
     if (!storage_->read({ (block_index_t)block, 0 }, &header, sizeof(BlockHead))) {
         return false;

@@ -40,6 +40,8 @@ public:
 
     uint32_t number_of_free_blocks();
 
+    bool free_all_blocks();
+
 };
 
 class TakenBlockTracker : public BlockVisitor {
