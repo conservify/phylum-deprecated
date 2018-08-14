@@ -32,12 +32,16 @@ public:
     }
 
     LogStream& printf(const char *f, ...) {
+        #ifdef PHYLUM_DISABLE_LOGGING
+        return *this;
+        #else
         char buffer[128];
         va_list args;
         va_start(args, f);
         vsnprintf(buffer, sizeof(buffer), f, args);
         va_end(args);
         return print(buffer);
+        #endif
     }
 
 public:
