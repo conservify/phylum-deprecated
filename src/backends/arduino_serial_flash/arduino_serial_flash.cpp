@@ -1,7 +1,6 @@
 #ifdef PHYLUM_ENABLE_SERIAL_FLASH
 
-#include <Arduino.h>
-
+#include <cinttypes>
 #include <cstdarg>
 #include <cstdio>
 
