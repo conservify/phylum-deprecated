@@ -147,7 +147,7 @@ public:
 
 private:
     bool allocate(FileDescriptor*(&fds)[SIZE]) {
-        FilePreallocator allocator{ *storage_ };
+        FilePreallocator allocator{ storage_->geometry() };
 
         #ifdef PHYLUM_LAYOUT_DEBUG
         sdebug() << "Effective block size: " << effective_file_block_size(geometry()) <<

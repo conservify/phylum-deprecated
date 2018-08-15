@@ -8,10 +8,10 @@ namespace phylum {
 class FilePreallocator {
 private:
     block_index_t head_ = 2;
-    StorageBackend &storage_;
+    Geometry &geometry_;
 
 public:
-    FilePreallocator(StorageBackend &storage) : storage_(storage) {
+    FilePreallocator(Geometry &geometry) : geometry_(geometry) {
     }
 
 public:
@@ -19,7 +19,7 @@ public:
 
 private:
     Geometry &geometry() const {
-        return storage_.geometry();
+        return geometry_;
     }
 
     block_index_t blocks_required_for_index(block_index_t nblocks);

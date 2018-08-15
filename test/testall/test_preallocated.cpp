@@ -9,6 +9,38 @@
 
 using namespace phylum;
 
+class EmptySuite : public ::testing::Test {
+};
+
+TEST_F(EmptySuite, FormattingLayoutLargerThanGeometry) {
+    auto number_of_blocks = UINT32_MAX / (512);
+    Geometry geometry{ number_of_blocks, 4, 4, 512 };
+
+    FileDescriptor file_system_area_fd =   { "system",        100 };
+    FileDescriptor file_log_startup_fd =   { "startup.log",   100 };
+    FileDescriptor file_log_now_fd =       { "now.log",       100 };
+    FileDescriptor file_log_emergency_fd = { "emergency.log", 100 };
+    FileDescriptor file_data_fd =          { "data.fk",       0   };
+
+    FileDescriptor* files[] = {
+        &file_system_area_fd,
+        &file_log_startup_fd,
+        &file_log_now_fd,
+        &file_log_emergency_fd,
+        &file_data_fd
+    };
+
+    FilePreallocator allocator{ geometry };
+
+    sdebug() << number_of_blocks << endl;
+
+    FileAllocation allocation;
+    for (auto i = 0;i < 5; ++i) {
+        allocator.allocate(0, files[i], allocation);
+        sdebug() << "Alloc: " << allocation << endl;
+    }
+}
+
 class PreallocatedSuite : public ::testing::Test {
 protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
