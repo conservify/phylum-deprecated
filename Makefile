@@ -7,8 +7,7 @@ build: gitdeps
 	cd build && cmake ../ && make
 
 clean:
-	mkdir -p $(BUILD)
-	cd build && cmake ../ && make clean
+	rm -rf $(BUILD)
 
 veryclean:
 	rm -rf $(BUILD) gitdeps
