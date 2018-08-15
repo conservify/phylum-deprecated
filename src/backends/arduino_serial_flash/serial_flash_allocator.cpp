@@ -169,11 +169,16 @@ TakenBlockTracker::TakenBlockTracker() {
 }
 
 void TakenBlockTracker::block(block_index_t block) {
-    set_block_taken(map_, block);
+    if (block < sizeof(map_) * 8) {
+        set_block_taken(map_, block);
+    }
 }
 
 bool TakenBlockTracker::is_free(block_index_t block) {
-    return is_block_free(map_, block);
+    if (block > sizeof(map_) * 8) {
+        return is_block_free(map_, block);
+    }
+    return false;
 }
 
 }

@@ -18,7 +18,7 @@ bool UnusedBlockReclaimer::reclaim() {
     for (auto block = (uint32_t)0; block < files_->backend_->geometry().number_of_blocks; ++block) {
         if (tracker_.is_free(block)) {
             if (files_->allocator_->is_taken(block)) {
-                sdebug() << "Erase: " << block << endl;
+                sdebug() << "Erasing: " << block << endl;
                 if (!files_->backend_->erase(block)) {
                     return false;
                 }

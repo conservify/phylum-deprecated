@@ -23,8 +23,12 @@ class LogStream {
 public:
     LogStream& print(const char *str) {
         #ifdef ARDUINO
-        Serial.print(str);
-        Serial5.print(str);
+        if (Serial) {
+            Serial.print(str);
+        }
+        if (Serial5) {
+            Serial5.print(str);
+        }
         #else
         printf("%s", str);
         #endif
