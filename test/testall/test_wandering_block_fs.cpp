@@ -1,7 +1,8 @@
 #include <gtest/gtest.h>
 
 #include "phylum/super_block.h"
-#include "phylum/serial_flash_fs.h"
+#include "phylum/files.h"
+#include "phylum/unused_block_reclaimer.h"
 #include "backends/linux_memory/linux_memory.h"
 
 #include "utilities.h"

@@ -1,5 +1,5 @@
-#ifndef __PHYLUM_SERIAL_FLASH_FS_H_INCLUDED
-#define __PHYLUM_SERIAL_FLASH_FS_H_INCLUDED
+#ifndef __PHYLUM_FILES_H_INCLUDED
+#define __PHYLUM_FILES_H_INCLUDED
 
 #include "phylum/private.h"
 #include "phylum/blocked_file.h"
@@ -21,23 +21,6 @@ public:
 
 public:
     AllocatedBlockedFile open(BlockAddress start, OpenMode mode);
-
-};
-
-class UnusedBlockReclaimer {
-private:
-    Files *files_;
-    WanderingBlockManager *wandering_;
-    TakenBlockTracker tracker_;
-
-public:
-    UnusedBlockReclaimer(Files *files, WanderingBlockManager *wandering) :
-        files_(files), wandering_(wandering) {
-    }
-
-public:
-    bool walk(BlockAddress address);
-    bool reclaim();
 
 };
 

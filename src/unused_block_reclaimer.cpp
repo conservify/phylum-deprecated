@@ -1,10 +1,6 @@
-#include "phylum/serial_flash_fs.h"
+#include "phylum/unused_block_reclaimer.h"
 
 namespace phylum {
-
-AllocatedBlockedFile Files::open(BlockAddress start, OpenMode mode) {
-    return AllocatedBlockedFile{ backend_, mode, allocator_, start };
-}
 
 bool UnusedBlockReclaimer::walk(BlockAddress address) {
     auto file = files_->open(address, OpenMode::Read);
