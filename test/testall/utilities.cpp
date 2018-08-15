@@ -210,7 +210,7 @@ void BlockHelper::dump(block_index_t block) {
     }
     }
 
-    sdebug() << std::endl;
+    sdebug() << endl;
 }
 
 DataHelper::DataHelper(FileSystem &fs) : fs_(&fs) {

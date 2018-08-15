@@ -86,7 +86,7 @@ bool LinuxMemoryBackend::read(BlockAddress addr, void *d, size_t n) {
 static void verify_erased(BlockAddress addr, uint8_t *p, size_t n) {
     for (size_t i = 0; i < n; ++i) {
         if (*p != LinuxMemoryBackend::EraseByte) {
-            sdebug() << "Corruption: " << addr << std::endl;
+            sdebug() << "Corruption: " << addr << endl;
             assert(*p == LinuxMemoryBackend::EraseByte);
         }
         p++;
@@ -99,7 +99,7 @@ static void verify_append(BlockAddress addr, uint8_t *p, uint8_t *src, size_t n)
     for (size_t i = 0; i < n; ++i) {
         if (*p != LinuxMemoryBackend::EraseByte) {
             if (*p != *src) {
-                sdebug() << "Corruption: " << addr << " " << i << std::endl;
+                sdebug() << "Corruption: " << addr << " " << i << endl;
                 assert(*p == LinuxMemoryBackend::EraseByte);
             }
         }

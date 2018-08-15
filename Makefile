@@ -23,6 +23,10 @@ test-ff: build
 	env GTEST_COLOR=1 build/test/testall/testall -VV
 
 gitdeps:
+	simple-deps --config examples/arduino_zero_large_files/arduino-libraries
+	simple-deps --config examples/arduino_zero_prealloc/arduino-libraries
 	simple-deps --config examples/arduino_zero_serial_flash/arduino-libraries
+	simple-deps --config examples/arduino_zero_tree/arduino-libraries
+	simple-deps --config test/testall/arduino-libraries
 
 .PHONY: build clean

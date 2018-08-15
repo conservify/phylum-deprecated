@@ -73,7 +73,7 @@ public:
     }
 
 public:
-    friend std::ostream& operator<<(std::ostream& os, const LogEntry& e);
+    friend ostreamtype& operator<<(ostreamtype& os, const LogEntry& e);
 
 };
 
@@ -109,7 +109,7 @@ public:
     }
 
 public:
-    friend std::ostream& operator<<(std::ostream& os, const StorageLog& e);
+    friend ostreamtype& operator<<(ostreamtype& os, const StorageLog& e);
 
 };
 

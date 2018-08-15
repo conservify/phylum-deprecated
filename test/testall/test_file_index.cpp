@@ -77,5 +77,4 @@ TEST_F(FileIndexSuite, LargeIndex) {
     ASSERT_TRUE(index.seek(0, record));
     ASSERT_EQ(storage.log().size(), 14);
     ASSERT_EQ(record.position, (uint64_t)0);
-
 }

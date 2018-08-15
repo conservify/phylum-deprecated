@@ -40,7 +40,7 @@ void StorageLog::append(LogEntry &&entry) {
     entries_.back().backup();
 
     if (logging_) {
-        sdebug() << entry << std::endl;
+        sdebug() << "Entry: " << entry << endl;
     }
 }
 
@@ -48,7 +48,7 @@ void StorageLog::undo(size_t number) {
     entries_.back().undo();
 }
 
-std::ostream& operator<<(std::ostream& os, const LogEntry& e) {
+ostreamtype& operator<<(ostreamtype& os, const LogEntry& e) {
     switch (e.type_) {
     case OperationType::Opened:
         os << "Opened()";
@@ -69,9 +69,9 @@ std::ostream& operator<<(std::ostream& os, const LogEntry& e) {
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const StorageLog& l) {
+ostreamtype& operator<<(ostreamtype& os, const StorageLog& l) {
     for (auto &e : l.entries_) {
-        os << e << std::endl;
+        os << e << endl;
     }
     return os;
 }
