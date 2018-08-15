@@ -4,6 +4,8 @@
 #ifdef PHYLUM_ENABLE_SERIAL_FLASH
 
 #include <SerialFlash.h>
+#undef min
+#undef max
 
 #include <phylum/phylum.h>
 #include <phylum/private.h>
