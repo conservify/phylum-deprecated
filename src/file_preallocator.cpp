@@ -59,8 +59,6 @@ block_index_t FilePreallocator::blocks_required_for_data(uint64_t opaque_size) {
         scale = Megabyte;
     }
 
-    sdebug() << "Scale: " << scale << endl;
-
     auto size = opaque_size * scale;
     return (size / effective_file_block_size(geometry())) + 1;
 }
