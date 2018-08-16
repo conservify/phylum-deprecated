@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include <phylum/phylum.h>
+#include <phylum/basic_super_block_manager.h>
 #include <backends/arduino_serial_flash/arduino_serial_flash.h>
 #include <backends/arduino_serial_flash/serial_flash_allocator.h>
 
@@ -9,7 +10,7 @@ using namespace phylum;
 struct SimpleState : MinimumSuperBlock {
 };
 
-using OurStateManager = SerialFlashStateManager<SimpleState>;
+using OurStateManager = BasicSuperBlockManager<SimpleState>;
 
 static void fail() {
     Serial.println("Fail!");

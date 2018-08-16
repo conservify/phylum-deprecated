@@ -1,5 +1,5 @@
-#ifndef __PHYLUM_WANDERING_BLOCK_H_INCLUDED
-#define __PHYLUM_WANDERING_BLOCK_H_INCLUDED
+#ifndef __PHYLUM_SUPER_BLOCK_MANAGER_H_INCLUDED
+#define __PHYLUM_SUPER_BLOCK_MANAGER_H_INCLUDED
 
 #undef min
 #undef max
@@ -25,7 +25,7 @@ struct MinimumSuperBlock {
     SuperBlockLink link{ BlockType::SuperBlock };
 };
 
-class WanderingBlockManager {
+class SuperBlockManager {
 private:
     static constexpr block_index_t AnchorBlocks[] = { 1, 2 };
     // TODO: Store more than one super block in a sector?
@@ -34,7 +34,7 @@ private:
     ReusableBlockAllocator *blocks_;
 
 public:
-    WanderingBlockManager(StorageBackend &storage, ReusableBlockAllocator &blocks);
+    SuperBlockManager(StorageBackend &storage, ReusableBlockAllocator &blocks);
 
 public:
     SectorAddress location() {

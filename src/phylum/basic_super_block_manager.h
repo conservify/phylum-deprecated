@@ -1,14 +1,14 @@
 #ifndef __PHYLUM_SERIAL_FLASH_STATE_MANAGER_H_INCLUDED
 #define __PHYLUM_SERIAL_FLASH_STATE_MANAGER_H_INCLUDED
 
-#include "phylum/wandering_block_manager.h"
+#include "phylum/super_block_manager.h"
 
 namespace phylum {
 
 template<typename T>
-class SerialFlashStateManager {
+class BasicSuperBlockManager {
 private:
-    WanderingBlockManager manager_;
+    SuperBlockManager manager_;
     T state_;
 
 public:
@@ -20,12 +20,12 @@ public:
         return manager_.location();
     }
 
-    WanderingBlockManager &manager() {
+    SuperBlockManager &manager() {
         return manager_;
     }
 
 public:
-    SerialFlashStateManager(StorageBackend &storage, ReusableBlockAllocator &blocks) : manager_(storage, blocks) {
+    BasicSuperBlockManager(StorageBackend &storage, ReusableBlockAllocator &blocks) : manager_(storage, blocks) {
     }
 
 public:

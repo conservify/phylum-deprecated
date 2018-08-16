@@ -1,17 +1,17 @@
 #include "phylum/phylum.h"
 #include "phylum/private.h"
-#include "phylum/wandering_block_manager.h"
+#include "phylum/super_block_manager.h"
 
 namespace phylum {
 
 constexpr uint16_t SuperBlockStartSector = 0;
-constexpr block_index_t WanderingBlockManager::AnchorBlocks[];
+constexpr block_index_t SuperBlockManager::AnchorBlocks[];
 
-WanderingBlockManager::WanderingBlockManager(StorageBackend &storage, ReusableBlockAllocator &blocks) :
+SuperBlockManager::SuperBlockManager(StorageBackend &storage, ReusableBlockAllocator &blocks) :
     storage_(&storage), blocks_(&blocks) {
 }
 
-bool WanderingBlockManager::walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where, BlockVisitor *visitor) {
+bool SuperBlockManager::walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where, BlockVisitor *visitor) {
     link = { };
     where.invalid();
 
@@ -24,7 +24,7 @@ bool WanderingBlockManager::walk(block_index_t desired, SuperBlockLink &link, Se
 
     // No link in the anchor area!
     if (!where.valid()) {
-        sdebug() << "WanderingBlockManager::walk: No link in anchor" << endl;
+        sdebug() << "SuperBlockManager::walk: No link in anchor" << endl;
         return false;
     }
 
@@ -52,45 +52,45 @@ bool WanderingBlockManager::walk(block_index_t desired, SuperBlockLink &link, Se
         }
     }
 
-    sdebug() << "WanderingBlockManager::walk: Failed to find" << endl;
+    sdebug() << "SuperBlockManager::walk: Failed to find" << endl;
 
     return false;
 }
 
-bool WanderingBlockManager::locate(MinimumSuperBlock &sb, size_t size) {
+bool SuperBlockManager::locate(MinimumSuperBlock &sb, size_t size) {
     SuperBlockLink link;
     SectorAddress where;
 
     location_.invalid();
 
     if (!walk(BLOCK_INDEX_INVALID, link, where, nullptr)) {
-        sdebug() << "WanderingBlockManager::walk failed." << endl;
+        sdebug() << "SuperBlockManager::walk failed." << endl;
         return false;
     }
 
     location_ = where;
 
     if (!storage_->read({ location_, 0 }, &sb, size)) {
-        sdebug() << "WanderingBlockManager::read_super failed." << endl;
+        sdebug() << "SuperBlockManager::read_super failed." << endl;
         return false;
     }
 
     return true;
 }
 
-bool WanderingBlockManager::walk(BlockVisitor *visitor) {
+bool SuperBlockManager::walk(BlockVisitor *visitor) {
     SuperBlockLink link;
     SectorAddress where;
 
     if (!walk(BLOCK_INDEX_INVALID, link, where, visitor)) {
-        sdebug() << "WanderingBlockManager::walk failed." << endl;
+        sdebug() << "SuperBlockManager::walk failed." << endl;
         return false;
     }
 
     return true;
 }
 
-bool WanderingBlockManager::find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where) {
+bool SuperBlockManager::find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where) {
     for (auto s = SuperBlockStartSector; s < storage_->geometry().sectors_per_block(); ++s) {
         SuperBlockLink link;
 
@@ -112,11 +112,11 @@ bool WanderingBlockManager::find_link(block_index_t block, SuperBlockLink &found
     return true;
 }
 
-bool WanderingBlockManager::create(MinimumSuperBlock &sb, size_t size) {
+bool SuperBlockManager::create(MinimumSuperBlock &sb, size_t size) {
     return create(sb, size, [] {});
 }
 
-bool WanderingBlockManager::create(MinimumSuperBlock &sb, size_t size, std::function<void()> update) {
+bool SuperBlockManager::create(MinimumSuperBlock &sb, size_t size, std::function<void()> update) {
     block_index_t super_block_block = BLOCK_INDEX_INVALID;
     SuperBlockLink link;
     link.chained_block = BLOCK_INDEX_INVALID;
@@ -173,7 +173,7 @@ bool WanderingBlockManager::create(MinimumSuperBlock &sb, size_t size, std::func
     return locate(sb, size);
 }
 
-bool WanderingBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, PendingWrite pending) {
+bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, PendingWrite pending) {
     // Move to the following sector and see if we need to perform the rollover.
     addr.sector++;
 
@@ -235,7 +235,7 @@ bool WanderingBlockManager::rollover(SectorAddress addr, SectorAddress &relocate
     return true;
 }
 
-bool WanderingBlockManager::save(MinimumSuperBlock &sb, size_t size) {
+bool SuperBlockManager::save(MinimumSuperBlock &sb, size_t size) {
     sb.link.header.timestamp++;
 
     auto write = PendingWrite{ BlockType::SuperBlock, &sb, size };
@@ -250,19 +250,19 @@ bool WanderingBlockManager::save(MinimumSuperBlock &sb, size_t size) {
     return true;
 }
 
-int32_t WanderingBlockManager::chain_length() {
+int32_t SuperBlockManager::chain_length() {
     return 2;
 }
 
-bool WanderingBlockManager::read(SectorAddress addr, SuperBlockLink &link) {
+bool SuperBlockManager::read(SectorAddress addr, SuperBlockLink &link) {
     return storage_->read({ addr, 0 }, &link, sizeof(SuperBlockLink));
 }
 
-bool WanderingBlockManager::write(SectorAddress addr, SuperBlockLink &link) {
+bool SuperBlockManager::write(SectorAddress addr, SuperBlockLink &link) {
     return storage_->write({ addr, 0 }, &link, sizeof(SuperBlockLink));
 }
 
-bool WanderingBlockManager::write(SectorAddress addr, PendingWrite write) {
+bool SuperBlockManager::write(SectorAddress addr, PendingWrite write) {
     return storage_->write({ addr, 0 }, write.ptr, write.n);
 }
 

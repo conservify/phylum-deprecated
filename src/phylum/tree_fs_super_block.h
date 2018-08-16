@@ -1,11 +1,11 @@
-#ifndef __PHYLUM_SUPER_BLOCK_H_INCLUDED
-#define __PHYLUM_SUPER_BLOCK_H_INCLUDED
+#ifndef __PHYLUM_TREE_FS_SUPER_BLOCK_H_INCLUDED
+#define __PHYLUM_TREE_FS_SUPER_BLOCK_H_INCLUDED
 
-#include "phylum/serial_flash_state_manager.h"
+#include "phylum/super_block_manager.h"
 
 namespace phylum {
 
-struct SuperBlock : public MinimumSuperBlock  {
+struct TreeFileSystemSuperBlock : public MinimumSuperBlock  {
     AllocatorState allocator;
     timestamp_t last_gc{ 0 };
     block_index_t tree{ 0 };
@@ -14,18 +14,18 @@ struct SuperBlock : public MinimumSuperBlock  {
     BlockAddress leaf{ BLOCK_INDEX_INVALID };
     BlockAddress index{ BLOCK_INDEX_INVALID };
 
-    SuperBlock() {
+    TreeFileSystemSuperBlock() {
     }
 };
 
-class SuperBlockManager {
+class TreeFileSystemSuperBlockManager {
 private:
     BlockManager *blocks_;
-    WanderingBlockManager manager_;
-    SuperBlock sb_;
+    SuperBlockManager manager_;
+    TreeFileSystemSuperBlock sb_;
 
 public:
-    SuperBlock &block() {
+    TreeFileSystemSuperBlock &block() {
         return sb_;
     }
 
@@ -38,7 +38,7 @@ public:
     }
 
 public:
-    SuperBlockManager(StorageBackend &storage, BlockManager &blocks);
+    TreeFileSystemSuperBlockManager(StorageBackend &storage, BlockManager &blocks);
 
 public:
     bool locate();

@@ -8,12 +8,12 @@ namespace phylum {
 class UnusedBlockReclaimer {
 private:
     Files *files_;
-    WanderingBlockManager *wandering_;
+    SuperBlockManager *sbm_;
     TakenBlockTracker tracker_;
 
 public:
-    UnusedBlockReclaimer(Files *files, WanderingBlockManager *wandering) :
-        files_(files), wandering_(wandering) {
+    UnusedBlockReclaimer(Files &files, SuperBlockManager &sbm) :
+        files_(&files), sbm_(&sbm) {
     }
 
 public:

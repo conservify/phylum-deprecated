@@ -3,7 +3,7 @@
 
 #include "phylum/private.h"
 #include "phylum/blocked_file.h"
-#include "phylum/wandering_block_manager.h"
+#include "phylum/super_block_manager.h"
 #include "backends/arduino_serial_flash/serial_flash_allocator.h"
 
 namespace phylum {

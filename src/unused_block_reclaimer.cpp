@@ -9,7 +9,7 @@ bool UnusedBlockReclaimer::walk(BlockAddress address) {
 }
 
 bool UnusedBlockReclaimer::reclaim() {
-    wandering_->walk(&tracker_);
+    sbm_->walk(&tracker_);
 
     for (auto block = (uint32_t)0; block < files_->backend_->geometry().number_of_blocks; ++block) {
         if (tracker_.is_free(block)) {

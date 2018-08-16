@@ -82,7 +82,7 @@ FileSystem::FileSystem(StorageBackend &storage, BlockManager &allocator) :
     fpm_(storage, allocator) {
 }
 
-void FileSystem::prepare(SuperBlock &sb) {
+void FileSystem::prepare(TreeFileSystemSuperBlock &sb) {
     // NOTE: This is done again in SuperBlockManager::save
     auto allocator_state = allocator_->state();
     sb.allocator = allocator_state;

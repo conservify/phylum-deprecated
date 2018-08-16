@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "phylum/super_block.h"
+#include "phylum/tree_fs_super_block.h"
 #include "backends/linux_memory/linux_memory.h"
 
 #include "utilities.h"
@@ -15,7 +15,7 @@ protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend storage_;
     QueueBlockAllocator allocator_;
-    SuperBlockManager sbm_{ storage_, allocator_ };
+    TreeFileSystemSuperBlockManager sbm_{ storage_, allocator_ };
 
 protected:
     void SetUp() override {
@@ -105,7 +105,7 @@ protected:
     Geometry geometry_{ 1024, 4, 4, 512 };
     LinuxMemoryBackend storage_;
     SequentialBlockAllocator allocator_;
-    SuperBlockManager sbm_{ storage_, allocator_ };
+    TreeFileSystemSuperBlockManager sbm_{ storage_, allocator_ };
 
 protected:
     void SetUp() override {

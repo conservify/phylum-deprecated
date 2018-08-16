@@ -1,8 +1,9 @@
 #include <gtest/gtest.h>
 
-#include "phylum/super_block.h"
+#include "phylum/tree_fs_super_block.h"
 #include "phylum/files.h"
 #include "phylum/unused_block_reclaimer.h"
+#include "phylum/basic_super_block_manager.h"
 #include "backends/linux_memory/linux_memory.h"
 
 #include "utilities.h"
@@ -18,7 +19,7 @@ protected:
     Geometry geometry_{ 32, 32, 4, 512 }; // 2MB Serial Flash
     LinuxMemoryBackend storage_;
     SerialFlashAllocator allocator_{ storage_ };
-    SerialFlashStateManager<SimpleState> manager_{ storage_, allocator_ };
+    BasicSuperBlockManager<SimpleState> manager_{ storage_, allocator_ };
 
 protected:
     void SetUp() override {
@@ -197,7 +198,7 @@ TEST_F(WanderingBlockSuite, UnusedBlockReclaim) {
     helper.write(file1, (1024 * 256) / helper.size());
     file1.close();
 
-    UnusedBlockReclaimer reclaimer(&files, &manager_.manager());
+    UnusedBlockReclaimer reclaimer(files, manager_.manager());
     reclaimer.walk(location);
     reclaimer.reclaim();
 }

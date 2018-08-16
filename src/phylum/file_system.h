@@ -3,7 +3,7 @@
 
 #include "phylum/persisted_tree.h"
 #include "phylum/block_alloc.h"
-#include "phylum/super_block.h"
+#include "phylum/tree_fs_super_block.h"
 #include "phylum/crc.h"
 #include "phylum/inodes.h"
 #include "phylum/backend_nodes.h"
@@ -111,7 +111,7 @@ private:
 
     StorageBackend *storage_;
     BlockManager *allocator_;
-    SuperBlockManager sbm_;
+    TreeFileSystemSuperBlockManager sbm_;
     StorageBackendNodeStorage<NodeType> nodes_;
     BlockAddress tree_addr_;
     Journal journal_;
@@ -129,7 +129,7 @@ public:
         return *storage_;
     }
 
-    SuperBlock &sb() {
+    TreeFileSystemSuperBlock &sb() {
         return sbm_.block();
     }
 
@@ -151,7 +151,7 @@ public:
 private:
     bool touch();
     bool format();
-    void prepare(SuperBlock &sb);
+    void prepare(TreeFileSystemSuperBlock &sb);
 
 };
 
