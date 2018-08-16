@@ -141,6 +141,16 @@ struct Geometry {
     bool contains(const BlockAddress addr) const;
 
     bool valid(const BlockAddress addr) const;
+
+    static Geometry from_physical_block_layout(uint32_t number_of_physical_blocks) {
+        return from_physical_block_layout(Geometry{ 0, 4, 4, SectorSize }, number_of_physical_blocks);
+    }
+
+    static Geometry from_physical_block_layout(Geometry g, uint32_t number_of_physical_blocks) {
+        auto number_of_fs_blocks = number_of_physical_blocks / (g.sectors_per_page * g.pages_per_block);
+        g.number_of_blocks = number_of_fs_blocks;
+        return g;
+    }
 };
 
 struct BlockAddress {

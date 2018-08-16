@@ -71,6 +71,7 @@ public:
                 OpenMode::Write
             };
             if (!file.format()) {
+                sdebug() << "Format file failed: " << fds_[i]->name << endl;
                 return false;
             }
         }
@@ -149,13 +150,9 @@ private:
     bool allocate(FileDescriptor*(&fds)[SIZE]) {
         FilePreallocator allocator{ storage_->geometry() };
 
-        #ifdef PHYLUM_LAYOUT_DEBUG
-        sdebug() << "Effective block size: " << effective_file_block_size(geometry()) <<
-            " overhead = " << file_block_overhead(geometry()) << endl;
-        #endif
-
         for (size_t i = 0; i < SIZE; ++i) {
             if (!allocator.allocate((uint8_t)i, fds[i], allocations_[i])) {
+                sdebug() << "Allocation failed: " << fds[i]->name << endl;
                 return false;
             }
         }

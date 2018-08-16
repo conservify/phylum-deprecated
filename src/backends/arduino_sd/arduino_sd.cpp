@@ -23,14 +23,9 @@ bool ArduinoSdBackend::initialize(const Geometry &g, uint8_t cs) {
     }
 
     auto number_of_sd_blocks = sd_raw_card_size(&sd_);
-    auto number_of_fs_blocks = number_of_sd_blocks / (g.sectors_per_page * g.pages_per_block);
+    geometry_ = Geometry::from_physical_block_layout(number_of_sd_blocks);
 
-    geometry_ = g;
-    geometry_.number_of_blocks = number_of_sd_blocks;
-
-    #ifdef PHYLUM_ARDUINO_DEBUG
-    sdebug() << "Ready: FsBlocks " << number_of_fs_blocks << " SdBlocks: " << number_of_sd_blocks << endl;
-    #endif
+    sdebug() << "Ready: " << geometry_ << endl;
 
     return true;
 }

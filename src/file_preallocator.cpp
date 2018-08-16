@@ -12,6 +12,8 @@ bool FilePreallocator::allocate(uint8_t id, FileDescriptor *fd, FileAllocation &
 
     assert(fd != nullptr);
 
+    file = FileAllocation{ };
+
     if (fd->maximum_size > 0) {
         nblocks = blocks_required_for_data(fd->maximum_size);
         index_blocks = blocks_required_for_index(nblocks) * 2;
@@ -22,20 +24,26 @@ bool FilePreallocator::allocate(uint8_t id, FileDescriptor *fd, FileAllocation &
         nblocks -= index_blocks;
     }
 
-    assert(nblocks > 0);
+    if (nblocks == 0) {
+        return false;
+    }
 
     auto index = Extent{ head_, index_blocks };
     head_ += index.nblocks;
-    assert(geometry().contains(BlockAddress{ head_, 0 }));
+    if (!geometry().contains(BlockAddress{ head_, 0 })) {
+        return false;
+    }
 
     auto data = Extent{ head_, nblocks };
     head_ += data.nblocks;
-    assert(geometry().contains(BlockAddress{ head_, 0 }));
+    if (!geometry().contains(BlockAddress{ head_, 0 })) {
+        return false;
+    }
 
     file = FileAllocation{ index, data };
 
     #ifdef PHYLUM_DEBUG
-    sdebug() << "Allocated: " << file << " " << fd->name << endl;
+    sdebug() << "Allocated: " << fd->name << " " << file << " " << geometry() << endl;
     #endif
 
     return true;
