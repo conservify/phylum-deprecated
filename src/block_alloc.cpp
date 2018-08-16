@@ -38,6 +38,7 @@ DebuggingBlockAllocator::DebuggingBlockAllocator() {
 
 block_index_t DebuggingBlockAllocator::allocate(BlockType type) {
     auto block = SequentialBlockAllocator::allocate(type);
+    assert(allocations_.find(block) == allocations_.end());
     allocations_[block] = type;
     return block;
 }

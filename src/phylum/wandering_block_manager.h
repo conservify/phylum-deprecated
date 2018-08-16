@@ -1,6 +1,10 @@
 #ifndef __PHYLUM_WANDERING_BLOCK_H_INCLUDED
 #define __PHYLUM_WANDERING_BLOCK_H_INCLUDED
 
+#undef min
+#undef max
+#include <functional>
+
 #include "phylum/backend.h"
 #include "phylum/private.h"
 #include "phylum/block_alloc.h"
@@ -26,8 +30,6 @@ private:
     static constexpr block_index_t AnchorBlocks[] = { 1, 2 };
     // TODO: Store more than one super block in a sector?
     SectorAddress location_;
-
-protected:
     StorageBackend *storage_;
     ReusableBlockAllocator *blocks_;
 
@@ -40,33 +42,26 @@ public:
     }
 
 public:
-    bool locate();
-    bool create();
-    bool save();
+    bool locate(MinimumSuperBlock &sb, size_t size);
+    bool create(MinimumSuperBlock &sb, size_t size);
+    bool create(MinimumSuperBlock &sb, size_t size, std::function<void()> update);
+    bool save(MinimumSuperBlock &sb, size_t size);
     bool walk(BlockVisitor *visitor);
 
-protected:
+private:
     struct PendingWrite {
         BlockType type;
         void *ptr;
         size_t n;
     };
 
-private:
     int32_t chain_length();
     bool walk(block_index_t desired, SuperBlockLink &link, SectorAddress &where, BlockVisitor *visitor);
     bool find_link(block_index_t block, SuperBlockLink &found, SectorAddress &where);
-
     bool rollover(SectorAddress addr, SectorAddress &new_location, PendingWrite write);
     bool read(SectorAddress addr, SuperBlockLink &link);
     bool write(SectorAddress addr, SuperBlockLink &link);
     bool write(SectorAddress addr, PendingWrite write);
-
-protected:
-    virtual void link_super(SuperBlockLink link) = 0;
-    virtual bool read_super(SectorAddress addr) = 0;
-    virtual bool write_fresh_super(SectorAddress addr) = 0;
-    virtual PendingWrite prepare_super() = 0;
 
 };
 

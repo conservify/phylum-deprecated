@@ -197,7 +197,7 @@ TEST_F(WanderingBlockSuite, UnusedBlockReclaim) {
     helper.write(file1, (1024 * 256) / helper.size());
     file1.close();
 
-    UnusedBlockReclaimer reclaimer(&files, &manager_);
+    UnusedBlockReclaimer reclaimer(&files, &manager_.manager());
     reclaimer.walk(location);
     reclaimer.reclaim();
 }

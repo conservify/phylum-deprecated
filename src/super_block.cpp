@@ -4,59 +4,52 @@
 
 namespace phylum {
 
-SuperBlockManager::SuperBlockManager(StorageBackend &storage, BlockManager &blocks) : WanderingBlockManager(storage, blocks) {
+SuperBlockManager::SuperBlockManager(StorageBackend &storage, BlockManager &blocks) : blocks_(&blocks), manager_(storage, blocks) {
 }
 
-void SuperBlockManager::link_super(SuperBlockLink link) {
-    sb_.link = link;
-    sb_.link.header.type = BlockType::SuperBlock;
-}
-
-bool SuperBlockManager::read_super(SectorAddress addr) {
-    if (!read(addr, sb_)) {
+bool SuperBlockManager::locate() {
+    if (!manager_.locate(sb_, sizeof(SuperBlock))) {
         return false;
     }
 
-    reinterpret_cast<BlockManager*>(blocks_)->state(sb_.allocator);
+    blocks_->state(sb_.allocator);
 
     return true;
 }
 
-bool SuperBlockManager::write_fresh_super(SectorAddress addr) {
+bool SuperBlockManager::create() {
     // We pull allocator state after doing the above allocations to ensure the
     // first state we write is correct.
+    sb_ = SuperBlock{ };
     sb_.tree = BLOCK_INDEX_INVALID;
     sb_.journal = blocks_->allocate(BlockType::Journal);
     sb_.free = blocks_->allocate(BlockType::Free);
-    sb_.allocator = reinterpret_cast<BlockManager*>(blocks_)->state();
 
     assert(sb_.journal != BLOCK_INDEX_INVALID);
     assert(sb_.free != BLOCK_INDEX_INVALID);
 
-    if (!write(addr, sb_)) {
+    if (!manager_.create(sb_, sizeof(SuperBlock), [&] { update_before_create(); })) {
+        return false;
+    }
+
+    return locate();
+}
+
+bool SuperBlockManager::save() {
+    sb_.link.header.timestamp++;
+    sb_.allocator = blocks_->state();
+
+    if (!manager_.save(sb_, sizeof(SuperBlock))) {
         return false;
     }
 
     return true;
 }
 
-WanderingBlockManager::PendingWrite SuperBlockManager::prepare_super() {
-    sb_.link.header.timestamp++;
-    sb_.allocator = reinterpret_cast<BlockManager*>(blocks_)->state();
-
-    return PendingWrite{
-        BlockType::SuperBlock,
-        &sb_,
-        sizeof(SuperBlock)
-    };
-}
-
-bool SuperBlockManager::read(SectorAddress addr, SuperBlock &sb) {
-    return storage_->read({ addr, 0 }, &sb, sizeof(SuperBlock));
-}
-
-bool SuperBlockManager::write(SectorAddress addr, SuperBlock &sb) {
-    return storage_->write({ addr, 0 }, &sb, sizeof(SuperBlock));
+void SuperBlockManager::update_before_create() {
+    // Creating the super block layout requires allocating, which changes
+    // allocator state. This updates just prior to saving.
+    sb_.allocator = blocks_->state();
 }
 
 }

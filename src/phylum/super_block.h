@@ -18,8 +18,10 @@ struct SuperBlock : public MinimumSuperBlock  {
     }
 };
 
-class SuperBlockManager : public WanderingBlockManager {
+class SuperBlockManager {
 private:
+    BlockManager *blocks_;
+    WanderingBlockManager manager_;
     SuperBlock sb_;
 
 public:
@@ -31,17 +33,20 @@ public:
         return sb_.link.header.timestamp;
     }
 
+    SectorAddress location() {
+        return manager_.location();
+    }
+
 public:
     SuperBlockManager(StorageBackend &storage, BlockManager &blocks);
 
-protected:
-    bool read(SectorAddress addr, SuperBlock &sb);
-    bool write(SectorAddress addr, SuperBlock &sb);
+public:
+    bool locate();
+    bool create();
+    bool save();
 
-    virtual void link_super(SuperBlockLink link) override;
-    virtual bool read_super(SectorAddress addr) override;
-    virtual bool write_fresh_super(SectorAddress addr) override;
-    virtual PendingWrite prepare_super() override;
+protected:
+    void update_before_create();
 
 };
 
