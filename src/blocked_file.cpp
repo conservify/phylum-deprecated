@@ -6,8 +6,9 @@
 
 namespace phylum {
 
-block_index_t AllocatedBlockedFile::allocate() {
-    return allocator_->allocate(BlockType::File);
+BlockedFile::AllocatedBlock AllocatedBlockedFile::allocate() {
+    auto block = allocator_->allocate(BlockType::File);
+    return AllocatedBlock { block, false };
 }
 
 void AllocatedBlockedFile::free(block_index_t block) {
@@ -316,11 +317,13 @@ BlockedFile::SavedSector BlockedFile::save_sector(bool flushing) {
     auto linked = BLOCK_INDEX_INVALID;
     auto writing_tail_sector = tail_sector();
     auto following = head_;
+    auto allocated = AllocatedBlock{ };
 
     if (writing_tail_sector) {
         if (flushing) {
             // Check to see if we're at the end of our allocated space.
-            linked = allocate();
+            allocated = allocate();
+            linked = allocated.block;
         }
 
         FileBlockTail tail;
@@ -343,10 +346,10 @@ BlockedFile::SavedSector BlockedFile::save_sector(bool flushing) {
     }
 
     if (!storage_->write(head_, buffer_, sizeof(buffer_))) {
-        return SavedSector{ 0, head_ };
+        return SavedSector{ 0, head_, allocated };
     }
 
-    return SavedSector{ buffpos_, following };
+    return SavedSector{ buffpos_, following, allocated };
 }
 
 int32_t BlockedFile::flush() {
@@ -366,8 +369,8 @@ int32_t BlockedFile::flush() {
     // We could do this in the if scope above, I like doing things "in order" though.
     if (head_.block != saved.head.block) {
         auto linked = saved.head.block;
-        if (is_valid_block(linked)) {
-            head_ = initialize(linked, head_.block);
+        if (saved.allocated && is_valid_block(linked)) {
+            head_ = initialize(saved.allocated, head_.block);
             // TODO: From SimpleFile
             // assert(file_->data.contains(head_));
             if (!head_.valid()) {
@@ -508,23 +511,26 @@ bool BlockedFile::exists() {
     return true;
 }
 
-BlockAddress BlockedFile::initialize(block_index_t block, block_index_t previous) {
+BlockAddress BlockedFile::initialize(AllocatedBlock allocated, block_index_t previous) {
     FileBlockHead head;
 
     head.fill();
     head.file_id = id_;
     head.version = version_;
+    head.block.age = allocated.age;
     head.block.linked_block = previous;
 
-    if (!storage_->erase(block)) {
+    if (!allocated.erased) {
+        if (!storage_->erase(allocated.block)) {
+            return { };
+        }
+    }
+
+    if (!storage_->write({ allocated.block, 0 }, &head, sizeof(FileBlockHead))) {
         return { };
     }
 
-    if (!storage_->write({ block, 0 }, &head, sizeof(FileBlockHead))) {
-        return { };
-    }
-
-    return BlockAddress { block, SectorSize };
+    return BlockAddress { allocated.block, SectorSize };
 }
 
 }

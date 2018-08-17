@@ -99,9 +99,20 @@ protected:
         return head_.tail_sector(geometry());
     }
 
+    struct AllocatedBlock {
+        block_index_t block;
+        block_age_t age;
+        bool erased;
+
+        operator bool() {
+            return is_valid_block(block);
+        }
+    };
+
     struct SavedSector {
         int32_t saved;
         BlockAddress head;
+        AllocatedBlock allocated;
 
         operator bool() {
             return saved > 0;
@@ -122,10 +133,10 @@ protected:
 
     SeekInfo seek(BlockAddress from, uint32_t position_at_from, uint64_t bytes, BlockVisitor *visitor, bool verify_head_block);
 
-    BlockAddress initialize(block_index_t block, block_index_t previous);
+    BlockAddress initialize(AllocatedBlock allocated, block_index_t previous);
 
 public:
-    virtual block_index_t allocate() = 0;
+    virtual AllocatedBlock allocate() = 0;
 
     virtual void free(block_index_t block) = 0;
 
@@ -144,7 +155,7 @@ public:
     }
 
 public:
-    block_index_t allocate() override;
+    AllocatedBlock allocate() override;
 
     void free(block_index_t block) override;
 

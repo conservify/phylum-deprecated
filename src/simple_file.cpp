@@ -6,7 +6,7 @@
 
 namespace phylum {
 
-block_index_t ExtentBlockedFile::allocate() {
+ExtentBlockedFile::AllocatedBlock ExtentBlockedFile::allocate() {
     auto block = data_.start;
     auto file_head = head();
     if (file_head.valid()) {
@@ -16,7 +16,7 @@ block_index_t ExtentBlockedFile::allocate() {
             block = BLOCK_INDEX_INVALID;
         }
     }
-    return block;
+    return AllocatedBlock { block, false };
 }
 
 void ExtentBlockedFile::free(block_index_t block) {

@@ -21,7 +21,7 @@ public:
     }
 
 public:
-    block_index_t allocate() override;
+    AllocatedBlock allocate() override;
     void free(block_index_t block) override;
 
 };
