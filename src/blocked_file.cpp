@@ -60,10 +60,8 @@ BlockedFile::SeekInfo BlockedFile::seek(BlockAddress from, uint32_t position_at_
         position_ = position_at_from;
     }
     else {
-        head_ = { allocate(), 0 };
-        length_ = 0;
-        version_ = 1;
-        return { head_, version, 0, 0, 0 };
+        assert(false);
+        return { { }, 0, 0, 0, 0 };
     }
 
 

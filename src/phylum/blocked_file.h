@@ -126,6 +126,7 @@ protected:
 
 public:
     virtual block_index_t allocate() = 0;
+
     virtual void free(block_index_t block) = 0;
 
 };
@@ -144,6 +145,7 @@ public:
 
 public:
     block_index_t allocate() override;
+
     void free(block_index_t block) override;
 
 };
