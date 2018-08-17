@@ -22,7 +22,7 @@ bool UnusedBlockReclaimer::reclaim() {
         }
     }
 
-    return true;
+    return files_->allocator_->initialize();
 }
 
 }

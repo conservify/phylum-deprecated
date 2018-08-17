@@ -45,6 +45,8 @@ bool SerialFlashAllocator::initialize() {
         return false;
     }
 
+    sdebug() << "Allocator ready: " << number_of_free_blocks() << endl;
+
     return true;
 }
 
@@ -158,7 +160,7 @@ uint32_t SerialFlashAllocator::number_of_free_blocks() {
 }
 
 TakenBlockTracker::TakenBlockTracker() {
-    for (auto block = (uint32_t)3; block < sizeof(map_) * 8; ++block) {
+    for (auto block = (uint32_t)0; block < sizeof(map_) * 8; ++block) {
         set_block_free(map_, block);
     }
 
@@ -174,7 +176,7 @@ void TakenBlockTracker::block(block_index_t block) {
 }
 
 bool TakenBlockTracker::is_free(block_index_t block) {
-    if (block > sizeof(map_) * 8) {
+    if (block < sizeof(map_) * 8) {
         return is_block_free(map_, block);
     }
     return false;

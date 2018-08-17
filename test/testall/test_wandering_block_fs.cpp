@@ -197,10 +197,18 @@ TEST_F(WanderingBlockSuite, UnusedBlockReclaim) {
     PatternHelper helper;
     helper.write(file1, (1024 * 256) / helper.size());
     file1.close();
+    for (auto i = 0; i < 5; ++i) {
+        auto discarded = files.open({ }, OpenMode::Write);
+        ASSERT_TRUE(file1.format());
+    }
+
+    ASSERT_EQ(allocator_.number_of_free_blocks(), 16);
 
     UnusedBlockReclaimer reclaimer(files, manager_.manager());
     reclaimer.walk(location);
     reclaimer.reclaim();
+
+    ASSERT_EQ(allocator_.number_of_free_blocks(), 21);
 }
 
 TEST_F(WanderingBlockSuite, SeekEndAndBegOfLargeFile) {
