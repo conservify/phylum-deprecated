@@ -111,7 +111,7 @@ void setup() {
 
     sdebug() << "Mounted in " << (mountFinished - mountStarted) << "ms" << endl;
 
-    while (true) {
+    for (auto i = 0; i < 10; ++i) {
         struct TestStruct {
             uint32_t uptime;
             uint8_t buffer[124];
