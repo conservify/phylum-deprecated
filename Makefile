@@ -1,4 +1,4 @@
-BUILD ?= build
+BUILD ?= $(abspath build)
 
 all: build
 
@@ -13,7 +13,7 @@ veryclean:
 	rm -rf $(BUILD) gitdeps
 
 test: build
-	cd build && env GTEST_COLOR=1 make test ARGS=-VV
+	cd build && env GTEST_OUTPUT="xml:$(BUILD)/tests.xml" GTEST_COLOR=1 make test ARGS="-VV"
 
 test-00: build
 	env GTEST_COLOR=1 build/test/testall/testall -VV
