@@ -202,13 +202,13 @@ TEST_F(WanderingBlockSuite, UnusedBlockReclaim) {
         ASSERT_TRUE(file1.format());
     }
 
-    ASSERT_EQ(allocator_.number_of_free_blocks(), 16);
+    ASSERT_EQ(allocator_.number_of_free_blocks(), (size_t)16);
 
     UnusedBlockReclaimer reclaimer(files, manager_.manager());
     reclaimer.walk(location);
     reclaimer.reclaim();
 
-    ASSERT_EQ(allocator_.number_of_free_blocks(), 21);
+    ASSERT_EQ(allocator_.number_of_free_blocks(), (size_t)21);
 }
 
 TEST_F(WanderingBlockSuite, SeekEndAndBegOfLargeFile) {

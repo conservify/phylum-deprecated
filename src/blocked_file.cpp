@@ -6,9 +6,12 @@
 
 namespace phylum {
 
-BlockedFile::AllocatedBlock AllocatedBlockedFile::allocate() {
-    auto block = allocator_->allocate(BlockType::File);
-    return AllocatedBlock { block, false };
+bool AllocatedBlockedFile::preallocate(uint32_t expected_size) {
+    return allocator_->preallocate(expected_size);
+}
+
+AllocatedBlock AllocatedBlockedFile::allocate() {
+    return allocator_->allocate(BlockType::File);
 }
 
 void AllocatedBlockedFile::free(block_index_t block) {

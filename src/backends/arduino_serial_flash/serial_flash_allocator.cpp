@@ -3,6 +3,9 @@
 namespace phylum {
 
 SerialFlashAllocator::SerialFlashAllocator(StorageBackend &storage) : storage_(&storage) {
+    for (auto i = 0; i < PreallocationSize; ++i) {
+        preallocated_[i] = BLOCK_INDEX_INVALID;
+    }
 }
 
 static inline bool is_block_free(uint8_t *map, block_index_t block) {
@@ -18,6 +21,18 @@ static inline void set_block_taken(uint8_t *map, block_index_t block) {
 }
 
 AllocatedBlock SerialFlashAllocator::allocate(BlockType type) {
+    for (auto i = 0; i < PreallocationSize; ++i) {
+        if (is_valid_block(preallocated_[i])) {
+            auto f = preallocated_[i];
+            preallocated_[i] = BLOCK_INDEX_INVALID;
+            return { f, true };
+        }
+    }
+
+    return allocate_internal(type);
+}
+
+AllocatedBlock SerialFlashAllocator::allocate_internal(BlockType type) {
     ScanInfo info;
 
     if (!scan(true, info)) {
@@ -157,6 +172,21 @@ uint32_t SerialFlashAllocator::number_of_free_blocks() {
         }
     }
     return c;
+}
+
+bool SerialFlashAllocator::preallocate(uint32_t expected_size) {
+    for (auto i = 0; i < PreallocationSize; ++i) {
+        auto alloc = allocate_internal(BlockType::Unallocated);
+
+        if (!alloc.erased) {
+            if (!storage_->erase(alloc.block)) {
+                return false;
+            }
+        }
+
+        preallocated_[i] = alloc.block;
+    }
+    return true;
 }
 
 TakenBlockTracker::TakenBlockTracker() {

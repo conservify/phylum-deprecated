@@ -45,6 +45,9 @@ public:
 class ReusableBlockAllocator : public BlockAllocator {
 public:
     virtual bool free(block_index_t block, block_age_t age) = 0;
+    virtual bool preallocate(uint32_t expected_size) {
+        return true;
+    }
 };
 
 class EmptyAllocator : public BlockAllocator {

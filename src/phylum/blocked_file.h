@@ -134,6 +134,7 @@ public:
 
 class AllocatedBlockedFile : public BlockedFile {
 private:
+    StorageBackend *storage_;
     ReusableBlockAllocator *allocator_;
 
 public:
@@ -141,13 +142,15 @@ public:
     }
 
     AllocatedBlockedFile(StorageBackend *storage, OpenMode mode, ReusableBlockAllocator *allocator, BlockAddress head) :
-        BlockedFile(storage, mode, head), allocator_(allocator) {
+        BlockedFile(storage, mode, head), storage_(storage), allocator_(allocator) {
     }
 
 public:
     AllocatedBlock allocate() override;
 
     void free(block_index_t block) override;
+
+    bool preallocate(uint32_t expected_size);
 
 };
 
