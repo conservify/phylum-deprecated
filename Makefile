@@ -1,6 +1,8 @@
 BUILD ?= $(abspath build)
 
-all: build
+all: build test
+
+automated: build test
 
 build: gitdeps
 	mkdir -p $(BUILD)
@@ -12,14 +14,13 @@ clean:
 veryclean:
 	rm -rf $(BUILD) gitdeps
 
-test: build
-	cd build && env GTEST_OUTPUT="xml:$(BUILD)/tests.xml" GTEST_COLOR=1 make test ARGS="-VV"
+test: build test-00 test-ff
 
 test-00: build
-	env GTEST_COLOR=1 build/test/testall/testall -VV
+	env GTEST_OUTPUT="xml:$(BUILD)/tests-00.xml" GTEST_COLOR=1 build/test/testall/testall --erase-00
 
 test-ff: build
-	env GTEST_COLOR=1 build/test/testall/testall -VV
+	env GTEST_OUTPUT="xml:$(BUILD)/tests-ff.xml" GTEST_COLOR=1 build/test/testall/testall --erase-ff
 
 gitdeps:
 	simple-deps --config examples/arduino_zero_large_files/arduino-libraries
