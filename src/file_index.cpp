@@ -13,13 +13,13 @@ public:
     }
 
 public:
-    virtual block_index_t allocate(BlockType type) override {
+    virtual AllocatedBlock allocate(BlockType type) override {
         auto b = block_++;
         if (!extent_.contains(b)) {
             b = extent_.start;
         }
         assert(extent_.contains(b));
-        return b;
+        return { b, false };
     }
 
 };

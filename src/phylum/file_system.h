@@ -101,7 +101,7 @@ private:
     };
 
     SeekStatistics seek(BlockAddress starting, uint32_t max);
-    BlockAddress initialize_block(block_index_t block, block_index_t previous);
+    BlockAddress initialize_block(AllocatedBlock block, block_index_t previous);
 
 };
 

@@ -84,7 +84,8 @@ TEST_F(AddressingSuite, FindEndAfterFillingBlockAndBeforeStartingNext) {
     ASSERT_TRUE(storage.open());
     ASSERT_TRUE(allocator.initialize(g));
 
-    auto first_block = allocator.allocate(BlockType::File);
+    auto first_block_alloc = allocator.allocate(BlockType::File);
+    auto first_block = first_block_alloc.block;
 
     auto layout = BlockLayout<TreeBlockHead, TreeBlockTail>{ storage, allocator,
                                                              BlockAddress{ first_block, 0 },

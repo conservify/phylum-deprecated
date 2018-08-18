@@ -145,7 +145,8 @@ public:
     BlockAddress find_available(size_t required, THead head) {
         if (invalid_address() || should_move_to_following_block(required)) {
             assert(type_ != BlockType::Error);
-            auto new_block = allocator_.allocate(type_);
+            auto new_block_alloc = allocator_.allocate(type_);
+            auto new_block = new_block_alloc.block;
             head.block.linked_block = address_.block;
             if (!write_head(new_block, head)) {
                 return { };

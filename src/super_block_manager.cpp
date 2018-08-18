@@ -125,7 +125,8 @@ bool SuperBlockManager::create(MinimumSuperBlock &sb, size_t size, std::function
     link.header.age = 0;
 
     for (auto i = 0; i < chain_length() + 1; ++i) {
-        auto block = blocks_->allocate(i == 0 ? BlockType::SuperBlock : BlockType::SuperBlockLink);
+        auto alloc = blocks_->allocate(i == 0 ? BlockType::SuperBlock : BlockType::SuperBlockLink);
+        auto block = alloc.block;
         assert(block != BLOCK_INDEX_INVALID);
 
         if (!storage_->erase(block)) {
@@ -199,10 +200,13 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
         }
     }
 
-    auto block = blocks_->allocate(pending.type);
+    auto alloc = blocks_->allocate(pending.type);
+    auto block = alloc.block;
     relocated = { block, SuperBlockStartSector };
-    if (!storage_->erase(block)) {
-        return false;
+    if (!alloc.erased) {
+        if (!storage_->erase(block)) {
+            return false;
+        }
     }
 
     if (!write(relocated, pending)) {

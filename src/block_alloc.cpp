@@ -21,10 +21,10 @@ void SequentialBlockAllocator::state(AllocatorState state) {
     block_ = state.head;
 }
 
-block_index_t SequentialBlockAllocator::allocate(BlockType type) {
+AllocatedBlock SequentialBlockAllocator::allocate(BlockType type) {
     assert(geometry_ != nullptr);
     assert(block_ < geometry_->number_of_blocks);
-    return block_++;
+    return { block_++, false };
 }
 
 bool SequentialBlockAllocator::free(block_index_t block, block_age_t age) {
@@ -36,11 +36,11 @@ bool SequentialBlockAllocator::free(block_index_t block, block_age_t age) {
 DebuggingBlockAllocator::DebuggingBlockAllocator() {
 }
 
-block_index_t DebuggingBlockAllocator::allocate(BlockType type) {
-    auto block = SequentialBlockAllocator::allocate(type);
-    assert(allocations_.find(block) == allocations_.end());
-    allocations_[block] = type;
-    return block;
+AllocatedBlock DebuggingBlockAllocator::allocate(BlockType type) {
+    auto alloc = SequentialBlockAllocator::allocate(type);
+    assert(allocations_.find(alloc.block) == allocations_.end());
+    allocations_[alloc.block] = type;
+    return alloc;
 }
 
 QueueBlockAllocator::QueueBlockAllocator() {
@@ -59,7 +59,7 @@ AllocatorState QueueBlockAllocator::state() {
 void QueueBlockAllocator::state(AllocatorState state) {
 }
 
-block_index_t QueueBlockAllocator::allocate(BlockType type) {
+AllocatedBlock QueueBlockAllocator::allocate(BlockType type) {
     assert(geometry_ != nullptr);
 
     if (!initialized_) {
@@ -75,7 +75,7 @@ block_index_t QueueBlockAllocator::allocate(BlockType type) {
 
     free_.pop();
 
-    return block;
+    return { block, false };
 }
 
 bool QueueBlockAllocator::free(block_index_t block, block_age_t age) {

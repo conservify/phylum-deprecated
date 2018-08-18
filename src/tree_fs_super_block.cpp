@@ -22,8 +22,8 @@ bool TreeFileSystemSuperBlockManager::create() {
     // first state we write is correct.
     sb_ = TreeFileSystemSuperBlock{ };
     sb_.tree = BLOCK_INDEX_INVALID;
-    sb_.journal = blocks_->allocate(BlockType::Journal);
-    sb_.free = blocks_->allocate(BlockType::Free);
+    sb_.journal = blocks_->allocate(BlockType::Journal).block;
+    sb_.free = blocks_->allocate(BlockType::Free).block;
 
     assert(sb_.journal != BLOCK_INDEX_INVALID);
     assert(sb_.free != BLOCK_INDEX_INVALID);

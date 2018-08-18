@@ -369,7 +369,7 @@ int32_t BlockedFile::flush() {
     // We could do this in the if scope above, I like doing things "in order" though.
     if (head_.block != saved.head.block) {
         auto linked = saved.head.block;
-        if (saved.allocated && is_valid_block(linked)) {
+        if (saved.allocated.valid() && is_valid_block(linked)) {
             head_ = initialize(saved.allocated, head_.block);
             // TODO: From SimpleFile
             // assert(file_->data.contains(head_));

@@ -99,16 +99,6 @@ protected:
         return head_.tail_sector(geometry());
     }
 
-    struct AllocatedBlock {
-        block_index_t block;
-        block_age_t age;
-        bool erased;
-
-        operator bool() {
-            return is_valid_block(block);
-        }
-    };
-
     struct SavedSector {
         int32_t saved;
         BlockAddress head;

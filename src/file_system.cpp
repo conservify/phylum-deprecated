@@ -395,8 +395,10 @@ int32_t OpenFile::flush() {
     auto linked = BLOCK_INDEX_INVALID;
     auto writing_tail_sector = tail_sector();
     auto addr = head_;
+    auto alloc = AllocatedBlock{ };
     if (writing_tail_sector) {
-        linked = fs_->allocator_->allocate(BlockType::File);
+        alloc = fs_->allocator_->allocate(BlockType::File);
+        linked = alloc.block;
         FileBlockTail tail;
         tail.sector.bytes = buffpos_;
         tail.bytes_in_block = bytes_in_block_;
@@ -418,7 +420,7 @@ int32_t OpenFile::flush() {
 
     // We could do this in the if scope above, I like doing things "in order" though.
     if (writing_tail_sector) {
-        head_ = initialize_block(linked, head_.block);
+        head_ = initialize_block(alloc, head_.block);
         if (!head_.valid()) {
             assert(false); // TODO: Yikes.
         }
@@ -495,22 +497,24 @@ void OpenFile::close() {
     flush();
 }
 
-BlockAddress OpenFile::initialize_block(block_index_t block, block_index_t previous) {
+BlockAddress OpenFile::initialize_block(AllocatedBlock alloc, block_index_t previous) {
     FileBlockHead head;
 
     head.fill();
     head.file_id = id_;
     head.block.linked_block = previous;
 
-    if (!fs_->storage_->erase(block)) {
+    if (!alloc.erased) {
+        if (!fs_->storage_->erase(alloc.block)) {
+            return { };
+        }
+    }
+
+    if (!fs_->storage_->write({ alloc.block, 0 }, &head, sizeof(FileBlockHead))) {
         return { };
     }
 
-    if (!fs_->storage_->write({ block, 0 }, &head, sizeof(FileBlockHead))) {
-        return { };
-    }
-
-    return BlockAddress { block, SectorSize };
+    return BlockAddress { alloc.block, SectorSize };
 }
 
 }

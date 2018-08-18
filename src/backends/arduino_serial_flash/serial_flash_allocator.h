@@ -23,7 +23,7 @@ public:
 
 public:
     virtual bool initialize();
-    virtual block_index_t allocate(BlockType type) override;
+    virtual AllocatedBlock allocate(BlockType type) override;
     virtual bool free(block_index_t block, block_age_t age) override;
 
 public:

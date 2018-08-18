@@ -21,9 +21,25 @@ struct AllocatorState {
     }
 };
 
+struct AllocatedBlock {
+    block_index_t block{ BLOCK_INDEX_INVALID };
+    block_age_t age{ 0 };
+    bool erased{ false };
+
+    AllocatedBlock() {
+    }
+
+    AllocatedBlock(block_index_t block, bool erased) : block(block), erased(erased) {
+    }
+
+    bool valid() {
+        return is_valid_block(block);
+    }
+};
+
 class BlockAllocator {
 public:
-    virtual block_index_t allocate(BlockType type) = 0;
+    virtual AllocatedBlock allocate(BlockType type) = 0;
 };
 
 class ReusableBlockAllocator : public BlockAllocator {
@@ -33,8 +49,8 @@ public:
 
 class EmptyAllocator : public BlockAllocator {
 public:
-    virtual block_index_t allocate(BlockType type) override {
-        return BLOCK_INDEX_INVALID;
+    AllocatedBlock allocate(BlockType type) override {
+        return { BLOCK_INDEX_INVALID, false };
     }
 };
 
@@ -55,11 +71,11 @@ public:
     SequentialBlockAllocator();
 
 public:
-    virtual bool initialize(Geometry &geometry) override;
-    virtual bool free(block_index_t block, block_age_t age) override;
-    virtual AllocatorState state() override;
-    virtual void state(AllocatorState state) override;
-    virtual block_index_t allocate(BlockType type) override;
+    bool initialize(Geometry &geometry) override;
+    bool free(block_index_t block, block_age_t age) override;
+    AllocatorState state() override;
+    void state(AllocatorState state) override;
+    AllocatedBlock allocate(BlockType type) override;
 
 };
 
@@ -88,7 +104,7 @@ public:
     }
 
 public:
-    virtual block_index_t allocate(BlockType type) override;
+    AllocatedBlock allocate(BlockType type) override;
 
 };
 
@@ -102,11 +118,11 @@ public:
     QueueBlockAllocator();
 
 public:
-    virtual bool initialize(Geometry &geometry) override;
-    virtual AllocatorState state() override;
-    virtual void state(AllocatorState state) override;
-    virtual block_index_t allocate(BlockType type) override;
-    virtual bool free(block_index_t block, block_age_t age) override;
+    bool initialize(Geometry &geometry) override;
+    AllocatorState state() override;
+    void state(AllocatorState state) override;
+    AllocatedBlock allocate(BlockType type) override;
+    bool free(block_index_t block, block_age_t age) override;
 
 };
 #endif

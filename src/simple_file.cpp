@@ -6,7 +6,7 @@
 
 namespace phylum {
 
-ExtentBlockedFile::AllocatedBlock ExtentBlockedFile::allocate() {
+AllocatedBlock ExtentBlockedFile::allocate() {
     auto block = data_.start;
     auto file_head = head();
     if (file_head.valid()) {

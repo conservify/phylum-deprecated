@@ -17,12 +17,12 @@ static inline void set_block_taken(uint8_t *map, block_index_t block) {
     map[block / 8] |= (1 << (block % 8));
 }
 
-block_index_t SerialFlashAllocator::allocate(BlockType type) {
+AllocatedBlock SerialFlashAllocator::allocate(BlockType type) {
     ScanInfo info;
 
     if (!scan(true, info)) {
         sdebug() << "Failed to allocate! (" << type << ")" << endl;
-        return BLOCK_INDEX_INVALID;
+        return { };
     }
 
     #ifdef PHYLUM_ARDUINO_DEBUG
@@ -35,7 +35,7 @@ block_index_t SerialFlashAllocator::allocate(BlockType type) {
 
     set_block_taken(map_, info.block);
 
-    return info.block;
+    return { info.block, false };
 }
 
 bool SerialFlashAllocator::initialize() {
