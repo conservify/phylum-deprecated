@@ -83,7 +83,7 @@ public:
 
     bool format();
 
-    void close();
+    void close() override;
 
     bool exists();
 

@@ -11,6 +11,7 @@ public:
     virtual bool seek(uint64_t position) = 0;
     virtual int32_t read(uint8_t *ptr, size_t size) = 0;
     virtual int32_t write(uint8_t *ptr, size_t size, bool span_sectors = true, bool span_blocks = true) = 0;
+    virtual void close() = 0;
 
 };
 
