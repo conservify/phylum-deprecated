@@ -23,10 +23,10 @@ test-ff: build
 	env GTEST_OUTPUT="xml:$(BUILD)/tests-ff.xml" GTEST_COLOR=1 build/test/testall/testall --erase-ff
 
 gitdeps:
-	simple-deps --config examples/arduino_zero_large_files/arduino-libraries
-	simple-deps --config examples/arduino_zero_prealloc/arduino-libraries
-	simple-deps --config examples/arduino_zero_serial_flash/arduino-libraries
-	simple-deps --config examples/arduino_zero_tree/arduino-libraries
-	simple-deps --config test/testall/arduino-libraries
+	simple-deps --config examples/arduino_zero_large_files/dependencies.sd
+	simple-deps --config examples/arduino_zero_prealloc/dependencies.sd
+	simple-deps --config examples/arduino_zero_serial_flash/dependencies.sd
+	simple-deps --config examples/arduino_zero_tree/dependencies.sd
+	simple-deps --config test/testall/dependencies.sd
 
 .PHONY: build clean
