@@ -40,8 +40,13 @@ bool BlockedFile::seek(BlockAddress from, uint32_t position_at_from, uint64_t de
     blocks_in_file_ = info.blocks;
     bytes_in_block_ = info.bytes_in_block;
     position_ += info.bytes;
+
+    auto success = true;
     if (desired == UINT64_MAX) {
         length_ = position_at_from + info.bytes;
+    }
+    else {
+        success = position_ == desired;
     }
 
     #if PHYLUM_DEBUG > 1
@@ -49,7 +54,7 @@ bool BlockedFile::seek(BlockAddress from, uint32_t position_at_from, uint64_t de
         " endp=" << position_at_from << " info=" << info.bytes << " head=" << head_ << endl;
     #endif
 
-    return true;
+    return success;
 }
 
 BlockedFile::SeekInfo BlockedFile::seek(BlockAddress from, uint32_t position_at_from, uint64_t desired, BlockVisitor *visitor, bool verify_head_block) {

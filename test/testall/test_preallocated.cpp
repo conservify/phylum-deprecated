@@ -520,3 +520,21 @@ TEST_F(PreallocatedSuite, MultipleWritesModeIncompleteTail) {
     auto verified2 = helper.verify_file(layout, data_file);
     EXPECT_EQ((uint32_t)helper.size() * wrote, verified2);
 }
+
+TEST_F(PreallocatedSuite, SeekingPastEndOfFile) {
+    FileDescriptor data_file = { "data.fk", 0 };
+    FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
+
+    ASSERT_TRUE(layout.format(files));
+
+    auto file1 = layout.open(data_file, OpenMode::Write);
+    ASSERT_EQ(file1.size(), (uint64_t)0);
+    ASSERT_EQ(file1.tell(), (uint64_t)0);
+    file1.close();
+
+    auto file2 = layout.open(data_file, OpenMode::Read);
+    ASSERT_FALSE(file2.seek(1024));
+    ASSERT_EQ(file1.size(), (uint64_t)0);
+    ASSERT_EQ(file1.tell(), (uint64_t)0);
+}
