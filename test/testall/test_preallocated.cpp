@@ -551,8 +551,6 @@ TEST_F(PreallocatedSuite, SeekingToOffsetOnBlockBoundary) {
     auto file1 = layout.open(data_file, OpenMode::Write);
     auto block = file1.head().block;
     while (true) {
-        auto before = file1.tell();
-
         helper.write(file1, 1);
 
         auto addr = file1.head();
