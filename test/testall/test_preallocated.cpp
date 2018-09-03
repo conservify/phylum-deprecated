@@ -6,6 +6,7 @@
 #include "backends/linux_memory/linux_memory.h"
 
 #include "utilities.h"
+#include "size_calcs.h"
 
 using namespace phylum;
 
@@ -521,7 +522,7 @@ TEST_F(PreallocatedSuite, MultipleWritesModeIncompleteTail) {
     EXPECT_EQ((uint32_t)helper.size() * wrote, verified2);
 }
 
-TEST_F(PreallocatedSuite, SeekingPastEndOfFile) {
+TEST_F(PreallocatedSuite, SeekingPastEndOfEmptyFile) {
     FileDescriptor data_file = { "data.fk", 0 };
     FileDescriptor* files[] = { &data_file };
     FileLayout<1> layout{ storage_ };
@@ -537,4 +538,39 @@ TEST_F(PreallocatedSuite, SeekingPastEndOfFile) {
     ASSERT_FALSE(file2.seek(1024));
     ASSERT_EQ(file1.size(), (uint64_t)0);
     ASSERT_EQ(file1.tell(), (uint64_t)0);
+}
+
+TEST_F(PreallocatedSuite, SeekingToOffsetOnBlockBoundary) {
+    FileDescriptor data_file = { "data.fk", 0 };
+    FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
+    PatternHelper helper;
+
+    ASSERT_TRUE(layout.format(files));
+
+    auto file1 = layout.open(data_file, OpenMode::Write);
+    auto block = file1.head().block;
+    while (true) {
+        auto before = file1.tell();
+
+        helper.write(file1, 1);
+
+        auto addr = file1.head();
+        if (addr.block != block) {
+            uint8_t buffer[512];
+
+            auto previous_tail_addr = BlockAddress::tail_sector_of(block, storage_.geometry());
+            ASSERT_TRUE(storage_.read(previous_tail_addr, buffer, sizeof(buffer)));
+
+            FileBlockTail tail;
+            memcpy(&tail, tail_info<FileBlockTail>(buffer), sizeof(FileBlockTail));
+
+            {
+                auto file2 = layout.open(data_file, OpenMode::Read);
+                ASSERT_TRUE(file2.seek(tail.bytes_in_block));
+            }
+
+            break;
+        }
+    }
 }

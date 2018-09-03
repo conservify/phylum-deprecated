@@ -51,7 +51,7 @@ bool BlockedFile::seek(BlockAddress from, uint32_t position_at_from, uint64_t de
 
     #if PHYLUM_DEBUG > 1
     sdebug() << "Seek: length=" << length_ << " position=" << position_ << " desired=" << desired <<
-        " endp=" << position_at_from << " info=" << info.bytes << " head=" << head_ << endl;
+        " endp=" << position_at_from << " info=" << info.bytes << " head=" << head_ << " seek_offset=" << seek_offset_ << endl;
     #endif
 
     return success;
@@ -106,7 +106,7 @@ BlockedFile::SeekInfo BlockedFile::seek(BlockAddress from, uint32_t position_at_
 
             FileBlockTail tail;
             memcpy(&tail, tail_info<FileBlockTail>(buffer_), sizeof(FileBlockTail));
-            if (is_valid_block(tail.block.linked_block) && desired > tail.bytes_in_block) {
+            if (is_valid_block(tail.block.linked_block) && desired >= tail.bytes_in_block) {
                 addr = BlockAddress::tail_sector_of(tail.block.linked_block, g);
                 bytes += tail.bytes_in_block;
                 desired -= tail.bytes_in_block;
