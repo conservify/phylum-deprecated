@@ -68,6 +68,7 @@ public:
                 storage_,
                 fds_[i],
                 &allocations_[i],
+                i,
                 OpenMode::Write
             };
             if (!file.format()) {
@@ -128,18 +129,18 @@ public:
     virtual SimpleFile open(FileDescriptor &fd, OpenMode mode = OpenMode::Read) override {
         for (size_t i = 0; i < SIZE; ++i) {
             if (fds_[i] == &fd) {
-                auto file = SimpleFile{ storage_, fds_[i], &allocations_[i], mode };
+                auto file = SimpleFile{ storage_, fds_[i], &allocations_[i], i, mode };
                 file.initialize();
                 return file;
             }
         }
-        return SimpleFile{ nullptr, nullptr, nullptr, OpenMode::Read };
+        return SimpleFile{ nullptr, nullptr, nullptr, 0, OpenMode::Read };
     }
 
     virtual bool erase(FileDescriptor &fd) override {
         for (size_t i = 0; i < SIZE; ++i) {
             if (fds_[i] == &fd) {
-                auto file = SimpleFile{ storage_, fds_[i], &allocations_[i], OpenMode::Write };
+                auto file = SimpleFile{ storage_, fds_[i], &allocations_[i], i, OpenMode::Write };
                 return file.erase();
             }
         }

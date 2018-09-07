@@ -34,12 +34,12 @@ public:
     BlockedFile() {
     }
 
-    BlockedFile(StorageBackend *storage, OpenMode mode) :
-        storage_(storage), mode_(mode) {
+    BlockedFile(StorageBackend *storage, uint32_t id, OpenMode mode) :
+        storage_(storage), id_(id), mode_(mode) {
     }
 
-    BlockedFile(StorageBackend *storage, OpenMode mode, BlockAddress head) :
-        storage_(storage), mode_(mode), head_(head), beg_(head) {
+    BlockedFile(StorageBackend *storage, uint32_t id, OpenMode mode, BlockAddress head) :
+        storage_(storage), id_(id), mode_(mode), head_(head), beg_(head) {
     }
 
     ~BlockedFile() {
@@ -51,6 +51,8 @@ public:
     friend class SimpleFile;
 
 public:
+    uint32_t id() const;
+
     bool read_only() const;
 
     uint32_t blocks_in_file() const;
@@ -142,7 +144,7 @@ public:
     }
 
     AllocatedBlockedFile(StorageBackend *storage, OpenMode mode, ReusableBlockAllocator *allocator, BlockAddress head) :
-        BlockedFile(storage, mode, head), storage_(storage), allocator_(allocator) {
+        BlockedFile(storage, 0, mode, head), storage_(storage), allocator_(allocator) {
     }
 
 public:

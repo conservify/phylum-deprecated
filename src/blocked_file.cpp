@@ -464,6 +464,10 @@ bool BlockedFile::format() {
     return true;
 }
 
+uint32_t BlockedFile::id() const {
+    return id_;
+}
+
 bool BlockedFile::read_only() const {
     return mode_ == OpenMode::Read;
 }

@@ -17,7 +17,7 @@ public:
     ExtentBlockedFile() {
     }
 
-    ExtentBlockedFile(StorageBackend *storage, OpenMode mode, Extent data) : BlockedFile(storage, mode), data_(data) {
+    ExtentBlockedFile(StorageBackend *storage, uint32_t id, OpenMode mode, Extent data) : BlockedFile(storage, id, mode), data_(data) {
     }
 
 public:
@@ -38,8 +38,8 @@ public:
     SimpleFile() {
     }
 
-    SimpleFile(StorageBackend *storage, FileDescriptor *fd, FileAllocation *file, OpenMode mode) :
-        blocked_(storage, mode, file->data), fd_(fd), file_(file), index_(storage, file) {
+    SimpleFile(StorageBackend *storage, FileDescriptor *fd, FileAllocation *file, uint32_t id, OpenMode mode) :
+        blocked_(storage, id, mode, file->data), fd_(fd), file_(file), index_(storage, file) {
     }
 
     template<size_t SIZE>
