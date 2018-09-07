@@ -130,7 +130,10 @@ public:
         for (size_t i = 0; i < SIZE; ++i) {
             if (fds_[i] == &fd) {
                 auto file = SimpleFile{ storage_, fds_[i], &allocations_[i], i, mode };
-                file.initialize();
+                if (!file.initialize()) {
+                    sdebug() << "Error initializing opening file." << endl;
+                    break;
+                }
                 return file;
             }
         }
