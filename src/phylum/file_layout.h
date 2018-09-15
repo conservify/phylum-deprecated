@@ -48,10 +48,12 @@ public:
         fds_ = fds;
 
         if (!allocate(fds)) {
+            sdebug() << "Format allocation failed" << endl;
             return false;
         }
 
         if (!table.erase()) {
+            sdebug() << "Format erase table failed" << endl;
             return false;
         }
 
@@ -61,6 +63,7 @@ public:
             memcpy(&entry.fd, fds_[i], sizeof(FileDescriptor));
             memcpy(&entry.alloc, &allocations_[i], sizeof(FileAllocation));
             if (!table.write(entry)) {
+                sdebug() << "Format file write table failed: " << fds_[i]->name << endl;
                 return false;
             }
 
@@ -88,14 +91,17 @@ public:
         for (size_t i = 0; i < SIZE; ++i) {
             FileTableEntry entry;
             if (!table.read(entry)) {
+                sdebug() << "Mounting error, table read failed: " << fds_[i]->name << endl;
                 return false;
             }
 
             if (!entry.magic.valid()) {
+                sdebug() << "Mounting error, table entry invalid: " << fds_[i]->name << endl;
                 return false;
             }
 
             if (!entry.fd.compatible(fds[i])) {
+                sdebug() << "Mounting error, table entry incompatible: " << fds_[i]->name << endl;
                 return false;
             }
 
