@@ -605,7 +605,7 @@ TEST_F(PreallocatedSuite, OpeningFileWithBadBlockReferencedByIndex) {
 
     // Write a file with index entries.
     auto file1 = layout.open(data_file, OpenMode::Write);
-    auto actual_end = write_file_with_index_entries(file1);
+    write_file_with_index_entries(file1);
 
     // Blow away the block referenced by the index.
     IndexRecord end;
@@ -615,4 +615,9 @@ TEST_F(PreallocatedSuite, OpeningFileWithBadBlockReferencedByIndex) {
     // Re-open the file.
     auto file2 = layout.open(data_file, OpenMode::Write);
     ASSERT_FALSE(file2);
+
+    ASSERT_TRUE(layout.erase(data_file));
+
+    auto file3 = layout.open(data_file, OpenMode::Write);
+    ASSERT_TRUE(file3);
 }
