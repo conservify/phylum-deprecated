@@ -138,12 +138,12 @@ public:
                 auto file = SimpleFile{ storage_, fds_[i], &allocations_[i], (uint32_t)i, mode };
                 if (!file.initialize()) {
                     phylog().errors() << "Error initializing file: " << fds_[i]->name << endl;
-                    break;
+                    return SimpleFile{ };
                 }
                 return file;
             }
         }
-        return SimpleFile{ nullptr, nullptr, nullptr, 0, OpenMode::Read };
+        return SimpleFile{ };
     }
 
     virtual bool erase(FileDescriptor &fd) override {
