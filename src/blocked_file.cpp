@@ -50,9 +50,13 @@ bool BlockedFile::seek(BlockAddress from, uint32_t position_at_from, uint64_t de
     }
 
     #if PHYLUM_DEBUG > 1
-    sdebug() << "Seek: length=" << length_ << " position=" << position_ << " desired=" << desired <<
-        " endp=" << position_at_from << " info=" << info.bytes << " head=" << head_ << " seek_offset=" << seek_offset_ << endl;
+    if (true) {
+    #else
+    if (!success) {
     #endif
+        sdebug() << "Seek: length=" << length_ << " position=" << position_ << " desired=" << desired <<
+            " endp=" << position_at_from << " info=" << info.bytes << " head=" << head_ << " seek_offset=" << seek_offset_ << endl;
+    }
 
     return success;
 }
@@ -83,6 +87,7 @@ BlockedFile::SeekInfo BlockedFile::seek(BlockAddress from, uint32_t position_at_
         }
 
         if (!head.valid()) {
+            phylog().errors() << "Block is invalid: " << starting_block << endl;
             return { };
         }
 

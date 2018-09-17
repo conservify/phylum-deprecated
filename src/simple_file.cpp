@@ -26,14 +26,17 @@ bool SimpleFile::seek(uint64_t desired) {
     IndexRecord end;
 
     if (!index().seek(desired, end)) {
+        phylog().errors() << "Index seek failed." << endl;
         return false;
     }
 
     if (!end.valid()) {
+        phylog().errors() << "Seek found invalid end." << endl;
         return blocked_.seek({ file_->data.start, 0 }, 0, desired, nullptr);
     }
 
     if (!blocked_.seek(end.address, end.position, desired, nullptr)) {
+        phylog().errors() << "Blocked file seek failed: " << end.address << " pos=" << end.position << " desired=" << desired << endl;
         return false;
     }
 
@@ -70,15 +73,18 @@ bool SimpleFile::initialize() {
     }
 
     if (!index().initialize()) {
+        phylog().errors() << "Index initialize failed." << endl;
         return false;
     }
 
     if (!seek(UINT64_MAX)) {
+        phylog().errors() << "Seek end failed." << endl;
         return false;
     }
 
     if (read_only()) {
         if (!seek(0)) {
+            phylog().errors() << "Seek beginning failed." << endl;
             return false;
         }
     }

@@ -3,4 +3,12 @@
 
 #include <alogging/alogging.h>
 
+namespace phylum {
+
+inline ostreamtype phylog() {
+    return LogStream{ "Phylum" };
+}
+
+}
+
 #endif

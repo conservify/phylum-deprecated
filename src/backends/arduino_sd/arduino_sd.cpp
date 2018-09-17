@@ -48,7 +48,11 @@ bool ArduinoSdBackend::erase(block_index_t block) {
     #ifdef PHYLUM_ARDUINO_DEBUG
     sdebug() << "Erase(" << block << ")" << endl;
     #endif
-    return sd_raw_erase(&sd_, first_sd_block, last_sd_block);
+    if (!sd_raw_erase(&sd_, first_sd_block, last_sd_block)) {
+        phylog().errors() << "Error erasing: block=" << block << endl;
+        return false;
+    }
+    return true;
 }
 
 bool ArduinoSdBackend::read(BlockAddress addr, void *d, size_t n) {
@@ -57,7 +61,11 @@ bool ArduinoSdBackend::read(BlockAddress addr, void *d, size_t n) {
     #ifdef PHYLUM_ARDUINO_DEBUG
     sdebug() << "Read(" << addr << " " << n << ")" << endl;
     #endif
-    return sd_raw_read_data(&sd_, sd_block, offset, n, (uint8_t *)d);
+    if (!sd_raw_read_data(&sd_, sd_block, offset, n, (uint8_t *)d)) {
+        phylog().errors() << "Error reading: " << addr << " bytes=" << n << endl;
+        return false;
+    }
+    return true;
 }
 
 bool ArduinoSdBackend::write(BlockAddress addr, void *d, size_t n) {
@@ -66,7 +74,11 @@ bool ArduinoSdBackend::write(BlockAddress addr, void *d, size_t n) {
     #ifdef PHYLUM_ARDUINO_DEBUG
     sdebug() << "Write(" << addr << " " << n << ")" << endl;
     #endif
-    return sd_raw_write_data(&sd_, sd_block, offset, n, (uint8_t *)d, true);
+    if (!sd_raw_write_data(&sd_, sd_block, offset, n, (uint8_t *)d, true)) {
+        phylog().errors() << "Error writing: " << addr << " bytes=" << n << endl;
+        return false;
+    }
+    return true;
 }
 
 }
