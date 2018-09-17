@@ -36,7 +36,7 @@ bool SimpleFile::seek(uint64_t desired) {
     }
 
     if (!blocked_.seek(end.address, end.position, desired, nullptr)) {
-        phylog().errors() << "Blocked file seek failed: " << end.address << " pos=" << end.position << " desired=" << desired << endl;
+        phylog().errors() << "File seek failed: " << end.address << " pos=" << end.position << " desired=" << desired << endl;
         return false;
     }
 

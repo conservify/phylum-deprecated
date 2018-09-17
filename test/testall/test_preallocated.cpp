@@ -572,3 +572,47 @@ TEST_F(PreallocatedSuite, SeekingToOffsetOnBlockBoundary) {
         }
     }
 }
+
+static BlockAddress write_file_with_index_entries(SimpleFile &file) {
+    PatternHelper helper;
+
+    auto block = file.head().block;
+    auto blocks_seen = 0;
+    while (true) {
+        helper.write(file, 1);
+
+        auto addr = file.head();
+        if (addr.block != block) {
+            blocks_seen++;
+
+            block = addr.block;
+
+            if (blocks_seen == BlockedFile::IndexFrequency * 2.5) {
+                break;
+            }
+        }
+    }
+
+    return file.head();
+}
+
+TEST_F(PreallocatedSuite, OpeningFileWithBadBlockReferencedByIndex) {
+    FileDescriptor data_file = { "data.fk", 0 };
+    FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
+
+    ASSERT_TRUE(layout.format(files));
+
+    // Write a file with index entries.
+    auto file1 = layout.open(data_file, OpenMode::Write);
+    auto actual_end = write_file_with_index_entries(file1);
+
+    // Blow away the block referenced by the index.
+    IndexRecord end;
+    ASSERT_TRUE(file1.index().seek(UINT64_MAX, end));
+    ASSERT_TRUE(storage_.erase(end.address.block));
+
+    // Re-open the file.
+    auto file2 = layout.open(data_file, OpenMode::Write);
+    ASSERT_FALSE(file2);
+}
