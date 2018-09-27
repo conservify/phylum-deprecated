@@ -245,6 +245,8 @@ bool SuperBlockManager::save(MinimumSuperBlock &sb, size_t size) {
     sb.link.header.timestamp++;
     sb.link.header.fill();
 
+    assert(location_.valid());
+
     auto write = PendingWrite{ BlockType::SuperBlock, &sb, size };
 
     SectorAddress actually_wrote;

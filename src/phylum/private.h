@@ -106,10 +106,17 @@ struct SectorAddress {
 struct BlockAddress;
 
 struct Geometry {
-    block_index_t number_of_blocks;
-    page_index_t pages_per_block;
-    sector_index_t sectors_per_page;
-    sector_index_t sector_size;
+    block_index_t number_of_blocks{ 0 };
+    page_index_t pages_per_block{ 0 };
+    sector_index_t sectors_per_page{ 0 };
+    sector_index_t sector_size{ 0 };
+
+    Geometry() {
+    }
+
+    Geometry(block_index_t number_of_blocks, page_index_t pages_per_block, sector_index_t sectors_per_page, sector_index_t sector_size) :
+        number_of_blocks(number_of_blocks), pages_per_block(pages_per_block), sectors_per_page(sectors_per_page), sector_size(sector_size) {
+    }
 
     block_index_t number_of_sectors() const {
         return number_of_blocks * sectors_per_block();
