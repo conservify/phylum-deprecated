@@ -23,7 +23,7 @@ bool ArduinoSdBackend::initialize(const Geometry &g, uint8_t cs) {
     }
 
     auto number_of_sd_blocks = sd_raw_card_size(&sd_);
-    geometry_ = Geometry::from_physical_block_layout(number_of_sd_blocks);
+    geometry_ = Geometry::from_physical_block_layout(number_of_sd_blocks, SectorSize);
 
     sdebug() << "Ready: " << geometry_ << endl;
 

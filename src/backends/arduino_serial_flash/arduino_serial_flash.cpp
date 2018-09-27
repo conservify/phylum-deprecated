@@ -41,9 +41,7 @@ bool ArduinoSerialFlashBackend::initialize(uint8_t cs, sector_index_t sector_siz
 
     geometry_ = Geometry{ number_of_blocks, pages_per_block, sectors_per_page, sector_size };
 
-    #ifdef PHYLUM_ARDUINO_DEBUG
     sdebug() << "Initialized: " << geometry_ << endl;
-    #endif
 
     return true;
 }

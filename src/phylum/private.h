@@ -128,9 +128,6 @@ struct Geometry {
     }
 
     bool valid() const {
-        if (sector_size != SectorSize) {
-            return false;
-        }
         return number_of_blocks > 0 && pages_per_block > 0 && sectors_per_page > 0 && sector_size > 0;
     }
 
@@ -142,8 +139,8 @@ struct Geometry {
 
     bool valid(const BlockAddress addr) const;
 
-    static Geometry from_physical_block_layout(uint32_t number_of_physical_blocks) {
-        return from_physical_block_layout(Geometry{ 0, 4, 4, SectorSize }, number_of_physical_blocks);
+    static Geometry from_physical_block_layout(uint32_t number_of_physical_blocks, sector_index_t sector_size) {
+        return from_physical_block_layout(Geometry{ 0, 4, 4, sector_size }, number_of_physical_blocks);
     }
 
     static Geometry from_physical_block_layout(Geometry g, uint32_t number_of_physical_blocks) {
@@ -165,7 +162,7 @@ public:
     BlockAddress(block_index_t block, uint32_t position) : block(block), position(position) {
     }
 
-    BlockAddress(SectorAddress addr, uint32_t offset = 0) : block(addr.block), position(addr.sector * SectorSize + offset) {
+    BlockAddress(const Geometry &geometry, SectorAddress addr, uint32_t offset) : block(addr.block), position(addr.sector * geometry.sector_size + offset) {
     }
 
 public:

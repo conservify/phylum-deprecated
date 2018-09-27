@@ -344,7 +344,7 @@ BlockedFile::SavedSector BlockedFile::save_sector(bool flushing) {
         tail.bytes_in_block = bytes_in_block_;
         tail.block.linked_block = linked;
         memcpy(tail_info<FileBlockTail>(buffer_), &tail, sizeof(FileBlockTail));
-        following = { linked };
+        following = { linked, 0 };
     }
     else {
         FileSectorTail tail;

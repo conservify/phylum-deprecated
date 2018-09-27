@@ -8,11 +8,12 @@ SectorCachingStorage::SectorCachingStorage(StorageBackend &target) : target(targ
 bool SectorCachingStorage::read(BlockAddress addr, void *d, size_t n) {
     auto sector = addr.sector(geometry());
     auto offset = addr.sector_offset(geometry());
+    auto sector_size = geometry().sector_size;
     if (sector_ != sector) {
         #if PHYLUM_DEBUG > 3
         sdebug() << "SectorCache: MISS " << addr << endl;
         #endif
-        if (!target.read({ sector, 0 }, buffer_, SectorSize)) {
+        if (!target.read({ geometry(), sector, 0 }, buffer_, sector_size)) {
             return false;
         }
         sector_ = sector;
@@ -37,7 +38,7 @@ bool SectorCachingStorage::write(BlockAddress addr, void *d, size_t n) {
 
     memcpy(buffer_ + offset, d, n);
 
-    return target.write({ sector, 0 }, buffer_, SectorSize);
+    return target.write({ geometry(), sector, 0 }, buffer_, SectorSize);
 }
 
 }

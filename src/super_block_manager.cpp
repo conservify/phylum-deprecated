@@ -70,7 +70,7 @@ bool SuperBlockManager::locate(MinimumSuperBlock &sb, size_t size) {
 
     location_ = where;
 
-    if (!storage_->read({ location_, 0 }, &sb, size)) {
+    if (!storage_->read({ storage_->geometry(), location_, 0 }, &sb, size)) {
         sdebug() << "SuperBlockManager::read_super failed." << endl;
         return false;
     }
@@ -94,14 +94,16 @@ bool SuperBlockManager::find_link(block_index_t block, SuperBlockLink &found, Se
     for (auto s = SuperBlockStartSector; s < storage_->geometry().sectors_per_block(); ++s) {
         SuperBlockLink link;
 
-        if (!read({ block, s }, link)) {
+        SectorAddress addr{ block, s };
+
+        if (!read(addr, link)) {
             return false;
         }
 
         if (link.header.magic.valid()) {
             if (found.header.timestamp == TIMESTAMP_INVALID || link.header.timestamp > found.header.timestamp) {
                 found = link;
-                where = { block, s };
+                where = addr;
             }
         }
         else {
@@ -167,7 +169,7 @@ bool SuperBlockManager::create(MinimumSuperBlock &sb, size_t size, std::function
     update();
 
     SectorAddress addr = { super_block_block, SuperBlockStartSector };
-    if (!storage_->write({ addr, 0 }, &sb, size)) {
+    if (!storage_->write({ storage_->geometry(), addr, 0 }, &sb, size)) {
         return false;
     }
 
@@ -241,6 +243,7 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
 
 bool SuperBlockManager::save(MinimumSuperBlock &sb, size_t size) {
     sb.link.header.timestamp++;
+    sb.link.header.fill();
 
     auto write = PendingWrite{ BlockType::SuperBlock, &sb, size };
 
@@ -259,15 +262,15 @@ int32_t SuperBlockManager::chain_length() {
 }
 
 bool SuperBlockManager::read(SectorAddress addr, SuperBlockLink &link) {
-    return storage_->read({ addr, 0 }, &link, sizeof(SuperBlockLink));
+    return storage_->read({ storage_->geometry(), addr, 0 }, &link, sizeof(SuperBlockLink));
 }
 
 bool SuperBlockManager::write(SectorAddress addr, SuperBlockLink &link) {
-    return storage_->write({ addr, 0 }, &link, sizeof(SuperBlockLink));
+    return storage_->write({ storage_->geometry(), addr, 0 }, &link, sizeof(SuperBlockLink));
 }
 
 bool SuperBlockManager::write(SectorAddress addr, PendingWrite write) {
-    return storage_->write({ addr, 0 }, write.ptr, write.n);
+    return storage_->write({ storage_->geometry(), addr, 0 }, write.ptr, write.n);
 }
 
 }

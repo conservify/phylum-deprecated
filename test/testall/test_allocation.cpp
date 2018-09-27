@@ -13,8 +13,8 @@ class AllocationSuite : public ::testing::Test {
 };
 
 TEST_F(AllocationSuite, SdCardSizeCalculatedCorrectly) {
-    auto number_of_sd_blocks = UINT32_MAX / 512;
-    auto g = Geometry::from_physical_block_layout(number_of_sd_blocks);
+    auto number_of_sd_blocks = UINT32_MAX / SectorSize;
+    auto g = Geometry::from_physical_block_layout(number_of_sd_blocks, SectorSize);
 
     ASSERT_EQ(g.number_of_blocks, number_of_sd_blocks / (4 * 4));
 }
