@@ -16,7 +16,7 @@ struct SimpleState : phylum::MinimumSuperBlock {
 
 class SuperBlockNonStandardSizeSuite : public ::testing::Test {
 protected:
-    Geometry geometry_{ 32, 32, 4, 2048 }; // 2MB Serial Flash
+    Geometry geometry_{ 32, 8, 4, 2048 }; // 2MB Serial Flash
     LinuxMemoryBackend storage_;
     SerialFlashAllocator allocator_{ storage_ };
     BasicSuperBlockManager<SimpleState> manager_{ storage_, allocator_ };
@@ -61,7 +61,52 @@ TEST_F(SuperBlockNonStandardSizeSuite, SavingAFewRevisions) {
 
     ASSERT_TRUE(other_manager.locate());
 
-    ASSERT_EQ(other_manager.location().block, 3);
-    ASSERT_EQ(other_manager.location().sector, 5);
+    ASSERT_EQ(other_manager.location().block, (block_index_t)31);
+    ASSERT_EQ(other_manager.location().sector, (sector_index_t)5);
 }
 
+TEST_F(SuperBlockNonStandardSizeSuite, PrefersInvalidBlocksDuringAllocation) {
+    ASSERT_TRUE(manager_.create());
+
+    for (block_index_t i = 0; i < geometry_.number_of_blocks; ++i) {
+        if (!allocator_.is_taken(i)) {
+            if (i != 10) {
+                ASSERT_TRUE(allocator_.free(i, 1));
+            }
+        }
+    }
+
+    for (auto i = 0; i < 33; ++i) {
+        ASSERT_TRUE(manager_.save());
+    }
+
+    ASSERT_EQ(manager_.location().block, (block_index_t)10);
+
+    BlockHead header;
+    ASSERT_TRUE(storage_.read(BlockAddress{ manager_.location().block, 0 }, &header, sizeof(BlockHead)));
+    ASSERT_EQ(header.age, (block_age_t)1);
+}
+
+TEST_F(SuperBlockNonStandardSizeSuite, AgeIsIncrementedWhenAllocatingBlockWithAge) {
+    ASSERT_TRUE(manager_.create());
+
+    for (block_index_t i = 0; i < geometry_.number_of_blocks; ++i) {
+        if (!allocator_.is_taken(i)) {
+            ASSERT_TRUE(allocator_.free(i, 10));
+        }
+    }
+
+    storage_.log().logging(false);
+
+    for (auto i = 0; i < 33; ++i) {
+        ASSERT_TRUE(manager_.save());
+    }
+
+    storage_.log().logging(false);
+
+    ASSERT_EQ(manager_.location().block, (block_index_t)3);
+
+    BlockHead header;
+    ASSERT_TRUE(storage_.read(BlockAddress{ manager_.location().block, 0 }, &header, sizeof(BlockHead)));
+    ASSERT_EQ(header.age, (block_age_t)11);
+}

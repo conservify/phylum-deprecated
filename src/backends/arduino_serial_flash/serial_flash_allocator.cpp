@@ -41,12 +41,10 @@ AllocatedBlock SerialFlashAllocator::allocate_internal(BlockType type) {
     }
 
     #ifdef PHYLUM_ARDUINO_DEBUG
-    sdebug() << "Allocate: " << type << " = " << (uint32_t)info.block << endl;
+    sdebug() << "Allocate: " << type << " = " << (uint32_t)info.block << " " << info.age << endl;
     #endif
 
-    if (info.block == BLOCK_INDEX_INVALID) {
-        assert(info.block != BLOCK_INDEX_INVALID);
-    }
+    assert(info.block != BLOCK_INDEX_INVALID);
 
     set_block_taken(map_, info.block);
 
@@ -100,30 +98,30 @@ bool SerialFlashAllocator::scan(bool free_only, ScanInfo &info) {
             }
         }
 
-        BlockHead header;
-        if (is_taken(block, header)) {
+        BlockHead candidate;
+        if (is_taken(block, candidate)) {
             set_block_taken(map_, block);
             #ifdef PHYLUM_ARDUINO_DEBUG
-            sdebug() << "Block " << (uint32_t)block << " is taken. (" << header.type << ")" << endl;
+            sdebug() << "Block " << (uint32_t)block << " is taken. (age=" << candidate.age << ", " << candidate.type << ") (selected=" << info.block << ", age=" << info.age << ")" << endl;
             #endif
         }
         else {
             set_block_free(map_, block);
             #ifdef PHYLUM_ARDUINO_DEBUG
-            sdebug() << "Block " << (uint32_t)block << " is free. (age=" << header.age << ")" << endl;
+            sdebug() << "Block " << (uint32_t)block << " is free. (age=" << candidate.age << ") (selected=" << info.block << ", age=" << info.age << ")" << (candidate.valid() ? "" : " Invalid") << endl;
             #endif
 
-            if (header.valid()) {
-                if (header.age < info.age || info.age == BLOCK_AGE_INVALID) {
+            if (candidate.valid()) {
+                if (info.block == BLOCK_INDEX_INVALID || candidate.age < info.age) {
                     info.block = block;
-                    info.age = header.age;
+                    info.age = candidate.age;
                 }
             }
             else {
-                if (info.block == BLOCK_INDEX_INVALID) {
-                    info.block = block;
-                    info.age = BLOCK_AGE_INVALID;
-                }
+                // Using 0 here means no other "valid" block can win, so we're
+                // picking this invalid block regardless.
+                info.block = block;
+                info.age = 0;
             }
         }
     }
