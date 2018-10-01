@@ -96,17 +96,35 @@ TEST_F(SuperBlockNonStandardSizeSuite, AgeIsIncrementedWhenAllocatingBlockWithAg
         }
     }
 
-    storage_.log().logging(false);
-
     for (auto i = 0; i < 33; ++i) {
         ASSERT_TRUE(manager_.save());
     }
-
-    storage_.log().logging(false);
 
     ASSERT_EQ(manager_.location().block, (block_index_t)3);
 
     BlockHead header;
     ASSERT_TRUE(storage_.read(BlockAddress{ manager_.location().block, 0 }, &header, sizeof(BlockHead)));
     ASSERT_EQ(header.age, (block_age_t)11);
+}
+
+TEST_F(SuperBlockNonStandardSizeSuite, TimestampWrapAround) {
+    ASSERT_TRUE(manager_.create());
+
+    for (block_index_t i = 0; i < geometry_.number_of_blocks; ++i) {
+        if (!allocator_.is_taken(i)) {
+            ASSERT_TRUE(allocator_.free(i, 10));
+        }
+    }
+
+    manager_.state().link.header.timestamp = BLOCK_AGE_INVALID - 10;
+
+    for (auto i = 0; i < 12; ++i) {
+        ASSERT_TRUE(manager_.save());
+    }
+
+    BasicSuperBlockManager<SimpleState> other_manager{ storage_, allocator_ };
+
+    ASSERT_TRUE(other_manager.locate());
+
+    ASSERT_EQ(other_manager.state().link.header.timestamp, (sector_index_t)1);
 }

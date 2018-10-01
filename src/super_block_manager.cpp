@@ -101,6 +101,11 @@ bool SuperBlockManager::find_link(block_index_t block, SuperBlockLink &found, Se
         }
 
         if (link.header.magic.valid()) {
+            // NOTE: This first test serves two purposes. It ensures an
+            // uninitialized found gets set to the first one we come across and
+            // also makes the find_link work when a wrap around has occured. In
+            // that case we automatically select a block that was prceeded by
+            // the maximum value.
             if (found.header.timestamp == TIMESTAMP_INVALID || link.header.timestamp > found.header.timestamp) {
                 found = link;
                 where = addr;
@@ -212,6 +217,7 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
     }
 
     pending.ptr->link.header.age = alloc.age + 1;
+
     if (!write(relocated, pending)) {
         return false;
     }
