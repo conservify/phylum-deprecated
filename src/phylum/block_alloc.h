@@ -29,7 +29,7 @@ struct AllocatedBlock {
     AllocatedBlock() {
     }
 
-    AllocatedBlock(block_index_t block, bool erased) : block(block), erased(erased) {
+    AllocatedBlock(block_index_t block, block_age_t age, bool erased) : block(block), age(age), erased(erased) {
     }
 
     bool valid() {
@@ -53,7 +53,7 @@ public:
 class EmptyAllocator : public BlockAllocator {
 public:
     AllocatedBlock allocate(BlockType type) override {
-        return { BLOCK_INDEX_INVALID, false };
+        return { BLOCK_INDEX_INVALID, 0, false };
     }
 };
 

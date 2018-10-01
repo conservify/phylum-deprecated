@@ -19,7 +19,7 @@ public:
             b = extent_.start;
         }
         assert(extent_.contains(b));
-        return { b, false };
+        return { b, 0, false };
     }
 
 };

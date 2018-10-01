@@ -16,7 +16,7 @@ AllocatedBlock ExtentBlockedFile::allocate() {
             block = BLOCK_INDEX_INVALID;
         }
     }
-    return AllocatedBlock { block, false };
+    return AllocatedBlock { block, 0, false };
 }
 
 void ExtentBlockedFile::free(block_index_t block) {

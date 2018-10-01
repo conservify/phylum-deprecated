@@ -25,7 +25,7 @@ AllocatedBlock SerialFlashAllocator::allocate(BlockType type) {
         if (is_valid_block(preallocated_[i])) {
             auto f = preallocated_[i];
             preallocated_[i] = BLOCK_INDEX_INVALID;
-            return { f, true };
+            return { f, 0, true };
         }
     }
 
@@ -50,7 +50,7 @@ AllocatedBlock SerialFlashAllocator::allocate_internal(BlockType type) {
 
     set_block_taken(map_, info.block);
 
-    return { info.block, false };
+    return { info.block, info.age, false };
 }
 
 bool SerialFlashAllocator::initialize() {

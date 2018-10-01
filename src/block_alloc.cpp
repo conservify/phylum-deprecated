@@ -24,7 +24,7 @@ void SequentialBlockAllocator::state(AllocatorState state) {
 AllocatedBlock SequentialBlockAllocator::allocate(BlockType type) {
     assert(geometry_ != nullptr);
     assert(block_ < geometry_->number_of_blocks);
-    return { block_++, false };
+    return { block_++, 0, false };
 }
 
 bool SequentialBlockAllocator::free(block_index_t block, block_age_t age) {
@@ -75,7 +75,7 @@ AllocatedBlock QueueBlockAllocator::allocate(BlockType type) {
 
     free_.pop();
 
-    return { block, false };
+    return { block, 0, false };
 }
 
 bool QueueBlockAllocator::free(block_index_t block, block_age_t age) {
