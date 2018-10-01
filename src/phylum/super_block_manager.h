@@ -51,7 +51,7 @@ public:
 private:
     struct PendingWrite {
         BlockType type;
-        void *ptr;
+        MinimumSuperBlock *ptr;
         size_t n;
     };
 

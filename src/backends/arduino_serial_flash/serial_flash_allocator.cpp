@@ -138,7 +138,7 @@ bool SerialFlashAllocator::scan(bool free_only, ScanInfo &info) {
 
 bool SerialFlashAllocator::free(block_index_t block, block_age_t age) {
     BlockHead header;
-    if (!storage_->read({ (block_index_t)block, 0 }, &header, sizeof(BlockHead))) {
+    if (!storage_->read(BlockAddress{ block, 0 }, &header, sizeof(BlockHead))) {
         return false;
     }
 

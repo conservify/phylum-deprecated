@@ -211,23 +211,24 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
         }
     }
 
+    pending.ptr->link.header.age = alloc.age + 1;
     if (!write(relocated, pending)) {
         return false;
     }
 
     // Find the chain link that references this now obsolete location.
-    SuperBlockLink link;
+    MinimumSuperBlock msb;
     SectorAddress previous;
-    if (!walk(addr.block, link, previous, nullptr)) {
+    if (!walk(addr.block, msb.link, previous, nullptr)) {
         return false;
     }
 
-    link.header.timestamp++;
-    link.chained_block = block;
+    msb.link.header.timestamp++;
+    msb.link.chained_block = block;
 
     auto link_write = PendingWrite {
         BlockType::SuperBlockLink,
-        &link,
+        &msb,
         sizeof(SuperBlockLink)
     };
 
@@ -236,7 +237,7 @@ bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, P
         return false;
     }
 
-    blocks_->free(addr.block, link.header.timestamp);
+    blocks_->free(addr.block, msb.link.header.age);
 
     return true;
 }
