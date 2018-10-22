@@ -57,7 +57,7 @@ int32_t SimpleFile::write(uint8_t *ptr, size_t size, bool span_sectors, bool spa
                 auto beginning_of_block = blocked_.head().beginning_of_block();
 
                 if (!index().append(position_at_start_of_block, beginning_of_block)) {
-                    return false;
+                    return 0;
                 }
 
                 previous_index_block_ = blocked_.head().block;

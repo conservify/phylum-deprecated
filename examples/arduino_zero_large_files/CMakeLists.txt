@@ -15,4 +15,6 @@ add_definitions(-DPHYLUM_ENABLE_SD)
 
 target_include_directories(phylum-arduino-zero-large-files PUBLIC ./ ../../src ../../src/backends/arduino_sd)
 
+target_compile_options(phylum-arduino-zero-large-files PUBLIC -Wall -Werror)
+
 add_arduino_firmware(phylum-arduino-zero-large-files)
