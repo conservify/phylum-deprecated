@@ -76,7 +76,7 @@ public:
 
     int32_t write(uint8_t *ptr, size_t size, bool span_sectors = true, bool span_blocks = true) override;
 
-    int32_t flush();
+    bool flush();
 
     bool erase_all_blocks();
 

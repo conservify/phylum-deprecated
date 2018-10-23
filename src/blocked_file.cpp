@@ -368,22 +368,22 @@ BlockedFile::SavedSector BlockedFile::save_sector(bool flushing) {
     return SavedSector{ buffpos_, following, allocated };
 }
 
-int32_t BlockedFile::flush() {
+bool BlockedFile::flush() {
     if (read_only()) {
-        return 0;
+        return false;
     }
 
     if (buffpos_ == 0 || buffavailable_ > 0) {
-        return 0;
+        return true;
     }
 
     if (unflushed_ == 0) {
-        return 0;
+        return true;
     }
 
     auto saved = save_sector(true);
     if (!saved) {
-        return 0;
+        return false;
     }
 
     // We could do this in the if scope above, I like doing things "in order" though.
@@ -411,10 +411,9 @@ int32_t BlockedFile::flush() {
         head_ = saved.head;
     }
 
-    auto flushed = buffpos_;
     buffpos_ = 0;
     unflushed_ = 0;
-    return flushed;
+    return true;
 }
 
 bool BlockedFile::initialize() {
