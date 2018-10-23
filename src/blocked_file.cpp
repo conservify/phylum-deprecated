@@ -304,6 +304,7 @@ int32_t BlockedFile::write(uint8_t *ptr, size_t size, bool span_sectors, bool sp
         else {
             memcpy(buffer_ + buffpos_, (const uint8_t *)ptr + wrote, copying);
             buffpos_ += copying;
+            unflushed_ += copying;
             wrote += copying;
             length_ += copying;
             position_ += copying;
@@ -376,6 +377,10 @@ int32_t BlockedFile::flush() {
         return 0;
     }
 
+    if (unflushed_ == 0) {
+        return 0;
+    }
+
     auto saved = save_sector(true);
     if (!saved) {
         return 0;
@@ -408,6 +413,7 @@ int32_t BlockedFile::flush() {
 
     auto flushed = buffpos_;
     buffpos_ = 0;
+    unflushed_ = 0;
     return flushed;
 }
 
@@ -415,6 +421,7 @@ bool BlockedFile::initialize() {
     length_ = 0;
     position_ = 0;
     buffpos_ = 0;
+    unflushed_ = 0;
     buffavailable_ = 0;
     seek_offset_ = 0;
     bytes_in_block_ = 0;

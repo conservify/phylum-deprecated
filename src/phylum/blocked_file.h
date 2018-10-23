@@ -20,6 +20,7 @@ private:
     uint8_t buffer_[SectorSize];
     uint16_t buffavailable_{ 0 };
     uint16_t buffpos_{ 0 };
+    uint16_t unflushed_{ 0 };
     uint16_t seek_offset_{ 0 };
     uint32_t bytes_in_block_{ 0 };
     uint32_t position_{ 0 };
