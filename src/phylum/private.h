@@ -329,9 +329,7 @@ inline ostreamtype& operator<<(ostreamtype& os, const Geometry &g) {
 }
 
 inline ostreamtype& operator<<(ostreamtype& os, const BlockAddress &addr) {
-    auto sector = addr.position / SectorSize;
-    auto offset = addr.position % SectorSize;
-    return os << addr.block << ":" << sector << "+" << offset;
+    return os << addr.block << ":" << addr.position;
 }
 
 inline ostreamtype& operator<<(ostreamtype& os, const BlockType &t) {
