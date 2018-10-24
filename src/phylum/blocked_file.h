@@ -62,7 +62,7 @@ public:
 
     uint64_t tell() const override;
 
-    BlockAddress beginning() const;
+    BlockAddress beginning() const override;
 
     BlockAddress head() const;
 

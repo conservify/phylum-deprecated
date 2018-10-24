@@ -5,6 +5,7 @@ namespace phylum {
 
 class File {
 public:
+    virtual BlockAddress beginning() const = 0;
     virtual uint32_t version() const = 0;
     virtual uint64_t size() const = 0;
     virtual uint64_t tell() const = 0;

@@ -58,6 +58,10 @@ public:
         return blocked_.read_only();
     }
 
+    BlockAddress beginning() const override {
+        return blocked_.beginning();
+    }
+
     uint32_t version() const override {
         return blocked_.version();
     }
