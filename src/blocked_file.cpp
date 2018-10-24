@@ -236,6 +236,9 @@ int32_t BlockedFile::read(uint8_t *ptr, size_t size) {
 
     auto remaining = (uint16_t)(buffavailable_ - buffpos_);
     auto copying = remaining > size ? size : remaining;
+
+    assert(buffpos_ + copying <= sizeof(buffer_));
+
     memcpy(ptr, buffer_ + buffpos_, copying);
 
     buffpos_ += copying;
