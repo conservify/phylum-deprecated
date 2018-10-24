@@ -32,7 +32,10 @@ bool BlockedFile::seek(BlockAddress from, uint32_t position_at_from, uint64_t de
         return false;
     }
 
-    seek_offset_ = info.address.sector_offset(geometry());
+    // May be tempted to use geometry() here, and that's a mistake because files
+    // use a fixed sector size. This also illimunates that the other fields of
+    // Geometry aren't used here.
+    seek_offset_ = info.address.sector_offset(SectorSize);
     version_ = info.version;
     head_ = info.address;
     head_.add(-seek_offset_);

@@ -195,7 +195,11 @@ public:
     }
 
     sector_index_t sector_offset(const Geometry &g) {
-        return position % g.sector_size;
+        return sector_offset(g.sector_size);
+    }
+
+    sector_index_t sector_offset(sector_index_t sector_size) {
+        return position % sector_size;
     }
 
     sector_index_t sector_number(const Geometry &g) {

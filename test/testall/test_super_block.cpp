@@ -128,3 +128,34 @@ TEST_F(SuperBlockNonStandardSizeSuite, TimestampWrapAround) {
 
     ASSERT_EQ(other_manager.state().link.header.timestamp, (sector_index_t)1);
 }
+
+TEST_F(SuperBlockNonStandardSizeSuite, WritingAndReadingFile) {
+    ASSERT_TRUE(manager_.create());
+    ASSERT_TRUE(manager_.locate());
+
+    Files files{ &storage_, &allocator_ };
+
+    auto file1 = files.open({ }, OpenMode::Write);
+
+    ASSERT_TRUE(file1.initialize());
+    ASSERT_FALSE(file1.exists());
+    ASSERT_TRUE(file1.format());
+
+    auto location = file1.beginning();
+
+    PatternHelper helper;
+    auto total = helper.write(file1, (1024) / helper.size());
+    file1.close();
+
+    ASSERT_EQ(total, (uint32_t)(1024));
+
+    auto file2 = files.open(location, OpenMode::Read);
+    ASSERT_TRUE(file2.exists());
+
+    file2.seek(0);
+    ASSERT_EQ(file2.tell(), (uint32_t)0);
+    auto verified = helper.read(file2);
+    ASSERT_EQ(verified, (uint32_t)(1024));
+
+    ASSERT_EQ(allocator_.number_of_free_blocks(), (uint32_t)25);
+}
