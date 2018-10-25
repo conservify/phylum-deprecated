@@ -43,11 +43,7 @@ public:
         storage_(storage), id_(id), mode_(mode), head_(head), beg_(head) {
     }
 
-    ~BlockedFile() {
-        if (!read_only()) {
-            close();
-        }
-    }
+    virtual ~BlockedFile() = 0;
 
     friend class SimpleFile;
 
@@ -146,6 +142,12 @@ public:
 
     AllocatedBlockedFile(StorageBackend *storage, OpenMode mode, ReusableBlockAllocator *allocator, BlockAddress head) :
         BlockedFile(storage, 0, mode, head), storage_(storage), allocator_(allocator) {
+    }
+
+    ~AllocatedBlockedFile() {
+        if (!read_only()) {
+            close();
+        }
     }
 
 public:

@@ -42,6 +42,12 @@ public:
         blocked_(storage, id, mode, file->data), fd_(fd), file_(file), index_(storage, file) {
     }
 
+    ~SimpleFile() {
+        if (!read_only()) {
+            close();
+        }
+    }
+
     template<size_t SIZE>
     friend class FileLayout;
 

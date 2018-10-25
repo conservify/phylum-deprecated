@@ -18,6 +18,9 @@ void AllocatedBlockedFile::free(block_index_t block) {
     allocator_->free(block, 0);
 }
 
+BlockedFile::~BlockedFile() {
+}
+
 bool BlockedFile::seek(uint64_t desired) {
     auto from = beg_;
     if (!from.valid()) {
