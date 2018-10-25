@@ -159,3 +159,15 @@ TEST_F(SuperBlockNonStandardSizeSuite, WritingAndReadingFile) {
 
     ASSERT_EQ(allocator_.number_of_free_blocks(), (uint32_t)25);
 }
+
+TEST_F(SuperBlockNonStandardSizeSuite, Preallocating) {
+    ASSERT_TRUE(manager_.create());
+    ASSERT_TRUE(manager_.locate());
+
+    Files files{ &storage_, &allocator_ };
+
+    ASSERT_TRUE(allocator_.preallocate(4));
+
+    auto file1 = files.open({ }, OpenMode::Write);
+
+}

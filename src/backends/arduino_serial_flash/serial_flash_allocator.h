@@ -37,7 +37,9 @@ public:
         block_age_t age;
     };
 
-    bool scan(bool free_only, ScanInfo &info);
+    bool scan(bool free_only, ScanInfo &selected);
+
+    bool scan(bool free_only, ScanInfo *blocks, size_t size);
 
     bool is_taken(block_index_t block, BlockHead &header);
 

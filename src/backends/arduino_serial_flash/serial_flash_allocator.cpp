@@ -87,9 +87,12 @@ bool SerialFlashAllocator::is_taken(block_index_t block) {
     return is_taken(block, header);
 }
 
-bool SerialFlashAllocator::scan(bool free_only, ScanInfo &info) {
-    info.block = BLOCK_INDEX_INVALID;
-    info.age = BLOCK_AGE_INVALID;
+bool SerialFlashAllocator::scan(bool free_only, ScanInfo *blocks, size_t size) {
+    size_t n = 0;
+
+    for (size_t block = 0; block < size; block++) {
+        blocks[block] = { BLOCK_INDEX_INVALID, 0 };
+    }
 
     for (auto block = (uint32_t)3; block < storage_->geometry().number_of_blocks; ++block) {
         if (free_only) {
@@ -102,26 +105,46 @@ bool SerialFlashAllocator::scan(bool free_only, ScanInfo &info) {
         if (is_taken(block, candidate)) {
             set_block_taken(map_, block);
             #ifdef PHYLUM_ARDUINO_DEBUG
-            sdebug() << "Block " << (uint32_t)block << " is taken. (age=" << candidate.age << ", " << candidate.type << ") (selected=" << info.block << ", age=" << info.age << ")" << endl;
+            sdebug() << "Block " << (uint32_t)block << " is taken. (age=" << candidate.age << ", " << candidate.type << ")" << endl;
             #endif
         }
         else {
             set_block_free(map_, block);
             #ifdef PHYLUM_ARDUINO_DEBUG
-            sdebug() << "Block " << (uint32_t)block << " is free. (age=" << candidate.age << ") (selected=" << info.block << ", age=" << info.age << ")" << (candidate.valid() ? "" : " Invalid") << endl;
+            sdebug() << "Block " << (uint32_t)block << " is free. (age=" << candidate.age << ")" << (candidate.valid() ? "" : " Invalid") << endl;
             #endif
 
-            if (candidate.valid()) {
-                if (info.block == BLOCK_INDEX_INVALID || candidate.age < info.age) {
-                    info.block = block;
-                    info.age = candidate.age;
+            if (size == 1) {
+                if (candidate.valid()) {
+                    if (blocks->block == BLOCK_INDEX_INVALID || candidate.age < blocks->age) {
+                        blocks->block = block;
+                        blocks->age = candidate.age;
+                    }
+                }
+                else {
+                    // Using 0 here means no other "valid" block can win, so we're
+                    // picking this invalid block regardless.
+                    blocks->block = block;
+                    blocks->age = 0;
                 }
             }
             else {
-                // Using 0 here means no other "valid" block can win, so we're
-                // picking this invalid block regardless.
-                info.block = block;
-                info.age = 0;
+                if (candidate.valid()) {
+                    blocks[n].block = block;
+                    blocks[n].age = candidate.age;
+                    n++;
+                }
+                else {
+                    // Using 0 here means no other "valid" block can win, so we're
+                    // picking this invalid block regardless.
+                    blocks[n].block = block;
+                    blocks[n].age = 0;
+                    n++;
+                }
+
+                if (n == size) {
+                    break;
+                }
             }
         }
     }
@@ -130,6 +153,17 @@ bool SerialFlashAllocator::scan(bool free_only, ScanInfo &info) {
     set_block_taken(map_, 0);
     set_block_taken(map_, 1);
     set_block_taken(map_, 2);
+
+    return true;
+}
+
+bool SerialFlashAllocator::scan(bool free_only, ScanInfo &selected) {
+    selected.block = BLOCK_INDEX_INVALID;
+    selected.age = BLOCK_AGE_INVALID;
+
+    if (!scan(free_only, &selected, 1)) {
+        return false;
+    }
 
     return true;
 }
@@ -172,17 +206,47 @@ uint32_t SerialFlashAllocator::number_of_free_blocks() {
     return c;
 }
 
-bool SerialFlashAllocator::preallocate(uint32_t expected_size) {
-    for (auto i = 0; i < PreallocationSize; ++i) {
-        auto alloc = allocate_internal(BlockType::Unallocated);
+static SerialFlashAllocator::ScanInfo *take_block(SerialFlashAllocator::ScanInfo *available, size_t size) {
+    SerialFlashAllocator::ScanInfo *selected = nullptr;
 
-        if (!alloc.erased) {
-            if (!storage_->erase(alloc.block)) {
-                return false;
+    for (size_t i = 0; i < size; ++i) {
+        auto &candidate = available[i];
+
+        if (candidate.block != BLOCK_INDEX_INVALID) {
+            if (selected == nullptr || candidate.age < selected->age || candidate.age == 0) {
+                selected = &candidate;
             }
         }
+    }
 
-        preallocated_[i] = alloc.block;
+    return selected;
+}
+
+bool SerialFlashAllocator::preallocate(uint32_t expected_size) {
+    // This is risk, though given this backend we're sure this will never be
+    // more than 64. So this will nearly always be less than 1k.
+    auto nblocks = storage_->geometry().number_of_blocks;
+    auto available = (ScanInfo *)alloca(sizeof(ScanInfo) * nblocks);
+
+    if (!scan(true, available, nblocks)) {
+        return false;
+    }
+
+    for (auto i = 0; i < PreallocationSize; ++i) {
+        auto alloc = take_block(available, nblocks);
+
+        assert(alloc != nullptr);
+
+        set_block_taken(map_, alloc->block);
+
+        if (!storage_->erase(alloc->block)) {
+            return false;
+        }
+
+        preallocated_[i] = alloc->block;
+
+        alloc->block = BLOCK_INDEX_INVALID;
+        alloc->age = BLOCK_AGE_INVALID;
     }
     return true;
 }
