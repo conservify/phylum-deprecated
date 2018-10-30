@@ -41,7 +41,7 @@ bool ArduinoSerialFlashBackend::initialize(uint8_t cs, sector_index_t sector_siz
 
     geometry_ = Geometry{ number_of_blocks, pages_per_block, sectors_per_page, sector_size };
 
-    sdebug() << "Initialized: " << geometry_ << endl;
+    sdebug() << "Initialized: " << geometry_ << " block-size=" << block_size << " capacity=" << capacity << endl;
 
     return true;
 }
@@ -90,10 +90,12 @@ bool ArduinoSerialFlashBackend::read(BlockAddress addr, void *d, size_t n) {
     serial_flash_.read(address, d, n);
     #if PHYLUM_ARDUINO_DEBUG > 1
     sdebug() << "Read(" << addr << " " << n << " " << address << ")" << endl;
+    #if PHYLUM_ARDUINO_DEBUG > 5
     auto s = sdebug();
     for (size_t i = 0; i < n; ++i) {
         s.printf("%02x ", ((uint8_t *)d)[i]);
     }
+    #endif
     #endif
     return true;
 }
@@ -102,10 +104,12 @@ bool ArduinoSerialFlashBackend::write(BlockAddress addr, void *d, size_t n) {
     auto address = get_sf_address(geometry_, addr);
     #if PHYLUM_ARDUINO_DEBUG > 1
     sdebug() << "Write(" << addr << " " << n << " " << address << ")" << endl;
+    #if PHYLUM_ARDUINO_DEBUG > 5
     auto s = sdebug();
     for (size_t i = 0; i < n; ++i) {
         s.printf("%02x ", ((uint8_t *)d)[i]);
     }
+    #endif
     #endif
     serial_flash_.write(address, d, n);
     return true;

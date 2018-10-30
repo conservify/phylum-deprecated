@@ -14,7 +14,7 @@ target_link_libraries(phylum-arduino-zero-serial-flash SerialFlash)
 find_package(SPI)
 target_link_libraries(phylum-arduino-zero-serial-flash SPI)
 
-add_definitions(-DPHYLUM_ARDUINO_DEBUG=1)
+add_definitions(-DPHYLUM_ARDUINO_DEBUG=2)
 add_definitions(-DPHYLUM_ENABLE_SERIAL_FLASH)
 
 target_include_directories(phylum-arduino-zero-serial-flash PUBLIC ./ ../../src ../../src/backends/arduino_serial_flash)
