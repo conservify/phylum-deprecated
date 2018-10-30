@@ -2,6 +2,7 @@
 
 #include <phylum/phylum.h>
 #include <phylum/basic_super_block_manager.h>
+#include <phylum/files.h>
 #include <backends/arduino_serial_flash/arduino_serial_flash.h>
 #include <backends/arduino_serial_flash/serial_flash_allocator.h>
 
@@ -39,6 +40,166 @@ extern "C" char *sbrk(int32_t i);
 static uint32_t free_memory() {
     char stack_dummy = 0;
     return &stack_dummy - sbrk(0);
+}
+
+class FileWriter {
+private:
+    File *file_{ nullptr };
+
+public:
+    FileWriter() {
+    }
+
+    FileWriter(phylum::BlockedFile &file) : file_(&file) {
+    }
+
+public:
+    int32_t write(uint8_t *ptr, size_t size) {
+        return file_->write(ptr, size, true);
+    }
+
+    void close() {
+        file_->close();
+    }
+
+};
+
+class FileStorage {
+private:
+    Files *files_;
+    AllocatedBlockedFile opened_;
+    FileWriter writer_;
+
+public:
+    FileStorage(Files &files) : files_(&files) {
+    }
+
+public:
+    BlockAddress beginningOfOpenFile() {
+        return opened_.beginning();
+    }
+
+    FileWriter *write() {
+        opened_ = files_->open({ }, phylum::OpenMode::Write);
+
+        if (!opened_.format()) {
+            // NOTE: Just return a /dev/null writer?
+            assert(false);
+            return nullptr;
+        }
+
+        writer_ = FileWriter{ opened_ };
+
+        return &writer_;
+    }
+
+};
+
+static void super_block_tests(ArduinoSerialFlashBackend &storage, SerialFlashAllocator &allocator) {
+    OurStateManager sbm{ storage, allocator };
+
+    sdebug() << "Initialize FS" << endl;
+
+    if (!sbm.locate()) {
+        sdebug() << "Locate failed, creating..." << endl;
+
+        if (!sbm.create()) {
+            sdebug() << "Create failed" << endl;
+            fail();
+        }
+
+        if (!sbm.locate()) {
+            sdebug() << "Locate failed" << endl;
+            fail();
+        }
+    }
+
+    sdebug() << "Ready!" << endl;
+
+    for (auto i = 0; i < 256; ++i) {
+        if (!sbm.save()) {
+            sdebug() << "Save failed!" << endl;
+            fail();
+        }
+
+        sdebug() << "New Location: " << sbm.location() << endl;
+    }
+}
+
+static void file_tests_1(ArduinoSerialFlashBackend &storage, SerialFlashAllocator &allocator) {
+    Files files{ &storage, &allocator };
+
+    auto file1 = files.open({ }, OpenMode::Write);
+
+    if (!file1.initialize()) {
+        fail();
+    }
+
+    if (!file1.format()) {
+        fail();
+    }
+
+    auto location = file1.beginning();
+
+    auto total = 0;
+    uint8_t buffer[163] = { 0xee };
+
+    for (auto i = 0; i < 388; ++i) {
+        auto wrote = file1.write(buffer, sizeof(buffer), true);
+        if (wrote <= 0) {
+            fail();
+        }
+        total += wrote;
+    }
+
+    auto wrote = file1.write(buffer, 16, true);
+    if (wrote <= 0) {
+        fail();
+    }
+    total += wrote;
+
+    file1.close();
+
+    sdebug() << "Wrote: " << (uint32_t)total << endl;
+
+    auto file2 = files.open(location, OpenMode::Read);
+
+    file2.seek(UINT64_MAX);
+
+    sdebug() << "Size: " << (uint32_t)file2.size() << endl;
+}
+
+static void file_tests_2(ArduinoSerialFlashBackend &storage, SerialFlashAllocator &allocator) {
+    Files files{ &storage, &allocator };
+    FileStorage fileStorage{ files };
+
+    auto writer = fileStorage.write();
+    auto location = fileStorage.beginningOfOpenFile();
+
+    auto total = 0;
+    uint8_t buffer[163] = { 0xee };
+
+    for (auto i = 0; i < 388; ++i) {
+        auto wrote = writer->write(buffer, sizeof(buffer));
+        if (wrote <= 0) {
+            fail();
+        }
+        total += wrote;
+    }
+
+    auto wrote = writer->write(buffer, 16);
+    if (wrote <= 0) {
+        fail();
+    }
+    total += wrote;
+
+    writer->close();
+
+    sdebug() << "Wrote: " << (uint32_t)total << endl;
+
+    auto file2 = files.open(location, OpenMode::Read);
+    file2.seek(UINT64_MAX);
+    sdebug() << "Size: " << (uint32_t)file2.size() << endl;
 }
 
 void setup() {
@@ -82,7 +243,7 @@ void setup() {
             digitalWrite(cfg.flash_cs, HIGH);
         }
 
-        if (storage.initialize(cfg.flash_cs)) {
+        if (storage.initialize(cfg.flash_cs, 2048)) {
             sdebug() << "Found on #" << cfg.flash_cs << endl;
             success = true;
             break;
@@ -104,34 +265,11 @@ void setup() {
         fail();
     }
 
-    OurStateManager sbm{ storage, allocator };
+    super_block_tests(storage, allocator);
 
-    sdebug() << "Initialize FS" << endl;
+    file_tests_1(storage, allocator);
 
-    if (!sbm.locate()) {
-        sdebug() << "Locate failed, creating..." << endl;
-
-        if (!sbm.create()) {
-            sdebug() << "Create failed" << endl;
-            fail();
-        }
-
-        if (!sbm.locate()) {
-            sdebug() << "Locate failed" << endl;
-            fail();
-        }
-    }
-
-    sdebug() << "Ready!" << endl;
-
-    for (auto i = 0; i < 1024; ++i) {
-        if (!sbm.save()) {
-            sdebug() << "Save failed!" << endl;
-            fail();
-        }
-
-        sdebug() << "New Location: " << sbm.location() << endl;
-    }
+    file_tests_2(storage, allocator);
 
     sdebug() << "DONE!" << endl;
 
