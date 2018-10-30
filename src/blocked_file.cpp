@@ -102,9 +102,10 @@ BlockedFile::SeekInfo BlockedFile::seek(BlockAddress from, uint32_t position_at_
 
     // Start walking the file from the given starting block until we reach the
     // end of the file or we've passed `max` bytes.
-    auto &g = geometry();
+    auto g = geometry();
     auto addr = BlockAddress::tail_sector_of(starting_block, g);
     auto scanned_block = false;
+
     while (true) {
         if (!storage_->read(addr, buffer_, sizeof(buffer_))) {
             return { };
@@ -118,11 +119,11 @@ BlockedFile::SeekInfo BlockedFile::seek(BlockAddress from, uint32_t position_at_
             FileBlockTail tail;
             memcpy(&tail, tail_info<FileBlockTail>(buffer_), sizeof(FileBlockTail));
             if (is_valid_block(tail.block.linked_block) && desired >= tail.bytes_in_block) {
-                addr = BlockAddress::tail_sector_of(tail.block.linked_block, g);
                 bytes += tail.bytes_in_block;
                 desired -= tail.bytes_in_block;
                 bytes_in_block = 0;
                 blocks++;
+                addr = BlockAddress::tail_sector_of(tail.block.linked_block, g);
             }
             else {
                 if (scanned_block) {
@@ -130,7 +131,7 @@ BlockedFile::SeekInfo BlockedFile::seek(BlockAddress from, uint32_t position_at_
                 }
                 scanned_block = true;
                 bytes_in_block = 0;
-                addr = BlockAddress{ addr.block, SectorSize };
+                addr = BlockAddress{ addr.block, geometry().sector_size };
             }
 
             if (visitor != nullptr) {
@@ -148,7 +149,7 @@ BlockedFile::SeekInfo BlockedFile::seek(BlockAddress from, uint32_t position_at_
                 bytes += tail.bytes;
                 bytes_in_block += tail.bytes;
                 desired -= tail.bytes;
-                addr.add(SectorSize);
+                addr.add(geometry().sector_size);
             }
             else {
                 bytes += desired;
@@ -196,7 +197,7 @@ int32_t BlockedFile::read(uint8_t *ptr, size_t size) {
 
         // Skip head sector, just in case.
         if (head_.is_beginning_of_block()) {
-            head_.add(SectorSize);
+            head_.add(geometry().sector_size);
         }
 
         if (!storage_->read(head_, buffer_, sizeof(buffer_))) {
@@ -211,7 +212,7 @@ int32_t BlockedFile::read(uint8_t *ptr, size_t size) {
             memcpy(&tail, tail_info<FileBlockTail>(buffer_), sizeof(FileBlockTail));
             buffavailable_ = tail.sector.bytes;
             if (tail.block.linked_block != BLOCK_INDEX_INVALID) {
-                head_ = BlockAddress{ tail.block.linked_block, SectorSize };
+                head_ = BlockAddress{ tail.block.linked_block, geometry().sector_size };
             }
             else {
                 // We should be in the last sector of the file.
@@ -223,7 +224,7 @@ int32_t BlockedFile::read(uint8_t *ptr, size_t size) {
             FileSectorTail tail;
             memcpy(&tail, tail_info<FileSectorTail>(buffer_), sizeof(FileSectorTail));
             buffavailable_ = tail.bytes;
-            head_.add(SectorSize);
+            head_.add(geometry().sector_size);
         }
 
         // End of the file? Marked by an "unwritten" sector.
@@ -262,7 +263,7 @@ int32_t BlockedFile::write(uint8_t *ptr, size_t size, bool span_sectors, bool sp
     // All 'atomic' writes have to be smaller than the smallest sector we can
     // write, which in our case is the block tail sector since that header is large.
     if (!span_sectors) {
-        assert(size <= SectorSize - sizeof(FileBlockTail));
+        assert(size <= geometry().sector_size - sizeof(FileBlockTail));
     }
 
     // If the head is invalid, seek to the end of the file.
@@ -348,6 +349,7 @@ BlockedFile::SavedSector BlockedFile::save_sector(bool flushing) {
         if (flushing) {
             // Check to see if we're at the end of our allocated space.
             allocated = allocate();
+            // assert(allocated.valid());
             linked = allocated.block;
         }
 
@@ -362,7 +364,7 @@ BlockedFile::SavedSector BlockedFile::save_sector(bool flushing) {
         FileSectorTail tail;
         tail.bytes = buffpos_;
         memcpy(tail_info<FileSectorTail>(buffer_), &tail, sizeof(FileSectorTail));
-        following.add(SectorSize);
+        following.add(geometry().sector_size);
 
         // Write this full sector. No partial writes here because of the tail. Most
         // of the time we write full sectors anyway.
@@ -564,7 +566,7 @@ BlockAddress BlockedFile::initialize(AllocatedBlock allocated, block_index_t pre
         return { };
     }
 
-    return BlockAddress { allocated.block, SectorSize };
+    return BlockAddress { allocated.block, geometry().sector_size };
 }
 
 }

@@ -126,6 +126,16 @@ struct Geometry {
         return pages_per_block * sectors_per_page;
     }
 
+    Geometry file_geometry() const {
+        auto original_block_size = block_size();
+        return {
+            number_of_blocks,
+            (page_index_t)(original_block_size / SectorSize / sectors_per_page),
+            sectors_per_page,
+            SectorSize
+        };
+    }
+
     uint32_t block_size() const {
         return (pages_per_block * sectors_per_page) * sector_size;
     }

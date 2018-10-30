@@ -3,12 +3,16 @@
 namespace phylum {
 
 SectorCachingStorage::SectorCachingStorage(StorageBackend &target) : target(target) {
+    assert(target.geometry().sector_size == SectorSize);
 }
 
 bool SectorCachingStorage::read(BlockAddress addr, void *d, size_t n) {
     auto sector = addr.sector(geometry());
     auto offset = addr.sector_offset(geometry());
     auto sector_size = geometry().sector_size;
+
+    assert(sector_size == SectorSize);
+
     if (sector_ != sector) {
         #if PHYLUM_DEBUG > 3
         sdebug() << "SectorCache: MISS " << addr << endl;
@@ -32,6 +36,10 @@ bool SectorCachingStorage::read(BlockAddress addr, void *d, size_t n) {
 bool SectorCachingStorage::write(BlockAddress addr, void *d, size_t n) {
     auto sector = addr.sector(geometry());
     auto offset = addr.sector_offset(geometry());
+    auto sector_size = geometry().sector_size;
+
+    assert(sector_size == SectorSize);
+
     if (sector_ != sector) {
         return target.write(addr, d, n);
     }

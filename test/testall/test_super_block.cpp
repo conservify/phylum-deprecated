@@ -171,3 +171,38 @@ TEST_F(SuperBlockNonStandardSizeSuite, Preallocating) {
     auto file1 = files.open({ }, OpenMode::Write);
 
 }
+
+TEST_F(SuperBlockNonStandardSizeSuite, WritingFileAndCheckingSize) {
+    ASSERT_TRUE(manager_.create());
+    ASSERT_TRUE(manager_.locate());
+
+    Files files{ &storage_, &allocator_ };
+
+    auto file1 = files.open({ }, OpenMode::Write);
+
+    ASSERT_TRUE(file1.initialize());
+    ASSERT_TRUE(file1.format());
+
+    auto location = file1.beginning();
+
+    auto total = 0;
+    uint8_t buffer[163] = { 0xee };
+
+    for (auto i = 0; i < 388; ++i) {
+        auto wrote = file1.write(buffer, sizeof(buffer), true);
+        ASSERT_TRUE(wrote > 0);
+        total += wrote;
+    }
+
+    auto wrote = file1.write(buffer, 16, true);
+    ASSERT_TRUE(wrote > 0);
+    total += wrote;
+
+    ASSERT_EQ((uint32_t)total, (uint32_t)63260);
+
+    file1.close();
+
+    auto file2 = files.open(location, OpenMode::Read);
+    file2.seek(UINT64_MAX);
+    ASSERT_EQ(file2.size(), (uint32_t)63260);
+}

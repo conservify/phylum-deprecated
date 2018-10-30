@@ -89,8 +89,8 @@ public:
 public:
     BlockAddress end_of_file();
 
-    const Geometry &geometry() const {
-        return storage_->geometry();
+    Geometry geometry() const {
+        return storage_->geometry().file_geometry();
     }
 
 protected:
