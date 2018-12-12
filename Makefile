@@ -6,7 +6,8 @@ automated: build test
 
 build: gitdeps
 	mkdir -p $(BUILD)
-	cd build && cmake ../ && make
+	cd build && cmake ../
+	$(MAKE) -C build
 
 clean:
 	rm -rf $(BUILD)
