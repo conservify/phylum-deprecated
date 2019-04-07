@@ -7,10 +7,10 @@
 #include "utilities.h"
 #include "lorem.h"
 
+namespace phylum {
+
 using block_index_t = uint32_t;
 using block_offset_t = uint32_t;
-
-using namespace phylum;
 
 class BlockOperations;
 
@@ -60,11 +60,6 @@ struct BlockHead2 {
     file_id_t file_id;
 
     /**
-     *
-     */
-    BlockAddress indexed;
-
-    /**
      * See "Striping" section in the README
      */
     union {
@@ -79,8 +74,8 @@ struct BlockHead2 {
     BlockHead2() {
     }
 
-    BlockHead2(BlockType type, uint32_t sequence, file_id_t file_id, BlockAddress indexed)
-        : magic(BlockMagic::get_valid()), type(type), sequence(sequence), file_id(file_id), indexed(indexed) {
+    BlockHead2(BlockType type, uint32_t sequence, file_id_t file_id)
+        : magic(BlockMagic::get_valid()), type(type), sequence(sequence), file_id(file_id) {
     }
 
     bool valid() const {
@@ -91,7 +86,7 @@ struct BlockHead2 {
 inline ostreamtype& operator<<(ostreamtype& os, const BlockHead2 &b) {
     switch (b.type) {
     case BlockType::File: {
-        return os << "BlockHead<" << b.sequence << " " << b.type << " file_id=" << b.file_id << " indexed=" << b.indexed << ">";
+        return os << "BlockHead<" << b.sequence << " " << b.type << " file_id=" << b.file_id << ">";
         break;
     }
     case BlockType::Index: {
@@ -136,7 +131,7 @@ public:
         BlockAddress tail;
     };
 
-    Allocation allocate(BlockOperations &bo, BlockType type, file_id_t file_id, BlockAddress indexed);
+    Allocation allocate(BlockOperations &bo, BlockType type, file_id_t file_id);
 
 };
 
@@ -198,12 +193,11 @@ public:
         return sf_->read(BlockAddress{ block, 0 }, &head, sizeof(BlockHead2));
     }
 
-    WriteOperation write_block_head(BlockAddress addr, BlockType type, file_id_t file_id, BlockAddress indexed) {
+    WriteOperation write_block_head(BlockAddress addr, BlockType type, file_id_t file_id) {
         BlockHead2 head{
             type,
             blocks_++,
-            file_id,
-            indexed
+            file_id
         };
 
         if (Logging > 0) {
@@ -231,7 +225,7 @@ public:
 
     WriteOperation write_block_tail(BlockAddress addr, block_index_t linked_block) {
         BlockTail2 tail{
-            addr.position - sizeof(BlockHead2),
+            addr.position - (uint32_t)sizeof(BlockHead2),
             linked_block
         };
 
@@ -255,7 +249,7 @@ public:
     }
 
 public:
-    WriteOperation write_data(BlockAddress addr, file_id_t file_id, BlockAddress indexed, void *data, size_t sz) {
+    WriteOperation write_data(BlockAddress addr, file_id_t file_id, void *data, size_t sz) {
         if (Logging > 2) {
             sdebug() << "BlockOps::write_data_chunk: addr=" << addr << " size=" << sz << endl;
         }
@@ -265,7 +259,7 @@ public:
 
         // Is there room in this block?
         if (geometry().remaining_in_block(addr, sizeof(BlockTail2)) < required) {
-            auto allocated = allocator_->allocate(*this, BlockType::File, file_id, indexed);
+            auto allocated = allocator_->allocate(*this, BlockType::File, file_id);
 
             assert(write_block_tail(addr, allocated.block).valid());
 
@@ -310,7 +304,7 @@ public:
 
         // Is there room in this block?
         if (geometry().remaining_in_block(addr, sizeof(BlockTail2)) < required) {
-            auto allocated = allocator_->allocate(*this, BlockType::Index, INVALID_FILE_ID, BlockAddress{ });
+            auto allocated = allocator_->allocate(*this, BlockType::Index, INVALID_FILE_ID);
 
             assert(write_block_tail(addr, allocated.block).valid());
 
@@ -367,7 +361,7 @@ public:
     }
 
     bool open() {
-        auto allocated = allocator_->allocate(*bo_, BlockType::Index, INVALID_FILE_ID, BlockAddress{ });
+        auto allocated = allocator_->allocate(*bo_, BlockType::Index, INVALID_FILE_ID);
 
         beginning_ = allocated.tail;
         head_ = allocated.tail;
@@ -420,7 +414,7 @@ public:
 
             auto addr = BlockAddress{
                 iterator.block,
-                position
+                (uint32_t)position
             };
 
             sdebug() << "Tree::get(" << sequence << ") read=" << addr << " visited=" << visited << " position=" << position << endl;
@@ -478,7 +472,7 @@ public:
             sdebug() << "Writing: file=" << id_ << " head=" << head_ << " size=" << sz << endl;
         }
 
-        auto dop = bo_->write_data(head_, id_, tree_->head(), data, sz);
+        auto dop = bo_->write_data(head_, id_, data, sz);
         if (!dop.valid()) {
             return false;
         }
@@ -597,7 +591,7 @@ public:
     File2 open_file(file_id_t id) {
         auto file = files_[(uint8_t)id];
         if (!file.valid()) {
-            auto allocated = allocator_.allocate(bo_, BlockType::File, id, tree_.head());
+            auto allocated = allocator_.allocate(bo_, BlockType::File, id);
 
             file = File2{
                 bo_,
@@ -631,7 +625,7 @@ public:
 
 };
 
-Allocator::Allocation Allocator::allocate(BlockOperations &bo, BlockType type, file_id_t file_id, BlockAddress indexed) {
+Allocator::Allocation Allocator::allocate(BlockOperations &bo, BlockType type, file_id_t file_id) {
     assert(available_blocks() > 0);
 
     auto new_block = head_++;
@@ -648,7 +642,7 @@ Allocator::Allocation Allocator::allocate(BlockOperations &bo, BlockType type, f
 
     assert(bo.erase(new_block));
 
-    auto head_op = bo.write_block_head(BlockAddress{ new_block, 0 }, type, file_id, indexed);
+    auto head_op = bo.write_block_head(BlockAddress{ new_block, 0 }, type, file_id);
     assert(head_op.valid());
 
     return {
@@ -687,9 +681,13 @@ bool Compactor::run() {
     return true;
 }
 
+}
+
+using namespace phylum;
+
 class Rev2Suite : public ::testing::Test {
 protected:
-    Geometry geometry_{ 1024, 4, 4, 512 };
+    Geometry geometry_{ 6, 4, 4, 512 };
     LinuxMemoryBackend storage_;
     DebuggingBlockAllocator allocator_;
     FileSystem2 fs_{ storage_ };
@@ -718,6 +716,9 @@ TEST_F(Rev2Suite, Example) {
         assert(wrote.success);
 
         if (fs_.allocator().available_blocks() == 2) {
+            auto scanner = fs_.scanner();
+            scanner.scan();
+
             Compactor compactor(fs_);
             auto done = compactor.run();
             assert(done);
@@ -726,6 +727,5 @@ TEST_F(Rev2Suite, Example) {
     }
 
     auto scanner = fs_.scanner();
-
     scanner.scan();
 }
