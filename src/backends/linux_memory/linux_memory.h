@@ -54,6 +54,7 @@ public:
     bool open() override;
     bool close() override;
     Geometry &geometry() override;
+    void geometry(Geometry g) override;
     bool erase(block_index_t block) override;
     void randomize();
     bool read(BlockAddress addr, void *d, size_t n) override;

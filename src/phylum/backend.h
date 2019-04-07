@@ -10,6 +10,7 @@ public:
     virtual bool open() = 0;
     virtual bool close() = 0;
     virtual Geometry &geometry() = 0;
+    virtual void geometry(Geometry g) = 0;
     virtual bool erase(block_index_t block) = 0;
     virtual bool read(BlockAddress addr, void *d, size_t n) = 0;
     virtual bool write(BlockAddress addr, void *d, size_t n) = 0;
@@ -36,6 +37,10 @@ public:
 
     virtual Geometry &geometry() override {
         return target.geometry();
+    }
+
+    virtual void geometry(Geometry g) override {
+        target.geometry(g);
     }
 
     virtual bool erase(block_index_t block) override {

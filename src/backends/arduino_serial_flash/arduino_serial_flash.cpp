@@ -75,6 +75,10 @@ Geometry &ArduinoSerialFlashBackend::geometry() {
     return geometry_;
 }
 
+void ArduinoSerialFlashBackend::geometry(Geometry g) {
+    geometry_ = g;
+}
+
 bool ArduinoSerialFlashBackend::erase(block_index_t block) {
     auto address = get_sf_address(geometry_, BlockAddress{ block, 0 });
     #ifdef PHYLUM_ARDUINO_DEBUG

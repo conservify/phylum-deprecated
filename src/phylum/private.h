@@ -30,11 +30,24 @@ constexpr sector_index_t SECTOR_INDEX_INVALID = ((sector_index_t)-1);
 constexpr block_age_t BLOCK_AGE_INVALID = ((block_age_t)-1);
 constexpr uint32_t POSITION_INDEX_INVALID = ((uint32_t)-1);
 constexpr file_id_t FILE_ID_INVALID = ((file_id_t)-1);
+constexpr uint32_t INVALID_SEQUENCE_NUMBER = ((uint32_t)-1);
 
 struct BlockMagic {
     static constexpr char MagicKey[] = "phylum00";
 
     char key[sizeof(MagicKey)] = { 0 };
+
+    BlockMagic() {
+    }
+
+    BlockMagic(const char *k) {
+        assert(k == MagicKey); // :)
+        memcpy(key, k, sizeof(MagicKey));
+    }
+
+    static BlockMagic get_valid() {
+        return { MagicKey };
+    }
 
     void fill();
     bool valid() const;
@@ -106,6 +119,7 @@ struct SectorAddress {
 struct BlockAddress;
 
 struct Geometry {
+    block_index_t first_{ 0 };
     block_index_t number_of_blocks{ 0 };
     page_index_t pages_per_block{ 0 };
     sector_index_t sectors_per_page{ 0 };
@@ -116,6 +130,10 @@ struct Geometry {
 
     Geometry(block_index_t number_of_blocks, page_index_t pages_per_block, sector_index_t sectors_per_page, sector_index_t sector_size) :
         number_of_blocks(number_of_blocks), pages_per_block(pages_per_block), sectors_per_page(sectors_per_page), sector_size(sector_size) {
+    }
+
+    block_index_t first() const {
+        return first_;
     }
 
     block_index_t number_of_sectors() const {
@@ -155,6 +173,10 @@ struct Geometry {
     bool contains(const BlockAddress addr) const;
 
     bool valid(const BlockAddress addr) const;
+
+    BlockAddress block_tail_address_from(BlockAddress addr, size_t sz) const;
+
+    uint32_t remaining_in_block(BlockAddress addr, size_t tail_size) const;
 
     static Geometry from_physical_block_layout(uint32_t number_of_physical_blocks, sector_index_t sector_size) {
         return from_physical_block_layout(Geometry{ 0, 4, 4, sector_size }, number_of_physical_blocks);
@@ -234,6 +256,10 @@ public:
 
     BlockAddress beginning_of_block() const {
         return { block, 0 };
+    }
+
+    BlockAddress advance(size_t s) const {
+        return { block, position + (uint32_t)s };
     }
 
     bool add_or_move_to_following_sector(const Geometry &g, uint32_t n) {
@@ -329,6 +355,14 @@ inline bool Geometry::contains(const BlockAddress addr) const {
 
 inline bool Geometry::valid(const BlockAddress addr) const {
     return contains(addr);
+}
+
+inline BlockAddress Geometry::block_tail_address_from(BlockAddress addr, size_t sz) const {
+    return BlockAddress{ addr.block, block_size() - (uint32_t)sz };
+}
+
+inline uint32_t Geometry::remaining_in_block(BlockAddress addr, size_t tail_size) const {
+    return block_size() - (addr.position + tail_size);
 }
 
 inline ostreamtype& operator<<(ostreamtype& os, const SectorAddress &addr) {

@@ -55,6 +55,10 @@ Geometry &LinuxMemoryBackend::geometry() {
    return geometry_;
 }
 
+void LinuxMemoryBackend::geometry(Geometry g) {
+    geometry_ = g;
+}
+
 bool LinuxMemoryBackend::erase(block_index_t block) {
     assert(geometry_.contains(BlockAddress{ block, 0 }));
 
@@ -112,7 +116,9 @@ static void verify_append(BlockAddress addr, uint8_t *p, uint8_t *src, size_t n)
 bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
     assert(geometry_.contains(addr));
     assert(n <= geometry_.sector_size);
-    assert(addr.sector_offset(geometry_) + n <= geometry_.sector_size);
+    if (false) {
+        assert(addr.sector_offset(geometry_) + n <= geometry_.sector_size);
+    }
 
     auto o = addr.block * geometry_.block_size() + (addr.position);
     assert(o + n < size_);

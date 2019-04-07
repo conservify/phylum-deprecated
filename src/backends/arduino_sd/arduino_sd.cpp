@@ -42,6 +42,10 @@ Geometry &ArduinoSdBackend::geometry() {
     return geometry_;
 }
 
+void ArduinoSdBackend::geometry(Geometry g) {
+    geometry_ = g;
+}
+
 bool ArduinoSdBackend::erase(block_index_t block) {
     auto first_sd_block = get_sd_block(geometry_, BlockAddress{ block, 0 });
     auto last_sd_block = get_sd_block(geometry_, BlockAddress{ block + 1, 0 });
