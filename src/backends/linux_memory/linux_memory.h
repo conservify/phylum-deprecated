@@ -23,6 +23,7 @@ private:
     uint64_t size_;
     uint8_t *ptr_;
     VerificationMode verification_{ VerificationMode::ErasedOnly };
+    bool strict_sectors_{ true };
 
 public:
     static uint8_t EraseByte;
@@ -45,6 +46,10 @@ public:
 
     void verification(VerificationMode mode) {
         verification_ = mode;
+    }
+
+    void strict_sectors(bool enabled) {
+        strict_sectors_ = enabled;
     }
 
 public:

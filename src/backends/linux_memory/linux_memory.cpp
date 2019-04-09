@@ -4,7 +4,6 @@
 
 namespace phylum {
 
-
 uint8_t LinuxMemoryBackend::EraseByte = 0xff;
 
 LinuxMemoryBackend::LinuxMemoryBackend() : size_(0), ptr_(nullptr) {
@@ -73,11 +72,13 @@ bool LinuxMemoryBackend::erase(block_index_t block) {
 bool LinuxMemoryBackend::read(BlockAddress addr, void *d, size_t n) {
     assert(addr.valid());
     assert(geometry_.contains(addr));
-    assert(n <= geometry_.sector_size);
-    assert(addr.sector_offset(geometry_) + n <= geometry_.sector_size);
+    if (strict_sectors_) {
+        assert(n <= geometry_.sector_size);
+        assert(addr.sector_offset(geometry_) + n <= geometry_.sector_size);
+    }
 
     auto o = addr.block * geometry_.block_size() + (addr.position);
-    assert(o + n < size_);
+    assert(o + n <= size_);
 
     auto p = ptr_ + o;
     memcpy(d, p, n);
@@ -121,7 +122,7 @@ bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
     }
 
     auto o = addr.block * geometry_.block_size() + (addr.position);
-    assert(o + n < size_);
+    assert(o + n <= size_);
 
     auto p = ptr_ + o;
 
