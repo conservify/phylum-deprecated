@@ -11,6 +11,7 @@ namespace phylum {
 
 using block_index_t = uint32_t;
 using block_offset_t = uint32_t;
+using SequenceNumber = uint32_t;
 
 class BlockOperations;
 
@@ -48,7 +49,7 @@ inline ostreamtype& operator<<(ostreamtype& os, const BlockTail2 &b) {
 }
 
 struct ChunkHead {
-    uint32_t sequence;
+    SequenceNumber sequence;
     file_id_t file_id;
     uint16_t size;
 };
@@ -56,7 +57,7 @@ struct ChunkHead {
 struct BlockHead2 {
     BlockMagic magic;
     BlockType type;
-    uint32_t sequence;
+    SequenceNumber sequence;
     file_id_t file_id;
 
     /**
@@ -74,7 +75,7 @@ struct BlockHead2 {
     BlockHead2() {
     }
 
-    BlockHead2(BlockType type, uint32_t sequence, file_id_t file_id)
+    BlockHead2(BlockType type, SequenceNumber sequence, file_id_t file_id)
         : magic(BlockMagic::get_valid()), type(type), sequence(sequence), file_id(file_id) {
     }
 
@@ -107,36 +108,69 @@ class BlockOperations;
 
 class Allocator {
 private:
+    StorageBackend *sb_{ nullptr };
     block_index_t first_{ 0 };
     block_index_t head_{ 0 };
     block_index_t number_of_blocks_{ 0 };
+    block_index_t available_blocks_{ 0 };
+    uint8_t *map_{ nullptr };
+
+public:
+    Allocator(StorageBackend &sb): sb_(&sb) {
+    }
+
+    virtual ~Allocator() {
+        if (map_ != nullptr) {
+            ::free(map_);
+            map_ = nullptr;
+        }
+    }
 
 public:
     bool initialize(Geometry geometry) {
         first_ = geometry.first();
         head_ = geometry.first();
         number_of_blocks_ = geometry.number_of_blocks;
+        available_blocks_ = number_of_blocks_;
+        map_ = (uint8_t *)malloc(number_of_blocks_ / 8);
+
+        for (auto b = (block_index_t)0; b < number_of_blocks_; ++b) {
+            assert(sb_->erase(b));
+        }
+
         return true;
     }
 
+    block_index_t head() {
+        return head_;
+    }
+
     uint32_t available_blocks() const {
-        if (head_ < first_) {
-            return number_of_blocks_ - (head_ + first_);
-        }
-        return number_of_blocks_ - (head_ - first_);
+        return available_blocks_;
     }
 
     struct Allocation {
         block_index_t block;
         BlockAddress tail;
+
+        BlockAddress head() {
+            return { block, sizeof(BlockHead2) };
+        }
+
+        bool valid() {
+            return block != INVALID_BLOCK_INDEX;
+        }
     };
 
     Allocation allocate(BlockOperations &bo, BlockType type, file_id_t file_id);
 
+    bool free(block_index_t block);
+
 };
 
 struct TreeNode {
-    uint32_t sequence;
+    SequenceNumber sequence;
+    SequenceNumber version;
     file_id_t file_id;
     BlockAddress addr;
     uint16_t size;
@@ -148,14 +182,14 @@ struct TreeNode {
     }
 };
 
-inline ostreamtype& operator<<(ostreamtype& os, const TreeNode &node) {
-    return os << "Node<" << node.sequence << " file=" << node.file_id << " addr=" << node.addr << " size=" << node.size << ">";
+inline ostreamtype& operator<<(ostreamtype& os, const TreeNode &n) {
+    return os << "Node<v" << n.version << " " << n.sequence << " file=" << n.file_id << " addr=" << n.addr << " size=" << n.size << ">";
 }
 
 struct WriteOperation {
     BlockAddress wrote;
     BlockAddress tail;
-    uint32_t block;
+    block_index_t block;
     uint32_t chunk;
     bool allocated;
 
@@ -169,8 +203,8 @@ private:
     static constexpr uint8_t Logging = 1;
 
 private:
-    uint32_t blocks_{ 0 };
-    uint32_t chunks_{ 0 };
+    SequenceNumber blocks_{ 0 };
+    SequenceNumber chunks_{ 0 };
     StorageBackend *sf_{ nullptr };
     Allocator *allocator_{ nullptr };
 
@@ -200,11 +234,11 @@ public:
             file_id
         };
 
+        assert(addr.position == 0);
+
         if (Logging > 0) {
             sdebug() << "BlockOps::write_block_head: addr=" << addr << " " << head << endl;
         }
-
-        assert(addr.position == 0);
 
         if (!sf_->write(addr, &head, sizeof(BlockHead2))) {
             return WriteOperation{ };
@@ -232,7 +266,7 @@ public:
         addr = geometry().block_tail_address_from(addr, sizeof(BlockTail2));
 
         if (Logging > 0) {
-            sdebug() << "BlockOps::write_block_tail: addr=" << addr << " " << tail << " linked=" << linked_block << endl;
+            sdebug() << "BlockOps::write_block_tail: addr=" << addr << " " << tail << endl;
         }
 
         if (!sf_->write(addr, &tail, sizeof(BlockTail2))) {
@@ -258,10 +292,12 @@ public:
         auto block_allocated = false;
 
         // Is there room in this block?
-        if (geometry().remaining_in_block(addr, sizeof(BlockTail2)) < required) {
+        if (!addr.valid() || geometry().remaining_in_block(addr, sizeof(BlockTail2)) < required) {
             auto allocated = allocator_->allocate(*this, BlockType::File, file_id);
 
-            assert(write_block_tail(addr, allocated.block).valid());
+            if (addr.valid()) {
+                assert(write_block_tail(addr, allocated.block).valid());
+            }
 
             addr = allocated.tail;
             block_allocated = true;
@@ -294,11 +330,7 @@ public:
         return sf_->read(addr, &node, sizeof(TreeNode));
     }
 
-    WriteOperation write_tree_node(BlockAddress addr, file_id_t file_id, uint32_t chunk, BlockAddress chunk_addr, size_t sz) {
-        if (Logging > 2) {
-            sdebug() << "BlockOps::write_tree_node:  addr=" << addr << " size=" << sz << " chunk=" << chunk_addr << endl;
-        }
-
+    WriteOperation write_tree_node(BlockAddress addr, TreeNode node) {
         auto required = sizeof(TreeNode);
         auto block_allocated = false;
 
@@ -311,15 +343,6 @@ public:
             addr = allocated.tail;
             block_allocated = true;
         }
-
-        TreeNode node{
-            chunk,
-            file_id,
-            chunk_addr,
-            (uint16_t)sz,
-            0,
-            { 0 }
-        };
 
         if (!sf_->write(addr, &node, sizeof(TreeNode))) {
             return WriteOperation{ };
@@ -334,6 +357,24 @@ public:
         };
     }
 
+    WriteOperation write_tree_node(BlockAddress addr, SequenceNumber version, file_id_t file_id, SequenceNumber chunk, BlockAddress chunk_addr, size_t sz) {
+        if (Logging > 2) {
+            sdebug() << "BlockOps::write_tree_node:  addr=" << addr << " size=" << sz << " chunk=" << chunk_addr << " version=" << version << endl;
+        }
+
+        TreeNode node{
+            chunk,
+            version,
+            file_id,
+            chunk_addr,
+            (uint16_t)sz,
+            0,
+            { 0 }
+        };
+
+        return write_tree_node(addr, node);
+    }
+
     Geometry &geometry() const {
         return sf_->geometry();
     }
@@ -341,6 +382,7 @@ public:
 
 class Tree {
 private:
+    SequenceNumber version_{ 0 };
     StorageBackend *sf_{ nullptr };
     Allocator *allocator_{ nullptr };
     BlockOperations *bo_{ nullptr };
@@ -370,7 +412,7 @@ public:
     }
 
     WriteOperation append(file_id_t file_id, uint32_t chunk, BlockAddress chunk_addr, size_t sz) {
-        auto op = bo_->write_tree_node(head_, file_id, chunk, chunk_addr, sz);
+        auto op = bo_->write_tree_node(head_, version_, file_id, chunk, chunk_addr, sz);
         if (!op.valid()) {
             return WriteOperation{ };
         }
@@ -380,9 +422,76 @@ public:
         return op;
     }
 
+    bool copy_nodes(BlockAddress from, BlockAddress to) {
+        return true;
+    }
+
+    bool rewrite(block_index_t removing) {
+        auto g = sf_->geometry();
+        auto iterator = beginning_;
+        auto destiny = head();
+
+        sdebug() << "Tree::rewrite() beginning=" << beginning_ << endl;
+
+        for (auto b = (block_index_t)0; b < g.number_of_blocks; ++b) {
+            BlockHead2 head;
+            assert(bo_->read_block_head(iterator.block, head));
+            assert(head.type == BlockType::Index);
+
+            BlockTail2 tail;
+            assert(bo_->read_block_tail(iterator.block, tail));
+
+            sdebug() << "Tree::rewrite() block: " << iterator.block << endl;
+
+            auto source = BlockAddress{ iterator.block, sizeof(BlockHead2) };
+
+            while (true) {
+                TreeNode node;
+                auto rop = bo_->read_tree_node(source, node);
+                assert(rop);
+
+                if (node.sequence == INVALID_SEQUENCE_NUMBER) {
+                    break;
+                }
+
+                if (node.addr.block == removing || node.version != version_) {
+                    if (node.version > version_) {
+                        break;
+                    }
+                    source = source.advance(sizeof(TreeNode));
+                    continue;
+                }
+                else {
+                    sdebug() << "Copy: " << node << " " << source << " -> " << destiny << endl;
+                }
+
+                node.version = version_ + 1;
+
+                auto wop = bo_->write_tree_node(destiny, node);
+                assert(wop.valid());
+
+                source = source.advance(sizeof(TreeNode));
+                destiny = wop.tail;
+            }
+
+            if (tail.valid()) {
+                iterator = BlockAddress{ tail.linked_block, 0 };
+            }
+            else {
+                break;
+            }
+        }
+
+        version_++;
+        head_ = destiny;
+
+        sdebug() << "Tree::rewrite() done" << endl;
+
+        return true;
+    }
+
     TreeNode get(uint32_t sequence) {
         auto g = sf_->geometry();
-
         auto iterator = beginning_;
         auto visited = (uint32_t)0;
 
@@ -463,11 +572,15 @@ private:
     friend class FileSystem2;
 
 public:
+    bool open() {
+        return true;
+    }
+
     bool valid() {
         return head_.valid();
     }
 
-     FileWrite write(void *data, size_t sz) {
+    FileWrite write(void *data, size_t sz) {
         if (false) {
             sdebug() << "Writing: file=" << id_ << " head=" << head_ << " size=" << sz << endl;
         }
@@ -536,27 +649,71 @@ public:
         }
     }
 
-    block_index_t find_oldest_block(BlockType type) {
-        auto g = sf_->geometry();
-        auto block = INVALID_BLOCK_INDEX;
-        auto seq = INVALID_SEQUENCE_NUMBER;
+    struct FoundBlock {
+        block_index_t block{ INVALID_BLOCK_INDEX };
+        SequenceNumber sequence{ INVALID_SEQUENCE_NUMBER };
+        BlockType type;
 
-        for (auto b = g.first(); b < g.first() + g.number_of_blocks; ++b) {
+        FoundBlock() {
+        }
+
+        FoundBlock(block_index_t block, SequenceNumber sequence, BlockType type) :
+            block(block), sequence(sequence), type(type) {
+        }
+
+        bool older_than(FoundBlock other) {
+            return (sequence == INVALID_SEQUENCE_NUMBER) || (other.sequence == INVALID_SEQUENCE_NUMBER) || (other.sequence > sequence);
+        }
+    };
+
+    block_index_t block_offset_to_index(block_index_t offset) {
+        auto g = sf_->geometry();
+        return (offset + g.first()) % g.number_of_blocks;
+    }
+
+    FoundBlock first_used_block_after(block_index_t block, BlockType type) {
+        auto g = sf_->geometry();
+
+        for (auto offset = (block_index_t)0; offset < g.number_of_blocks; ++offset) {
+            auto b = block_offset_to_index(block + offset);
+
             BlockHead2 head;
             assert(bo_->read_block_head(b, head));
 
             if (head.valid()) {
                 if (head.type == type) {
-                    if (seq == INVALID_SEQUENCE_NUMBER || head.sequence < seq) {
-                        block = b;
-                        seq = head.sequence;
+                    return { b, head.sequence, head.type };
+                }
+            }
+        }
+
+        assert(false);
+
+        return { };
+    }
+
+    FoundBlock find_oldest_block(BlockType type) {
+        auto g = sf_->geometry();
+        auto found = FoundBlock{ };
+
+        for (auto offset = (block_index_t)0; offset < g.number_of_blocks; ++offset) {
+            auto b = block_offset_to_index(offset);
+
+            BlockHead2 head;
+            assert(bo_->read_block_head(b, head));
+
+            if (head.valid()) {
+                if (head.type == type) {
+                    auto candidate = FoundBlock{ b, head.sequence, head.type };
+                    if (candidate.older_than(found)) {
+                        found = candidate;
                     }
                 }
             }
         }
 
 
-        return block;
+        return found;
     }
 
 };
@@ -570,7 +727,7 @@ private:
     File2 files_[2];
 
 public:
-    FileSystem2(StorageBackend &sf) : sf_(&sf), allocator_(), bo_(sf, allocator_), tree_(sf, allocator_, bo_) {
+    FileSystem2(StorageBackend &sf) : sf_(&sf), allocator_(sf), bo_(sf, allocator_), tree_(sf, allocator_, bo_) {
     }
 
 public:
@@ -591,14 +748,14 @@ public:
     File2 open_file(file_id_t id) {
         auto file = files_[(uint8_t)id];
         if (!file.valid()) {
-            auto allocated = allocator_.allocate(bo_, BlockType::File, id);
-
             file = File2{
                 bo_,
                 tree_,
                 id,
-                allocated.tail
+                { }
             };
+
+            assert(file.open());
         }
         return file;
     }
@@ -626,29 +783,47 @@ public:
 };
 
 Allocator::Allocation Allocator::allocate(BlockOperations &bo, BlockType type, file_id_t file_id) {
+    auto &g = bo.geometry();
+
     assert(available_blocks() > 0);
 
-    auto new_block = head_++;
+    for (auto b = (block_index_t)0; b < g.number_of_blocks; ++b) {
+        BlockHead2 head;
 
-    // Handle wrap around.
-    auto &g = bo.geometry();
-    if (new_block == g.number_of_blocks) {
-        new_block = g.first();
+        auto block = (b + head_) % g.number_of_blocks;
+
+        assert(bo.read_block_head(block, head));
+
+        if (!head.valid()) {
+            head_ = block;
+            break;
+        }
     }
+
+    available_blocks_--;
 
     if (true) {
-        sdebug() << "Allocated: " << new_block << " " << type << endl;
+        sdebug() << "Allocated: " << head_ << " " << type << " available=" << available_blocks_ << endl;
     }
 
-    assert(bo.erase(new_block));
+    // We're gonna erase as we go, for now.
+    // assert(bo.erase(head_));
 
-    auto head_op = bo.write_block_head(BlockAddress{ new_block, 0 }, type, file_id);
+    auto head_op = bo.write_block_head(BlockAddress{ head_, 0 }, type, file_id);
     assert(head_op.valid());
 
     return {
-        new_block,
-        BlockAddress{ new_block, sizeof(BlockHead2) }
+        head_,
+        BlockAddress{ head_, sizeof(BlockHead2) }
     };
+}
+
+bool Allocator::free(block_index_t block) {
+    available_blocks_++;
+
+    sdebug() << "Free: " << block << " available=" << available_blocks_ << endl;
+
+    return sb_->erase(block);
 }
 
 class Compactor {
@@ -665,18 +840,17 @@ public:
 };
 
 bool Compactor::run() {
-    // Drop the oldest Data block.... which, should be the first data block after the head.
+    auto &allocator = fs_->allocator();
+    auto &tree = fs_->tree();
     auto scanner = fs_->scanner();
-    auto found = scanner.find_oldest_block(BlockType::File);
+    auto old = scanner.find_oldest_block(BlockType::File);
 
-    sdebug() << "Oldest Block: " << found << endl;
+    sdebug() << "Candidate: " << old.block << endl;
 
-    // What happens to the tree? Can we mark that block as being recycled so
-    // when we rewrite the tree in the future we can update the flags?
+    assert(tree.rewrite(old.block));
 
-    // Also, there's no reason keeping index around for data we got rid of.
-
-    // memory.geometry(memory.geometry().fake(64, 6));
+    // TODO Need a way to indicate that the tree was completely written. Something atomic like the superblock we used to have.
+    assert(allocator.free(old.block));
 
     return true;
 }
@@ -694,6 +868,8 @@ protected:
 
 protected:
     void SetUp() override {
+        storage_.strict_sectors(false);
+
         ASSERT_TRUE(storage_.initialize(geometry_));
         ASSERT_TRUE(storage_.open());
         ASSERT_TRUE(fs_.open());
@@ -705,9 +881,14 @@ protected:
 };
 
 TEST_F(Rev2Suite, Example) {
+    // storage_.log().logging(true);
+
+    auto scanner = fs_.scanner();
     auto logs = fs_.open_file((file_id_t)0);
 
-    for (auto i = 0; i < 4096; ++i) {
+    // Theoretical maximum index size: (2048blocks/bank * 4banks) * 64bytes = 512k
+
+    for (auto i = 0; i < 512 * 20; ++i) {
         char message[64];
         LoremIpsum lorem;
         lorem.sentence(message, sizeof(message));
@@ -715,17 +896,17 @@ TEST_F(Rev2Suite, Example) {
         auto wrote = logs.write(message, strlen(message));
         assert(wrote.success);
 
-        if (fs_.allocator().available_blocks() == 2) {
-            auto scanner = fs_.scanner();
-            scanner.scan();
-
+        if (fs_.allocator().available_blocks() == 1) {
             Compactor compactor(fs_);
             auto done = compactor.run();
             assert(done);
-            assert(fs_.allocator().available_blocks() > 2);
+            // assert(fs_.allocator().available_blocks() > 1);
+
+            scanner.scan();
         }
     }
 
-    auto scanner = fs_.scanner();
+    sdebug() << "Done. Final Scan." << endl;
+
     scanner.scan();
 }
