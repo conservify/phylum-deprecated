@@ -865,9 +865,13 @@ protected:
     LinuxMemoryBackend storage_;
     DebuggingBlockAllocator allocator_;
     FileSystem2 fs_{ storage_ };
+    uint8_t saved_erase_byte_{ 0xff };
 
 protected:
     void SetUp() override {
+        saved_erase_byte_ = LinuxMemoryBackend::EraseByte;
+        LinuxMemoryBackend::EraseByte = 0xff;
+
         storage_.strict_sectors(false);
 
         ASSERT_TRUE(storage_.initialize(geometry_));
@@ -876,6 +880,7 @@ protected:
     }
 
     void TearDown() override {
+        LinuxMemoryBackend::EraseByte = saved_erase_byte_;
     }
 
 };
