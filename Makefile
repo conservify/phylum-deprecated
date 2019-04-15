@@ -29,5 +29,6 @@ gitdeps:
 	simple-deps --config examples/arduino_zero_serial_flash/dependencies.sd
 	simple-deps --config examples/arduino_zero_tree/dependencies.sd
 	simple-deps --config test/testall/dependencies.sd
+	simple-deps --config tool/dependencies.sd
 
 .PHONY: build clean

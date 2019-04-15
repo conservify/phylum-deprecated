@@ -42,6 +42,22 @@ bool LinuxMemoryBackend::open() {
     return true;
 }
 
+bool LinuxMemoryBackend::open(void *ptr, Geometry geometry) {
+    assert(geometry.valid());
+
+    close();
+
+    geometry_ = geometry;
+    size_ = (uint64_t)geometry_.number_of_sectors() * geometry_.sector_size;
+    ptr_ = (uint8_t *)ptr;
+    assert(ptr_ != nullptr);
+
+    log_.logging(false);
+    log_.append(LogEntry{ OperationType::Opened, ptr_ });
+
+    return true;
+}
+
 bool LinuxMemoryBackend::close() {
     if (ptr_ != nullptr) {
         free(ptr_);

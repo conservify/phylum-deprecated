@@ -57,6 +57,7 @@ public:
 
 public:
     bool open() override;
+    bool open(void *ptr, Geometry geometry);
     bool close() override;
     Geometry &geometry() override;
     void geometry(Geometry g) override;
