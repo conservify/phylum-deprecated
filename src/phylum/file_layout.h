@@ -90,6 +90,7 @@ public:
 
         for (size_t i = 0; i < SIZE; ++i) {
             FileTableEntry entry;
+
             if (!table.read(entry)) {
                 phylog().errors() << "Mounting error, table read failed: " << fds_[i]->name << endl;
                 return false;

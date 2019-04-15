@@ -170,11 +170,19 @@ bool FileIndex::initialize() {
     sdebug() << "Initializing: " << *this << endl;
     #endif
 
-    block_index_t end_block;
+    block_index_t end_block{ BLOCK_INDEX_INVALID };
     IndexBlockLayout sorted{ caching, file_->index };
     if (!sorted.seek(UINT64_MAX, end_block)) {
         return false;
     }
+
+    if (BLOCK_INDEX_INVALID == end_block) {
+        assert(0);
+    }
+
+    #if PHYLUM_DEBUG > 1
+    sdebug() << "Initializing: end_block=" << end_block << " " << endl;
+    #endif
 
     IndexRecord record;
     auto layout = get_index_layout(caching, { end_block, 0 });

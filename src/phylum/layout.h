@@ -277,7 +277,7 @@ private:
     bool verify_head(BlockAddress address) {
         THead head(BlockType::Error);
         #ifdef PHYLUM_LAYOUT_DEBUG
-        sdebug() << "layout: ReadHead: " << location << " " << sizeof(THead) << endl;
+        sdebug() << "layout: ReadHead: " << address << " " << sizeof(THead) << endl;
         #endif
         if (!storage_.read(address, &head, sizeof(THead))) {
             return false;
