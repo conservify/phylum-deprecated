@@ -109,6 +109,7 @@ bool LinuxMemoryBackend::read(BlockAddress addr, void *d, size_t n) {
     return true;
 }
 
+#if !defined(PHYLUM_READ_ONLY)
 static void verify_erased(BlockAddress addr, uint8_t *p, size_t n) {
     for (size_t i = 0; i < n; ++i) {
         if (*p != LinuxMemoryBackend::EraseByte) {
@@ -134,6 +135,7 @@ static void verify_append(BlockAddress addr, uint8_t *p, uint8_t *src, size_t n)
     }
     */
 }
+#endif
 
 bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
     #if defined(PHYLUM_READ_ONLY)
