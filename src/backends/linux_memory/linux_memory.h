@@ -22,6 +22,7 @@ private:
     Geometry geometry_;
     uint64_t size_;
     uint8_t *ptr_;
+    bool owner_{ false };
     VerificationMode verification_{ VerificationMode::ErasedOnly };
     bool strict_sectors_{ true };
 

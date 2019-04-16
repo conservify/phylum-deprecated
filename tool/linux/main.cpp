@@ -86,33 +86,60 @@ int32_t main(int32_t argc, const char **argv) {
 
     if (!fs.mount(descriptors)) {
         Log::error("Mounting failed!");
+        return 2;
     }
-
-    Log::info("Mounted (%d blocks)", storage.geometry().number_of_blocks);
 
     phylum::SerialFlashAllocator allocator{ storage };
 
-    auto data_alloc = fs.allocation(4);
-    auto head = data_alloc.data.beginning();
-
-    // phylum::BlockedFile bf{ &storage, 0, phylum::OpenMode::Read, head };
-    phylum::AllocatedBlockedFile file{ &storage, phylum::OpenMode::Read, &allocator, head };
-
-    BlockLogger block_logger;
-
-    file.walk(&block_logger);
+    if (false) {
+        auto data_alloc = fs.allocation(4);
+        auto head = data_alloc.data.beginning();
+        phylum::AllocatedBlockedFile file{ &storage, phylum::OpenMode::Read, &allocator, head };
+        BlockLogger block_logger;
+        file.walk(&block_logger);
+    }
 
     for (auto fd : descriptors) {
-        Log::info("Opening: %s", fd->name);
-
         auto opened = fs.open(*fd);
         if (opened) {
-            Log::info("File: %s size = %d maximum = %d", fd->name, (uint32_t)opened.size(),
-                      (uint32_t)fd->maximum_size);
+            Log::info("File: %s size = %d", fd->name, (uint32_t)opened.size());
+
+            if (!opened.seek(0)) {
+                Log::error("Error seeking to beginning of file!");
+                return 2;
+            }
+
+            if (opened.size() > 0) {
+                auto fp = fopen(fd->name, "wb");
+                if (fp == nullptr) {
+                    return 2;
+                }
+
+                auto total = 0;
+
+                while (true) {
+                    uint8_t buffer[512];
+                    auto read = opened.read(buffer, sizeof(buffer));
+                    if (read == 0) {
+                        break;
+                    }
+
+                    assert(fwrite(buffer, 1, read, fp) == (size_t)read);
+
+                    total += read;
+                }
+
+                Log::info("Done writing %d bytes to %s", total, fd->name);
+
+                fclose(fp);
+            }
         }
     }
 
+    storage.close();
+
     assert(munmap(ptr, file_size) == 0);
+
     close(fd);
 
     return 0;
