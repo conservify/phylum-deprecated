@@ -77,7 +77,7 @@ void LinuxMemoryBackend::geometry(Geometry g) {
 bool LinuxMemoryBackend::erase(block_index_t block) {
     assert(geometry_.contains(BlockAddress{ block, 0 }));
 
-    auto p = ptr_ + (block * geometry_.block_size());
+    auto p = ptr_ + ((uint64_t)block * geometry_.block_size());
     memset(p, EraseByte, geometry_.block_size());
 
     log_.append(LogEntry{ OperationType::EraseBlock, block, p });
@@ -93,7 +93,7 @@ bool LinuxMemoryBackend::read(BlockAddress addr, void *d, size_t n) {
         assert(addr.sector_offset(geometry_) + n <= geometry_.sector_size);
     }
 
-    auto o = addr.block * geometry_.block_size() + (addr.position);
+    auto o = (uint64_t)addr.block * geometry_.block_size() + (addr.position);
     assert(o + n <= size_);
 
     auto p = ptr_ + o;
@@ -137,7 +137,7 @@ bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
         assert(addr.sector_offset(geometry_) + n <= geometry_.sector_size);
     }
 
-    auto o = addr.block * geometry_.block_size() + (addr.position);
+    auto o = (uint64_t)addr.block * geometry_.block_size() + (addr.position);
     assert(o + n <= size_);
 
     auto p = ptr_ + o;

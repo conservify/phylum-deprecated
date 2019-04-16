@@ -167,7 +167,7 @@ bool FileIndex::initialize() {
     auto caching = SectorCachingStorage{ *storage_ };
 
     #if PHYLUM_DEBUG > 1
-    sdebug() << "Initializing: " << *this << endl;
+    sdebug() << "Initializing: " << *this << " " << file_->index << endl;
     #endif
 
     block_index_t end_block{ BLOCK_INDEX_INVALID };
