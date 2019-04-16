@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(dependencies.cmake)
 
 set(CMAKE_BUILD_TYPE DEBUG)
-set(PHYLUM_SRC_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+set(PHYLUM_SRC_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
 set(PHYLUM_LINUX_MEMORY_BACKEND_SRCS ${PHYLUM_SRC_DIRECTORY}/backends/linux_memory)
 set(PHYLUM_ARDUINO_SERIAL_FLASH_BACKEND_SRCS ${PHYLUM_SRC_DIRECTORY}/backends/arduino_serial_flash)
 set(ALOGGING_SOURCE_DIRECTORY "${arduino-logging_PATH}/src")
@@ -22,13 +22,13 @@ set(PROJECT_INCLUDES
   ${ALOGGING_SOURCE_DIRECTORY}
   )
 
+add_definitions(-DPHYLUM_READ_ONLY)
 add_definitions(-DPHYLUM_DEBUG=10)
-# add_definitions(-DPHYLUM_LAYOUT_DEBUG)
 
 add_executable(tool "${sources}")
 
 include_directories(.)
-include_directories(../src)
+include_directories(../../src)
 
 target_include_directories(tool PUBLIC "${PROJECT_INCLUDES}")
 

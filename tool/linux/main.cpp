@@ -104,7 +104,6 @@ int32_t main(int32_t argc, const char **argv) {
 
     file.walk(&block_logger);
 
-    /*
     for (auto fd : descriptors) {
         Log::info("Opening: %s", fd->name);
 
@@ -114,7 +113,6 @@ int32_t main(int32_t argc, const char **argv) {
                       (uint32_t)fd->maximum_size);
         }
     }
-    */
 
     assert(munmap(ptr, file_size) == 0);
     close(fd);
