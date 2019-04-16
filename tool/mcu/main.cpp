@@ -54,22 +54,13 @@ void setup() {
 
     sdebug() << "Starting: " << free_memory() << endl;
 
-    sdebug() << "sizeof(uint32_t): " << sizeof(uint32_t) << endl;
-    sdebug() << "UINT32_MAX: " << UINT32_MAX << endl;
-
-    sdebug() << "sizeof(uint64_t): " << sizeof(uint64_t) << endl;
-    sdebug() << "UINT64_MAX: " << UINT64_MAX << endl;
-
-    sdebug() << "sizeof(uint_least64_t): " << sizeof(uint_least64_t) << endl;
-    sdebug() << "UINT_LEAST64_MAX: " << UINT_LEAST64_MAX << endl;
-
-    sdebug() << "Initialize Backend" << endl;
+    #if defined(PHYLUM_READ_ONLY)
+    sdebug() << "Read Only" << endl;
+    #endif
 
     Geometry g{ 0, 4, 4, SectorSize };
     ArduinoSdBackend storage;
-    // FieldKit - 12
     if (!storage.initialize(g, 12)) {
-        // Adalogger - 4
         sdebug() << "Failed, trying CS = 4" << endl;
         if (!storage.initialize(g, 4)) {
             fail();

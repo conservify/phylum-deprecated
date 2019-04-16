@@ -75,6 +75,10 @@ void LinuxMemoryBackend::geometry(Geometry g) {
 }
 
 bool LinuxMemoryBackend::erase(block_index_t block) {
+    #if defined(PHYLUM_READ_ONLY)
+    assert(false);
+    return true;
+    #else
     assert(geometry_.contains(BlockAddress{ block, 0 }));
 
     auto p = ptr_ + ((uint64_t)block * geometry_.block_size());
@@ -83,6 +87,7 @@ bool LinuxMemoryBackend::erase(block_index_t block) {
     log_.append(LogEntry{ OperationType::EraseBlock, block, p });
 
     return true;
+    #endif
 }
 
 bool LinuxMemoryBackend::read(BlockAddress addr, void *d, size_t n) {
@@ -131,6 +136,10 @@ static void verify_append(BlockAddress addr, uint8_t *p, uint8_t *src, size_t n)
 }
 
 bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
+    #if defined(PHYLUM_READ_ONLY)
+    assert(false);
+    return true;
+    #else
     assert(geometry_.contains(addr));
     assert(n <= geometry_.sector_size);
     if (false) {
@@ -159,6 +168,7 @@ bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
     memcpy(p, d, n);
 
     return true;
+    #endif
 }
 
 }

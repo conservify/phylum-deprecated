@@ -47,6 +47,10 @@ void ArduinoSdBackend::geometry(Geometry g) {
 }
 
 bool ArduinoSdBackend::erase(block_index_t block) {
+    #if defined(PHYLUM_READ_ONLY)
+    assert(false);
+    return true;
+    #else
     auto first_sd_block = get_sd_block(geometry_, BlockAddress{ block, 0 });
     auto last_sd_block = get_sd_block(geometry_, BlockAddress{ block + 1, 0 });
     #ifdef PHYLUM_ARDUINO_DEBUG
@@ -57,6 +61,7 @@ bool ArduinoSdBackend::erase(block_index_t block) {
         return false;
     }
     return true;
+    #endif
 }
 
 bool ArduinoSdBackend::read(BlockAddress addr, void *d, size_t n) {
@@ -73,6 +78,10 @@ bool ArduinoSdBackend::read(BlockAddress addr, void *d, size_t n) {
 }
 
 bool ArduinoSdBackend::write(BlockAddress addr, void *d, size_t n) {
+    #if defined(PHYLUM_READ_ONLY)
+    assert(false);
+    return true;
+    #else
     auto sd_block = get_sd_block(geometry_, addr);
     auto offset = addr.sector_offset(geometry_);
     #ifdef PHYLUM_ARDUINO_DEBUG
@@ -83,6 +92,7 @@ bool ArduinoSdBackend::write(BlockAddress addr, void *d, size_t n) {
         return false;
     }
     return true;
+    #endif
 }
 
 }
