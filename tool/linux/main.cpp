@@ -1,15 +1,22 @@
 #include <cinttypes>
 #include <cassert>
+
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <fstream>
+
+#include <string>
+#include <experimental/filesystem>
 
 #include <phylum/tree_fs_super_block.h>
 #include <phylum/files.h>
 #include <phylum/unused_block_reclaimer.h>
 #include <phylum/basic_super_block_manager.h>
 #include <backends/linux_memory/linux_memory.h>
+
+namespace fs = std::experimental::filesystem;
 
 constexpr const char LogName[] = "Read";
 
@@ -41,18 +48,49 @@ public:
 
 };
 
+struct Args {
+    fs::path image;
+    fs::path directory;
+
+    bool is_file(std::string s) {
+        std::ifstream f(s.c_str());
+        return f.good();
+    }
+
+    bool parse(int32_t argc, const char **argv) {
+        std::error_code ec;
+        auto good = false;
+
+        for (auto i = 1; i < argc; ++i) {
+            std::string arg = argv[i];
+
+            if (fs::is_regular_file(arg, ec)) {
+                image = arg;
+                good = true;
+            }
+
+            if (fs::is_directory(arg, ec)) {
+                directory = arg;
+            }
+        }
+
+        return good;
+    }
+};
+
 int32_t main(int32_t argc, const char **argv) {
     log_configure_hook_register(log_message_hook, nullptr);
     log_configure_time(nullptr, nullptr);
 
-    if (argc == 1) {
+    Args args;
+    if (!args.parse(argc, argv)) {
         return 2;
     }
 
-    auto file_name = argv[1];
+    auto file_name = args.image.c_str();
     auto file_size = get_file_size(file_name);
 
-    Log::info("Starting: %ld (%s)", file_size, file_name);
+    Log::info("Opening %s (%ld bytes)...", file_name, file_size);
 
     auto fd = open(file_name, O_RDONLY, 0);
     assert(fd != -1);
@@ -61,8 +99,6 @@ int32_t main(int32_t argc, const char **argv) {
     assert(ptr != MAP_FAILED);
 
     auto number_of_blocks = file_size / (uint64_t)(phylum::SectorSize * 4 * 4);
-
-    Log::info("Starting: %ld (%d)", number_of_blocks, phylum::SectorSize);
 
     phylum::Geometry geometry{ (phylum::block_index_t)number_of_blocks, 4, 4, phylum::SectorSize };
     phylum::LinuxMemoryBackend storage;
@@ -109,29 +145,32 @@ int32_t main(int32_t argc, const char **argv) {
                 return 2;
             }
 
-            if (opened.size() > 0) {
-                auto fp = fopen(fd->name, "wb");
-                if (fp == nullptr) {
-                    return 2;
-                }
+            if (!args.directory.empty()) {
+                if (opened.size() > 0) {
+                    auto path = args.directory / fs::path{ fd->name };
+                    auto total = 0;
 
-                auto total = 0;
-
-                while (true) {
-                    uint8_t buffer[512];
-                    auto read = opened.read(buffer, sizeof(buffer));
-                    if (read == 0) {
-                        break;
+                    auto fp = fopen(path.c_str(), "wb");
+                    if (fp == nullptr) {
+                        return 2;
                     }
 
-                    assert(fwrite(buffer, 1, read, fp) == (size_t)read);
+                    while (true) {
+                        uint8_t buffer[512];
+                        auto read = opened.read(buffer, sizeof(buffer));
+                        if (read == 0) {
+                            break;
+                        }
 
-                    total += read;
+                        assert(fwrite(buffer, 1, read, fp) == (size_t)read);
+
+                        total += read;
+                    }
+
+                    Log::info("Done writing %d bytes to %s", total, path.c_str());
+
+                    fclose(fp);
                 }
-
-                Log::info("Done writing %d bytes to %s", total, fd->name);
-
-                fclose(fp);
             }
         }
     }

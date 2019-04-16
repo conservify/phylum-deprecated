@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(dependencies.cmake)
@@ -28,8 +28,11 @@ add_definitions(-DPHYLUM_DEBUG=0)
 add_executable(tool "${sources}")
 
 include_directories(.)
+
 include_directories(../../src)
 
 target_include_directories(tool PUBLIC "${PROJECT_INCLUDES}")
 
 target_compile_options(tool PUBLIC -Wall -pedantic)
+
+target_link_libraries(tool stdc++fs)
