@@ -90,6 +90,10 @@ struct BlockTail {
     block_index_t linked_block{ BLOCK_INDEX_INVALID };
 };
 
+inline ostreamtype& operator<<(ostreamtype& os, const BlockTail &e) {
+    return os << "BlockTail<linked=" << e.linked_block << ">";
+}
+
 struct SectorAddress {
     block_index_t block;
     sector_index_t sector;

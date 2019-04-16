@@ -36,6 +36,10 @@ struct FileTableEntry {
     }
 };
 
+inline ostreamtype& operator<<(ostreamtype& os, const FileTableEntry &e) {
+    return os << "FileTableEntry<" << e.fd.name << " " << e.fd.maximum_size << " index=" << e.alloc.index << " data=" << e.alloc.data << ">";
+}
+
 struct FileTableTail {
     BlockTail block;
 };

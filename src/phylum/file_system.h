@@ -35,9 +35,17 @@ struct FileBlockHead {
     }
 };
 
+inline ostreamtype& operator<<(ostreamtype& os, const FileBlockHead &e) {
+    return os << "FileBlockHead<" << e.block << " file=" << e.file_id << " version=" << e.version << " position=" << e.position << ">";
+}
+
 struct FileSectorTail {
     uint16_t bytes;
 };
+
+inline ostreamtype& operator<<(ostreamtype& os, const FileSectorTail &e) {
+    return os << "FileSectorTail<" << e.bytes << ">";
+}
 
 struct FileBlockTail {
     FileSectorTail sector;
@@ -46,6 +54,10 @@ struct FileBlockTail {
     uint32_t reserved[4];   // NOTE: Unused for now.
     BlockTail block;
 };
+
+inline ostreamtype& operator<<(ostreamtype& os, const FileBlockTail &e) {
+    return os << "FileBlockTail<" << e.sector << " bytes=" << e.bytes_in_block << " " << e.block << ">";
+}
 
 enum class Seek {
     Beginning,
