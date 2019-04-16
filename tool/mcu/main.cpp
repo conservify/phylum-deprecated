@@ -5,6 +5,10 @@
 
 using namespace phylum;
 
+constexpr const char LogName[] = "Read";
+
+using Log = SimpleLog<LogName>;
+
 static void fail() {
     Serial.println("Fail!");
     while (true) {
@@ -45,8 +49,35 @@ inline ostreamtype& operator<<(ostreamtype& os, const PrettyBytes &b) {
     return os;
 }
 
+constexpr uint8_t WIFI_PIN_CS = 7;
+constexpr uint8_t SD_PIN_CS = 12;
+constexpr uint8_t FLASH_PIN_CS = 26u;
+constexpr uint8_t PERIPHERALS_ENABLE_PIN = 25u;
+constexpr uint8_t RFM95_PIN_CS = 5;
+
+void board() {
+    pinMode(PERIPHERALS_ENABLE_PIN, OUTPUT);
+    digitalWrite(PERIPHERALS_ENABLE_PIN, LOW);
+
+    pinMode(FLASH_PIN_CS, OUTPUT);
+    pinMode(SD_PIN_CS, OUTPUT);
+    pinMode(WIFI_PIN_CS, OUTPUT);
+    pinMode(RFM95_PIN_CS, OUTPUT);
+
+    digitalWrite(FLASH_PIN_CS, HIGH);
+    digitalWrite(SD_PIN_CS, HIGH);
+    digitalWrite(WIFI_PIN_CS, HIGH);
+    digitalWrite(RFM95_PIN_CS, HIGH);
+
+    digitalWrite(PERIPHERALS_ENABLE_PIN, LOW);
+    delay(100);
+    digitalWrite(PERIPHERALS_ENABLE_PIN, HIGH);
+}
+
 void setup() {
     Serial.begin(115200);
+
+    board();
 
     while (!Serial) {
         delay(10);
@@ -87,15 +118,46 @@ void setup() {
         &file_data_fk
     };
 
-    auto mountStarted = millis();
     FileLayout<5> fs{ storage };
     if (!fs.mount(files)) {
-        sdebug() << "Mount failed!" << endl;
+        sdebug() << "Mounting failed!" << endl;
         fail();
     }
-    auto mountFinished = millis();
 
-    sdebug() << "Mounted in " << (mountFinished - mountStarted) << "ms" << endl;
+    for (auto fd : files) {
+        sdebug() << "Opening: " << fd->name << endl;
+
+        auto opened = fs.open(*fd);
+        if (opened) {
+            sdebug() << "File: " << fd->name << " size = " << opened.size() << " maximum = " << fd->maximum_size << endl;
+
+            if (!opened.seek(UINT64_MAX)) {
+            }
+
+            if (!opened.seek(0)) {
+            }
+
+            auto total_read = (uint32_t)0;
+            auto started = millis();
+
+            while (true) {
+                uint8_t buffer[1024];
+
+                auto read = opened.read(buffer, sizeof(buffer));
+                if (read == 0){
+                    break;
+                }
+
+                total_read += read;
+            }
+
+            auto elapsed = millis() - started;
+
+            sdebug() << "Read: " << total_read << " bytes " << elapsed << "ms" << endl;
+        }
+    }
+
+    sdebug() << "Done!" << endl;
 
     while (true) {
         delay(10);

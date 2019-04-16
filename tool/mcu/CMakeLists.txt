@@ -13,7 +13,7 @@ target_link_libraries(phylum-tool-dump SPI)
 
 add_definitions(-DPHYLUM_READ_ONLY)
 add_definitions(-DPHYLUM_ENABLE_SD)
-add_definitions(-DPHYLUM_DEBUG=10)
+add_definitions(-DPHYLUM_DEBUG=0)
 
 target_include_directories(phylum-tool-dump PUBLIC ./ ../../src ../../src/backends/arduino_sd)
 

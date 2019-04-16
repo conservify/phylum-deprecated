@@ -23,7 +23,7 @@ set(PROJECT_INCLUDES
   )
 
 add_definitions(-DPHYLUM_READ_ONLY)
-add_definitions(-DPHYLUM_DEBUG=10)
+add_definitions(-DPHYLUM_DEBUG=0)
 
 add_executable(tool "${sources}")
 

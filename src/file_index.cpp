@@ -191,7 +191,7 @@ bool FileIndex::initialize() {
     }
     head_ = layout.address();
 
-    #ifdef PHYLUM_DEBUG
+    #if PHYLUM_DEBUG > 0
     sdebug() << "Initialized: " << *this << endl;
     #endif
 
@@ -231,7 +231,7 @@ bool FileIndex::seek(uint64_t position, IndexRecord &selected) {
         selected = record;
     }
 
-    #ifdef PHYLUM_DEBUG
+    #if PHYLUM_DEBUG > 0
     sdebug() << "Seek: " << *this << " position=" << position << " = " << selected << endl;
     #endif
 
@@ -257,7 +257,7 @@ bool FileIndex::append(uint32_t position, BlockAddress address) {
 
     head_ = layout.address();
 
-    #ifdef PHYLUM_DEBUG
+    #if PHYLUM_DEBUG > 0
     sdebug() << "Append: " << *this << " position=" << position << " = " << address << endl;
     #endif
 

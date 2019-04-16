@@ -64,7 +64,7 @@ int32_t main(int32_t argc, const char **argv) {
 
     Log::info("Starting: %ld (%d)", number_of_blocks, phylum::SectorSize);
 
-    phylum::Geometry geometry{ number_of_blocks, 4, 4, phylum::SectorSize };
+    phylum::Geometry geometry{ (phylum::block_index_t)number_of_blocks, 4, 4, phylum::SectorSize };
     phylum::LinuxMemoryBackend storage;
     phylum::FileLayout<5> fs{ storage };
     phylum::FileDescriptor file_system_area_fd = { "system",          100  };
@@ -81,8 +81,6 @@ int32_t main(int32_t argc, const char **argv) {
     };
 
     assert(storage.open(ptr, geometry));
-
-    phylum::phylog().errors() << "G " << geometry << endl;
 
     Log::info("Mounting...");
 
