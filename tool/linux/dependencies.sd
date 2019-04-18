@@ -1,1 +1,3 @@
-https://github.com/Conservify/arduino-logging.git
+../../../data-protocol *
+https://github.com/nanopb/nanopb.git
+https://github.com/conservify/arduino-logging.git

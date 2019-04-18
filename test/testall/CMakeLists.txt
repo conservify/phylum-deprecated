@@ -17,22 +17,8 @@ set(PROJECT_INCLUDES
   ${ALOGGING_SRCS}
 )
 
-#set(PNGPP_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/png++)
-#ExternalProject_Add(
-#   png++
-#   URL http://download.savannah.nongnu.org/releases/pngpp/png++-0.2.9.tar.gz
-#   PREFIX ${PNGPP_SOURCE_DIR}
-#   INSTALL_COMMAND ""
-#   CONFIGURE_COMMAND ""
-#   BUILD_COMMAND ""
-#)
+add_definitions("-DPHYLUM_DEBUG=0")
 
-# ExternalProject_Get_Property(png++ source_dir)
-# set(PNGPP_INCLUDE_DIR "${source_dir}/../")
-
-# find_package(PNG REQUIRED)
-
-# add_definitions("-DPHYLUM_DEBUG=3")
 add_executable(testall ${SRCS})
 target_include_directories(testall PUBLIC "${PROJECT_INCLUDES}")
 target_compile_options(testall PUBLIC -Wall -pedantic)
@@ -41,6 +27,3 @@ set_target_properties(testall PROPERTIES C_STANDARD 11)
 set_target_properties(testall PROPERTIES CXX_STANDARD 11)
 add_test(NAME testall-ff COMMAND testall --erase-ff)
 add_test(NAME testall-00 COMMAND testall --erase-00)
-
-# target_include_directories(testall PUBLIC ${PNG_INCLUDE_DIR} ${PNGPP_INCLUDE_DIR})
-# target_link_libraries(testall ${PNG_LIBRARY})
