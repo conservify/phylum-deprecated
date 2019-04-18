@@ -113,8 +113,12 @@ int32_t main(int32_t argc, const char **argv) {
     auto fd = open(file_name, O_RDONLY, 0);
     assert(fd != -1);
 
+    Log::info("Mapping...");
+
     auto ptr = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE | MAP_POPULATE, fd, 0);
     assert(ptr != MAP_FAILED);
+
+    Log::info("Mounting...");
 
     auto number_of_blocks = file_size / (uint64_t)(SectorSize * 4 * 4);
 
@@ -135,8 +139,6 @@ int32_t main(int32_t argc, const char **argv) {
     };
 
     assert(storage.open(ptr, geometry));
-
-    Log::info("Mounting...");
 
     if (!fs.mount(descriptors)) {
         Log::error("Mounting failed!");
@@ -237,15 +239,17 @@ int32_t main(int32_t argc, const char **argv) {
                     auto addr = BlockAddress(block, SectorSize);
 
                     for (auto sector = (sector_index_t)1; sector < geometry.sectors_per_block(); ++sector) {
+                        auto sector_bytes = 0;
+
                         if (addr.tail_sector(geometry)) {
                             auto &file_tail = *(FileBlockTail *)((p + SectorSize * (sector + 1)) - sizeof(FileBlockTail));
                             if (file_tail.block.linked_block == 0) {
                                 break;
                             }
 
-                            sdebug() << "  " << file_tail << " file=" << file_position << endl;
+                            sdebug() << "  " << file_tail << " file-pos=" << file_position << " sector=" << sector << " " << addr << endl;
 
-                            file_position += file_tail.sector.bytes;
+                            sector_bytes = file_tail.sector.bytes;
                         }
                         else {
                             auto &sector_tail = *(FileSectorTail *)((p + SectorSize * (sector + 1)) - sizeof(FileSectorTail));
@@ -253,11 +257,12 @@ int32_t main(int32_t argc, const char **argv) {
                                 break;
                             }
 
-                            sdebug() << "  " << sector_tail << " file=" << file_position << endl;
+                            sdebug() << "  " << sector_tail << " file-pos=" << file_position << " sector=" << sector << " " << addr << endl;
 
-                            file_position += sector_tail.bytes;
+                            sector_bytes = sector_tail.bytes;
                         }
 
+                        file_position += sector_bytes;
                         addr = addr.advance(SectorSize);
                     }
 
