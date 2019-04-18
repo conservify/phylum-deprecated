@@ -17,5 +17,4 @@ endif(DEBUG_LAYOUT_LOGGING)
 
 add_subdirectory(test)
 add_subdirectory(examples)
-add_subdirectory(tool/mcu)
-add_subdirectory(tool/linux)
+add_subdirectory(tool)
