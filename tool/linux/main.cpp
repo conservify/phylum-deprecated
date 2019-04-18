@@ -18,6 +18,13 @@
 
 #include <fk-data-protocol.h>
 
+#include <google/protobuf/descriptor.h>
+#include <google/protobuf/dynamic_message.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <google/protobuf/io/tokenizer.h>
+
+#include <google/protobuf/compiler/parser.h>
+
 namespace fs = std::experimental::filesystem;
 
 constexpr const char LogName[] = "Read";
@@ -111,7 +118,7 @@ int32_t main(int32_t argc, const char **argv) {
     auto file_name = args.image.c_str();
     auto file_size = get_file_size(file_name);
 
-    Log::info("Opening %s (%ld bytes)...", file_name, file_size);
+    Log::info("Opening %s...", file_name);
 
     auto fd = open(file_name, O_RDONLY, 0);
     assert(fd != -1);
@@ -193,6 +200,12 @@ int32_t main(int32_t argc, const char **argv) {
 
                 fclose(fp);
             }
+
+            if (!args.log) {
+                if (!walk_protobuf_records(geometry, (uint8_t *)ptr, opened.head().block)) {
+                    return false;
+                }
+            }
         }
     }
 
@@ -235,10 +248,6 @@ int32_t main(int32_t argc, const char **argv) {
                     if (file_head.file_id != file_id) {
                         file_id = file_head.file_id;
                         file_position = 0;
-
-                        if (!walk_protobuf_records(geometry, (uint8_t *)ptr, block)) {
-                            return false;
-                        }
                     }
 
                     sdebug() << "Block: " << block << " " << file_head << endl;
@@ -366,7 +375,229 @@ bool pb_search_for_record(pb_istream_t *stream) {
     return true;
 }
 
+using namespace google::protobuf;
+using namespace google::protobuf::io;
+using namespace google::protobuf::compiler;
+
+class PhylumInputStream : public ZeroCopyInputStream {
+public:
+    PhylumInputStream(Geometry geometry, uint8_t *everything, block_index_t block);
+
+    // implements ZeroCopyInputStream ----------------------------------
+    bool Next(const void** data, int* size);
+    void BackUp(int count);
+    bool Skip(int count);
+    int64 ByteCount() const;
+
+public:
+    uint32_t position() const {
+        return position_;
+    }
+
+private:
+    Geometry geometry_;
+    uint8_t *everything_;
+    uint8_t *iter_;
+    BlockAddress address_;
+    uint32_t position_;
+    uint32_t sector_remaining_;
+
+    struct Block {
+        uint8_t *ptr;
+        size_t size;
+    };
+
+    Block previous_block_;
+
+    GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(PhylumInputStream);
+};
+
+PhylumInputStream::PhylumInputStream(Geometry geometry, uint8_t *everything, block_index_t block)
+    : geometry_(geometry), everything_(everything), address_{ block, 0 }, iter_{ nullptr }, position_{ 0 }, sector_remaining_{ 0 } {
+}
+
+bool PhylumInputStream::Next(const void **data, int *size) {
+    auto &g = geometry_;
+
+    *data == nullptr;
+    *size = 0;
+
+    while (true) {
+        if (sector_remaining_ == 0) {
+            auto follow = address_.tail_sector(g);
+            auto block_ptr = everything_ + address_.block * g.block_size();
+
+            address_.position += address_.remaining_in_sector(g);
+
+            auto sector = address_.sector_number(g);
+
+            if (address_.tail_sector(g)) {
+                auto &sector_tail = *(FileBlockTail *)((block_ptr + (SectorSize * g.sectors_per_block())) - sizeof(FileBlockTail));
+
+                if (follow) {
+                    address_ = BlockAddress{ sector_tail.block.linked_block, 0 };
+                    sector_remaining_ = 0;
+                    continue;
+                }
+
+                sector_remaining_ = sector_tail.sector.bytes;
+            }
+            else {
+                auto &sector_tail = *(FileSectorTail *)((block_ptr + (SectorSize * (sector + 1))) - sizeof(FileSectorTail));
+                sector_remaining_ = sector_tail.bytes;
+            }
+
+            iter_ = everything_ + (address_.block * g.block_size()) + address_.position;
+
+            if (sector_remaining_ == 0) {
+                return false;
+            }
+        }
+
+        break;
+    }
+
+    previous_block_ = Block{ iter_, sector_remaining_ };
+
+    *data = previous_block_.ptr;
+    *size = previous_block_.size;
+
+    position_ += sector_remaining_;
+    sector_remaining_ = 0;
+
+    return true;
+}
+
+void PhylumInputStream::BackUp(int c) {
+    sector_remaining_ = c;
+    iter_ = previous_block_.ptr + (previous_block_.size - c);
+    position_ -= c;
+}
+
+bool PhylumInputStream::Skip(int c) {
+    assert(false);
+    return true;
+}
+
+int64 PhylumInputStream::ByteCount() const {
+    assert(false);
+    return 0;
+}
+
+bool pb_read_delimited_from(google::protobuf::io::ZeroCopyInputStream *ri, google::protobuf::MessageLite *message) {
+    CodedInputStream cis(ri);
+
+    uint32_t size;
+    if (!cis.ReadVarint32(&size)) {
+        return false;
+    }
+
+    auto limited = cis.PushLimit(size);
+
+    if (!message->MergeFromCodedStream(&cis)) {
+        sdebug() << "Failed to merge" << endl;
+        return false;
+    }
+
+    if (!cis.ConsumedEntireMessage()) {
+        sdebug() << "Incomplete message" << endl;
+        return false;
+    }
+
+    cis.PopLimit(limited);
+
+    return true;
+}
+
+bool walk_protobuf_records2(Geometry geometry, uint8_t *everything, uint32_t block) {
+    std::string message_type("DataRecord");
+
+    auto fd = open("/home/jlewallen/fieldkit/data-protocol/fk-data.proto", O_RDONLY);
+    if (fd < 0) {
+        return false;
+    }
+
+    FileInputStream fis(fd);
+    fis.SetCloseOnDelete(true);
+
+    Tokenizer tokenizer(&fis, nullptr);
+
+    FileDescriptorProto file_desc_proto;
+    Parser parser;
+    if (!parser.Parse(&tokenizer, &file_desc_proto)) {
+        return false;
+    }
+
+    if (!file_desc_proto.has_name()) {
+        file_desc_proto.set_name(message_type);
+    }
+
+    DescriptorPool pool;
+    auto file_desc = pool.BuildFile(file_desc_proto);
+    if (file_desc == nullptr) {
+        return false;
+    }
+
+    auto message_desc = file_desc->FindMessageTypeByName(message_type);
+    if (message_desc == nullptr) {
+        return false;
+    }
+
+    DynamicMessageFactory factory;
+    auto prototype_msg = factory.GetPrototype(message_desc);
+    assert(prototype_msg != nullptr);
+
+    auto mutable_msg = prototype_msg->New();
+    assert(mutable_msg != nullptr);
+
+    PhylumInputStream is{ geometry, everything, block };
+    while (true) {
+        if (!pb_read_delimited_from(&is, mutable_msg)) {
+            if (is.position() != 0) {
+                sdebug() << "Done: " << is.position()  << endl;
+            }
+            break;
+        }
+
+        std::vector<const FieldDescriptor*> fields;
+        auto reflection = mutable_msg->GetReflection();
+        reflection->ListFields(*mutable_msg, &fields);
+
+        for (auto field_iter = fields.begin(); field_iter != fields.end(); field_iter++) {
+            auto field = *field_iter;
+            assert(field != nullptr);
+
+            switch (field->type()) {
+            case FieldDescriptor::TYPE_BOOL: {
+                break;
+            }
+            case FieldDescriptor::TYPE_INT32: {
+                break;
+            }
+            case FieldDescriptor::TYPE_INT64: {
+                break;
+            }
+            case FieldDescriptor::TYPE_FLOAT: {
+                break;
+            }
+            case FieldDescriptor::TYPE_STRING: {
+                break;
+            }
+            case FieldDescriptor::TYPE_MESSAGE: {
+                break;
+            }
+            }
+        }
+    }
+
+    return true;
+}
+
 bool walk_protobuf_records(Geometry geometry, uint8_t *everything, uint32_t block) {
+    assert(walk_protobuf_records2(geometry, everything, block));
+
+    return true;
+
     auto block_ptr = everything + (geometry.block_size() * block);
     auto &first_sector_tail = *(FileSectorTail *)((block_ptr + SectorSize * 2) - sizeof(FileSectorTail));
 
@@ -423,6 +654,5 @@ bool walk_protobuf_records(Geometry geometry, uint8_t *everything, uint32_t bloc
         }
     }
 
-    // __builtin_trap();
     return false;
 }
