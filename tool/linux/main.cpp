@@ -16,33 +16,22 @@
 #include <phylum/basic_super_block_manager.h>
 #include <backends/linux_memory/linux_memory.h>
 
-#include <fk-data-protocol.h>
-
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/dynamic_message.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/io/tokenizer.h>
-
 #include <google/protobuf/compiler/parser.h>
+
+#include "phylum_input_stream.h"
 
 namespace fs = std::experimental::filesystem;
 
 constexpr const char LogName[] = "Read";
 
 using Log = SimpleLog<LogName>;
+
 using namespace phylum;
 
-struct pb_phylum_reader_state_t {
-    pb_byte_t *everything;
-    pb_byte_t *iter;
-    uint32_t position;
-    uint32_t sector_remaining;
-    BlockAddress addr;
-    Geometry geometry;
-};
-
-bool pb_buf_read(pb_istream_t *stream, pb_byte_t *buf, size_t c);
-bool pb_decode_string(pb_istream_t *stream, const pb_field_t *, void **arg);
 bool walk_protobuf_records(Geometry geometry, uint8_t *everything, uint32_t block);
 
 uint64_t get_file_size(const char* filename) {
@@ -301,188 +290,9 @@ int32_t main(int32_t argc, const char **argv) {
     return 0;
 }
 
-bool pb_buf_read(pb_istream_t *stream, pb_byte_t *buf, size_t c) {
-    auto &state = *(pb_phylum_reader_state_t *)stream->state;
-    auto &g = state.geometry;
-
-    for (auto i = (size_t)0; i < c; ) {
-        if (state.sector_remaining == 0) {
-            auto follow = state.addr.tail_sector(g);
-            auto block_ptr = state.everything + state.addr.block * g.block_size();
-
-            state.addr.position += state.addr.remaining_in_sector(g);
-
-            auto sector = state.addr.sector_number(g);
-
-            if (state.addr.tail_sector(g)) {
-                auto &sector_tail = *(FileBlockTail *)((block_ptr + (SectorSize * g.sectors_per_block())) - sizeof(FileBlockTail));
-
-                if (follow) {
-                    state.addr = BlockAddress{ sector_tail.block.linked_block, 0 };
-                    state.sector_remaining = 0;
-                    continue;
-                }
-
-                state.sector_remaining = sector_tail.sector.bytes;
-            }
-            else {
-                auto &sector_tail = *(FileSectorTail *)((block_ptr + (SectorSize * (sector + 1))) - sizeof(FileSectorTail));
-                state.sector_remaining = sector_tail.bytes;
-            }
-
-            state.iter = state.everything + (state.addr.block * g.block_size()) + state.addr.position;
-
-            if (state.sector_remaining == 0) {
-                return false;
-            }
-        }
-
-        if (buf != nullptr) {
-            buf[i] = *state.iter;
-        }
-
-        state.addr.position++;
-        state.sector_remaining--;
-        state.position++;
-        state.iter++;
-        i++;
-    }
-
-    return true;
-}
-
-bool pb_decode_string(pb_istream_t *stream, const pb_field_t *, void **arg) {
-    auto len = stream->bytes_left;
-
-    if (len == 0) {
-        (*arg) = (void *)"";
-        return true;
-    }
-
-    auto *ptr = (uint8_t *)malloc(len + 1);
-    if (!pb_read(stream, ptr, len)) {
-        return false;
-    }
-
-    ptr[len] = 0;
-
-    (*arg) = (void *)ptr;
-
-    return true;
-}
-
-bool pb_search_for_record(pb_istream_t *stream) {
-    return true;
-}
-
 using namespace google::protobuf;
 using namespace google::protobuf::io;
 using namespace google::protobuf::compiler;
-
-class PhylumInputStream : public ZeroCopyInputStream {
-public:
-    PhylumInputStream(Geometry geometry, uint8_t *everything, block_index_t block);
-
-    // implements ZeroCopyInputStream ----------------------------------
-    bool Next(const void** data, int* size);
-    void BackUp(int count);
-    bool Skip(int count);
-    int64 ByteCount() const;
-
-public:
-    uint32_t position() const {
-        return position_;
-    }
-
-private:
-    Geometry geometry_;
-    uint8_t *everything_;
-    uint8_t *iter_;
-    BlockAddress address_;
-    uint32_t position_;
-    uint32_t sector_remaining_;
-
-    struct Block {
-        uint8_t *ptr;
-        size_t size;
-    };
-
-    Block previous_block_;
-
-    GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(PhylumInputStream);
-};
-
-PhylumInputStream::PhylumInputStream(Geometry geometry, uint8_t *everything, block_index_t block)
-    : geometry_(geometry), everything_(everything), address_{ block, 0 }, iter_{ nullptr }, position_{ 0 }, sector_remaining_{ 0 } {
-}
-
-bool PhylumInputStream::Next(const void **data, int *size) {
-    auto &g = geometry_;
-
-    *data == nullptr;
-    *size = 0;
-
-    while (true) {
-        if (sector_remaining_ == 0) {
-            auto follow = address_.tail_sector(g);
-            auto block_ptr = everything_ + address_.block * g.block_size();
-
-            address_.position += address_.remaining_in_sector(g);
-
-            auto sector = address_.sector_number(g);
-
-            if (address_.tail_sector(g)) {
-                auto &sector_tail = *(FileBlockTail *)((block_ptr + (SectorSize * g.sectors_per_block())) - sizeof(FileBlockTail));
-
-                if (follow) {
-                    address_ = BlockAddress{ sector_tail.block.linked_block, 0 };
-                    sector_remaining_ = 0;
-                    continue;
-                }
-
-                sector_remaining_ = sector_tail.sector.bytes;
-            }
-            else {
-                auto &sector_tail = *(FileSectorTail *)((block_ptr + (SectorSize * (sector + 1))) - sizeof(FileSectorTail));
-                sector_remaining_ = sector_tail.bytes;
-            }
-
-            iter_ = everything_ + (address_.block * g.block_size()) + address_.position;
-
-            if (sector_remaining_ == 0) {
-                return false;
-            }
-        }
-
-        break;
-    }
-
-    previous_block_ = Block{ iter_, sector_remaining_ };
-
-    *data = previous_block_.ptr;
-    *size = previous_block_.size;
-
-    position_ += sector_remaining_;
-    sector_remaining_ = 0;
-
-    return true;
-}
-
-void PhylumInputStream::BackUp(int c) {
-    sector_remaining_ = c;
-    iter_ = previous_block_.ptr + (previous_block_.size - c);
-    position_ -= c;
-}
-
-bool PhylumInputStream::Skip(int c) {
-    assert(false);
-    return true;
-}
-
-int64 PhylumInputStream::ByteCount() const {
-    assert(false);
-    return 0;
-}
 
 bool pb_read_delimited_from(google::protobuf::io::ZeroCopyInputStream *ri, google::protobuf::MessageLite *message) {
     CodedInputStream cis(ri);
@@ -509,7 +319,7 @@ bool pb_read_delimited_from(google::protobuf::io::ZeroCopyInputStream *ri, googl
     return true;
 }
 
-bool walk_protobuf_records2(Geometry geometry, uint8_t *everything, uint32_t block) {
+bool walk_protobuf_records(Geometry geometry, uint8_t *everything, uint32_t block) {
     std::string message_type("DataRecord");
 
     auto fd = open("/home/jlewallen/fieldkit/data-protocol/fk-data.proto", O_RDONLY);
@@ -591,68 +401,4 @@ bool walk_protobuf_records2(Geometry geometry, uint8_t *everything, uint32_t blo
     }
 
     return true;
-}
-
-bool walk_protobuf_records(Geometry geometry, uint8_t *everything, uint32_t block) {
-    assert(walk_protobuf_records2(geometry, everything, block));
-
-    return true;
-
-    auto block_ptr = everything + (geometry.block_size() * block);
-    auto &first_sector_tail = *(FileSectorTail *)((block_ptr + SectorSize * 2) - sizeof(FileSectorTail));
-
-    if (first_sector_tail.bytes == 0) {
-        return true;
-    }
-
-    fk_data_DataRecord message = fk_data_DataRecord_init_default;
-    message.log.facility.funcs.decode = pb_decode_string;
-    message.log.message.funcs.decode = pb_decode_string;
-
-    pb_phylum_reader_state_t state;
-    state.everything = everything;
-    state.geometry = geometry;
-    state.addr = BlockAddress{ block, 0 };
-    state.iter = nullptr;
-    state.sector_remaining = 0;
-    state.position = 0;
-
-    pb_istream_t stream;
-    stream.state = &state;
-    stream.bytes_left = UINT32_MAX; // TODO: Make this accurate.
-    stream.callback = &pb_buf_read;
-    stream.errmsg = nullptr;
-
-    while (true) {
-        pb_istream_t message_stream;
-        if (!pb_make_string_substream(&stream, &message_stream)) {
-            sdebug() << "Error creating message substream." << endl;
-            return false;
-        }
-
-        auto message_size = message_stream.bytes_left;
-
-        if (!pb_decode(&message_stream, fk_data_DataRecord_fields, &message)) {
-            if (PB_GET_ERROR(&message_stream) != nullptr) {
-                sdebug() << "Error decoding: " << PB_GET_ERROR(&message_stream) << " message-size=" << message_size << endl;
-            }
-            else {
-                sdebug() << "Error decoding!" << " message-size=" << message_size << endl;
-            }
-        }
-
-        if (!pb_close_string_substream(&stream, &message_stream)) {
-            sdebug() << "Error closing message substream. bytes-left=" << message_stream.bytes_left << endl;
-            return false;
-        }
-
-        if (message.log.message.arg != nullptr) {
-            auto &lm = message.log;
-            auto facility = (const char *)lm.facility.arg;
-            auto message = (const char *)lm.message.arg;
-            sdebug() << state.position << " " << facility << ": '" << message << "'" << endl;
-        }
-    }
-
-    return false;
 }

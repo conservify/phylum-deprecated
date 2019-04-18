@@ -33,11 +33,6 @@ set(PHYLUM_LINUX_MEMORY_BACKEND_SRCS ${PHYLUM_SRC_DIRECTORY}/backends/linux_memo
 set(PHYLUM_ARDUINO_SERIAL_FLASH_BACKEND_SRCS ${PHYLUM_SRC_DIRECTORY}/backends/arduino_serial_flash)
 set(ALOGGING_SOURCE_DIRECTORY "${arduino-logging_PATH}/src")
 
-file(GLOB nanopb_sources ${nanopb_PATH}/*.cpp ${nanopb_PATH}/*.c ${nanopb_PATH}/*.h)
-
-file(GLOB data_protocol_sources ${data-protocol_PATH}/src/cpp/*.cpp ${data-protocol_PATH}/src/cpp/*.cc ${data-protocol_PATH}/src/cpp/*.h
-  ${data-protocol_PATH}/src/*.cpp ${data-protocol_PATH}/src/*.c ${data-protocol_PATH}/src/*.h)
-
 file(GLOB sources *.cpp ${PHYLUM_SRC_DIRECTORY}/*.cpp ${PHYLUM_SRC_DIRECTORY}/phylum/*.h
   ${PHYLUM_LINUX_MEMORY_BACKEND_SRCS}/*.cpp ${PHYLUM_LINUX_MEMORY_BACKEND_SRCS}/*.h
   ${PHYLUM_ARDUINO_SERIAL_FLASH_BACKEND_SRCS}/*allocator*.cpp ${ALOGGING_SOURCE_DIRECTORY}/*.cpp)
@@ -47,8 +42,6 @@ set(PROJECT_INCLUDES
   ${PHYLUM_SRC_DIRECTORY}
   ${PHYLUM_LINUX_MEMORY_BACKEND_SRCS}
   ${ALOGGING_SOURCE_DIRECTORY}
-  ${nanopb_PATH}
-  ${data-protocol_PATH}/src
 )
 
 add_definitions(-DPHYLUM_READ_ONLY)
@@ -61,7 +54,7 @@ ExternalProject_Get_Property(protobuf-external source_dir)
 include_directories(${source_dir}/src)
 link_directories(${CMAKE_CURRENT_BINARY_DIR}/protobuf)
 
-add_executable(tool ${sources} ${nanopb_sources} ${data_protocol_sources})
+add_executable(tool ${sources})
 
 include_directories(.)
 
