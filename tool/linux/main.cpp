@@ -16,12 +16,27 @@
 #include <phylum/basic_super_block_manager.h>
 #include <backends/linux_memory/linux_memory.h>
 
+#include <fk-data-protocol.h>
+
 namespace fs = std::experimental::filesystem;
 
 constexpr const char LogName[] = "Read";
 
 using Log = SimpleLog<LogName>;
 using namespace phylum;
+
+struct pb_phylum_reader_state_t {
+    pb_byte_t *everything;
+    pb_byte_t *iter;
+    uint32_t position;
+    uint32_t sector_remaining;
+    BlockAddress addr;
+    Geometry geometry;
+};
+
+bool pb_buf_read(pb_istream_t *stream, pb_byte_t *buf, size_t c);
+bool pb_decode_string(pb_istream_t *stream, const pb_field_t *, void **arg);
+bool walk_protobuf_records(Geometry geometry, uint8_t *everything, uint32_t block);
 
 uint64_t get_file_size(const char* filename) {
     struct stat st;
@@ -83,18 +98,6 @@ struct Args {
         return good;
     }
 };
-
-template<typename int_t = uint64_t>
-int_t decode_vi(uint8_t *p, size_t in_size) {
-    int_t rv = 0;
-    for (size_t i = 0; i < in_size; i++) {
-        rv |= (p[i] & 127) << (7 * i);
-        if(!(p[i] & 128)) {
-            break;
-        }
-    }
-    return rv;
-}
 
 int32_t main(int32_t argc, const char **argv) {
     log_configure_hook_register(log_message_hook, nullptr);
@@ -232,6 +235,10 @@ int32_t main(int32_t argc, const char **argv) {
                     if (file_head.file_id != file_id) {
                         file_id = file_head.file_id;
                         file_position = 0;
+
+                        if (!walk_protobuf_records(geometry, (uint8_t *)ptr, block)) {
+                            return false;
+                        }
                     }
 
                     sdebug() << "Block: " << block << " " << file_head << endl;
@@ -283,4 +290,139 @@ int32_t main(int32_t argc, const char **argv) {
     close(fd);
 
     return 0;
+}
+
+bool pb_buf_read(pb_istream_t *stream, pb_byte_t *buf, size_t c) {
+    auto &state = *(pb_phylum_reader_state_t *)stream->state;
+    auto &g = state.geometry;
+
+    for (auto i = (size_t)0; i < c; ) {
+        if (state.sector_remaining == 0) {
+            auto follow = state.addr.tail_sector(g);
+            auto block_ptr = state.everything + state.addr.block * g.block_size();
+
+            state.addr.position += state.addr.remaining_in_sector(g);
+
+            auto sector = state.addr.sector_number(g);
+
+            if (state.addr.tail_sector(g)) {
+                auto &sector_tail = *(FileBlockTail *)((block_ptr + (SectorSize * g.sectors_per_block())) - sizeof(FileBlockTail));
+
+                if (follow) {
+                    state.addr = BlockAddress{ sector_tail.block.linked_block, 0 };
+                    state.sector_remaining = 0;
+                    continue;
+                }
+
+                state.sector_remaining = sector_tail.sector.bytes;
+            }
+            else {
+                auto &sector_tail = *(FileSectorTail *)((block_ptr + (SectorSize * (sector + 1))) - sizeof(FileSectorTail));
+                state.sector_remaining = sector_tail.bytes;
+            }
+
+            state.iter = state.everything + (state.addr.block * g.block_size()) + state.addr.position;
+
+            if (state.sector_remaining == 0) {
+                return false;
+            }
+        }
+
+        if (buf != nullptr) {
+            buf[i] = *state.iter;
+        }
+
+        state.addr.position++;
+        state.sector_remaining--;
+        state.position++;
+        state.iter++;
+        i++;
+    }
+
+    return true;
+}
+
+bool pb_decode_string(pb_istream_t *stream, const pb_field_t *, void **arg) {
+    auto len = stream->bytes_left;
+
+    if (len == 0) {
+        (*arg) = (void *)"";
+        return true;
+    }
+
+    auto *ptr = (uint8_t *)malloc(len + 1);
+    if (!pb_read(stream, ptr, len)) {
+        return false;
+    }
+
+    ptr[len] = 0;
+
+    (*arg) = (void *)ptr;
+
+    return true;
+}
+
+bool pb_search_for_record(pb_istream_t *stream) {
+    return true;
+}
+
+bool walk_protobuf_records(Geometry geometry, uint8_t *everything, uint32_t block) {
+    auto block_ptr = everything + (geometry.block_size() * block);
+    auto &first_sector_tail = *(FileSectorTail *)((block_ptr + SectorSize * 2) - sizeof(FileSectorTail));
+
+    if (first_sector_tail.bytes == 0) {
+        return true;
+    }
+
+    fk_data_DataRecord message = fk_data_DataRecord_init_default;
+    message.log.facility.funcs.decode = pb_decode_string;
+    message.log.message.funcs.decode = pb_decode_string;
+
+    pb_phylum_reader_state_t state;
+    state.everything = everything;
+    state.geometry = geometry;
+    state.addr = BlockAddress{ block, 0 };
+    state.iter = nullptr;
+    state.sector_remaining = 0;
+    state.position = 0;
+
+    pb_istream_t stream;
+    stream.state = &state;
+    stream.bytes_left = UINT32_MAX; // TODO: Make this accurate.
+    stream.callback = &pb_buf_read;
+    stream.errmsg = nullptr;
+
+    while (true) {
+        pb_istream_t message_stream;
+        if (!pb_make_string_substream(&stream, &message_stream)) {
+            sdebug() << "Error creating message substream." << endl;
+            return false;
+        }
+
+        auto message_size = message_stream.bytes_left;
+
+        if (!pb_decode(&message_stream, fk_data_DataRecord_fields, &message)) {
+            if (PB_GET_ERROR(&message_stream) != nullptr) {
+                sdebug() << "Error decoding: " << PB_GET_ERROR(&message_stream) << " message-size=" << message_size << endl;
+            }
+            else {
+                sdebug() << "Error decoding!" << " message-size=" << message_size << endl;
+            }
+        }
+
+        if (!pb_close_string_substream(&stream, &message_stream)) {
+            sdebug() << "Error closing message substream. bytes-left=" << message_stream.bytes_left << endl;
+            return false;
+        }
+
+        if (message.log.message.arg != nullptr) {
+            auto &lm = message.log;
+            auto facility = (const char *)lm.facility.arg;
+            auto message = (const char *)lm.message.arg;
+            sdebug() << state.position << " " << facility << ": '" << message << "'" << endl;
+        }
+    }
+
+    // __builtin_trap();
+    return false;
 }
