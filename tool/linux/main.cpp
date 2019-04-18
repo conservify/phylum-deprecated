@@ -44,22 +44,6 @@ static size_t log_message_hook(const LogMessage *m, const char *formatted, void 
     return 0;
 }
 
-class BlockLogger : public phylum::BlockVisitor {
-public:
-    BlockLogger() {
-    }
-
-public:
-    void block(block_index_t block) override {
-        Log::info("Block: %d", block);
-    }
-
-    bool is_free(block_index_t block) {
-        return false;
-    }
-
-};
-
 struct Args {
     fs::path image;
     fs::path directory;
@@ -142,15 +126,6 @@ int32_t main(int32_t argc, const char **argv) {
     if (!fs.mount(descriptors)) {
         Log::error("Mounting failed!");
         return 2;
-    }
-
-    if (false) {
-        auto data_alloc = fs.allocation(4);
-        auto head = data_alloc.data.beginning();
-        SerialFlashAllocator allocator{ storage };
-        AllocatedBlockedFile file{ &storage, OpenMode::Read, &allocator, head };
-        BlockLogger block_logger;
-        file.walk(&block_logger);
     }
 
     for (auto fd : descriptors) {
