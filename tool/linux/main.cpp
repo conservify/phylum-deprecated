@@ -16,13 +16,8 @@
 #include <phylum/basic_super_block_manager.h>
 #include <backends/linux_memory/linux_memory.h>
 
-#include <google/protobuf/descriptor.h>
-#include <google/protobuf/dynamic_message.h>
-#include <google/protobuf/io/zero_copy_stream_impl.h>
-#include <google/protobuf/io/tokenizer.h>
-#include <google/protobuf/compiler/parser.h>
-
 #include "phylum_input_stream.h"
+#include "record_walker.h"
 
 namespace fs = std::experimental::filesystem;
 
@@ -31,8 +26,6 @@ constexpr const char LogName[] = "Read";
 using Log = SimpleLog<LogName>;
 
 using namespace phylum;
-
-bool walk_protobuf_records(Geometry geometry, uint8_t *everything, uint32_t block);
 
 uint64_t get_file_size(const char* filename) {
     struct stat st;
@@ -166,7 +159,10 @@ int32_t main(int32_t argc, const char **argv) {
             }
 
             if (!args.log) {
-                if (!walk_protobuf_records(geometry, (uint8_t *)ptr, opened.head().block)) {
+                RecordWalker walker("/home/jlewallen/fieldkit/data-protocol/fk-data.proto", "DataRecord");
+                LoggingVisitor visitor;
+                PhylumInputStream stream{ geometry, reinterpret_cast<uint8_t*>(ptr), opened.head().block };
+                if (!walker.walk(stream, visitor)) {
                     return false;
                 }
             }
@@ -265,115 +261,3 @@ int32_t main(int32_t argc, const char **argv) {
     return 0;
 }
 
-using namespace google::protobuf;
-using namespace google::protobuf::io;
-using namespace google::protobuf::compiler;
-
-bool pb_read_delimited_from(google::protobuf::io::ZeroCopyInputStream *ri, google::protobuf::MessageLite *message) {
-    CodedInputStream cis(ri);
-
-    uint32_t size;
-    if (!cis.ReadVarint32(&size)) {
-        return false;
-    }
-
-    auto limited = cis.PushLimit(size);
-
-    if (!message->MergeFromCodedStream(&cis)) {
-        sdebug() << "Failed to merge" << endl;
-        return false;
-    }
-
-    if (!cis.ConsumedEntireMessage()) {
-        sdebug() << "Incomplete message" << endl;
-        return false;
-    }
-
-    cis.PopLimit(limited);
-
-    return true;
-}
-
-bool walk_protobuf_records(Geometry geometry, uint8_t *everything, uint32_t block) {
-    std::string message_type("DataRecord");
-
-    auto fd = open("/home/jlewallen/fieldkit/data-protocol/fk-data.proto", O_RDONLY);
-    if (fd < 0) {
-        return false;
-    }
-
-    FileInputStream fis(fd);
-    fis.SetCloseOnDelete(true);
-
-    Tokenizer tokenizer(&fis, nullptr);
-
-    FileDescriptorProto file_desc_proto;
-    Parser parser;
-    if (!parser.Parse(&tokenizer, &file_desc_proto)) {
-        return false;
-    }
-
-    if (!file_desc_proto.has_name()) {
-        file_desc_proto.set_name(message_type);
-    }
-
-    DescriptorPool pool;
-    auto file_desc = pool.BuildFile(file_desc_proto);
-    if (file_desc == nullptr) {
-        return false;
-    }
-
-    auto message_desc = file_desc->FindMessageTypeByName(message_type);
-    if (message_desc == nullptr) {
-        return false;
-    }
-
-    DynamicMessageFactory factory;
-    auto prototype_msg = factory.GetPrototype(message_desc);
-    assert(prototype_msg != nullptr);
-
-    auto mutable_msg = prototype_msg->New();
-    assert(mutable_msg != nullptr);
-
-    PhylumInputStream is{ geometry, everything, block };
-    while (true) {
-        if (!pb_read_delimited_from(&is, mutable_msg)) {
-            if (is.position() != 0) {
-                sdebug() << "Done: " << is.position()  << endl;
-            }
-            break;
-        }
-
-        std::vector<const FieldDescriptor*> fields;
-        auto reflection = mutable_msg->GetReflection();
-        reflection->ListFields(*mutable_msg, &fields);
-
-        for (auto field_iter = fields.begin(); field_iter != fields.end(); field_iter++) {
-            auto field = *field_iter;
-            assert(field != nullptr);
-
-            switch (field->type()) {
-            case FieldDescriptor::TYPE_BOOL: {
-                break;
-            }
-            case FieldDescriptor::TYPE_INT32: {
-                break;
-            }
-            case FieldDescriptor::TYPE_INT64: {
-                break;
-            }
-            case FieldDescriptor::TYPE_FLOAT: {
-                break;
-            }
-            case FieldDescriptor::TYPE_STRING: {
-                break;
-            }
-            case FieldDescriptor::TYPE_MESSAGE: {
-                break;
-            }
-            }
-        }
-    }
-
-    return true;
-}
