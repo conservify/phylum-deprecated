@@ -59,13 +59,21 @@ bool RecordWalker::walk(PhylumInputStream &stream, RecordVisitor &visitor) {
     assert(mutable_msg != nullptr);
 
     while (true) {
-        if (!read_delimited(&stream, mutable_msg)) {
-            if (stream.position() != 0) {
-                sdebug() << "Done: " << stream.position()  << endl;
-            }
+        auto read_details = read(&stream, mutable_msg);
+        if (read_details.is_eos) {
             break;
         }
+        else if (read_details.is_incomplete) {
+            sdebug() << "Incomplete message @ " << stream.position() << " size = " << read_details.size << " bytes" << endl;
+        }
+        else if (!read_details) {
+            sdebug() << "Failed message @ " << stream.position() << " size = " << read_details.size << " bytes" << endl;
+        }
+        else {
+            visitor.message(mutable_msg, read_details.size);
+        }
 
+        /*
         std::vector<const FieldDescriptor*> fields;
         auto reflection = mutable_msg->GetReflection();
         reflection->ListFields(*mutable_msg, &fields);
@@ -95,32 +103,35 @@ bool RecordWalker::walk(PhylumInputStream &stream, RecordVisitor &visitor) {
             }
             }
         }
+        */
     }
 
     return true;
 }
 
-bool RecordWalker::read(ZeroCopyInputStream *ri, MessageLite *message) {
+RecordWalker::Read RecordWalker::read(ZeroCopyInputStream *ri, MessageLite *message) {
     CodedInputStream cis(ri);
 
     uint32_t size;
     if (!cis.ReadVarint32(&size)) {
-        return false;
+        return Read::eos();
     }
 
     auto limited = cis.PushLimit(size);
 
     if (!message->MergeFromCodedStream(&cis)) {
-        sdebug() << "Failed to merge" << endl;
-        return false;
+        return Read::failed(size);
     }
 
     if (!cis.ConsumedEntireMessage()) {
-        sdebug() << "Incomplete message" << endl;
-        return false;
+        return Read::incomplete(size);
     }
 
     cis.PopLimit(limited);
 
-    return true;
+    return Read::success(size);
+}
+
+void LoggingVisitor::message(Message *message, size_t serialized_size) {
+    // std::cout << "Message<" << ">" << std::endl;
 }

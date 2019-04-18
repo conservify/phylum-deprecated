@@ -84,17 +84,17 @@ int32_t main(int32_t argc, const char **argv) {
     auto file_name = args.image.c_str();
     auto file_size = get_file_size(file_name);
 
-    Log::info("Opening %s...", file_name);
+    Log::info("Opening %s", file_name);
 
     auto fd = open(file_name, O_RDONLY, 0);
     assert(fd != -1);
 
-    Log::info("Mapping...");
+    Log::info("Mapping");
 
-    auto ptr = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE | MAP_POPULATE, fd, 0);
+    auto ptr = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE /* | MAP_POPULATE */, fd, 0);
     assert(ptr != MAP_FAILED);
 
-    Log::info("Mounting...");
+    Log::info("Mounting");
 
     auto number_of_blocks = file_size / (uint64_t)(SectorSize * 4 * 4);
 
@@ -131,6 +131,19 @@ int32_t main(int32_t argc, const char **argv) {
                 return 2;
             }
 
+            if (!args.log) {
+                RecordWalker walker("/home/jlewallen/fieldkit/data-protocol/fk-data.proto", "DataRecord");
+                LoggingVisitor visitor;
+                PhylumInputStream stream{ geometry, reinterpret_cast<uint8_t*>(ptr), opened.head().block };
+
+                if (!walker.walk(stream, visitor)) {
+                    return false;
+                }
+                if (stream.position() > 0) {
+                    sdebug() << "Done: " << stream.position() << endl;
+                }
+            }
+
             if (!args.directory.empty() && opened.size() > 0) {
                 auto path = args.directory / fs::path{ fd->name };
                 auto total = 0;
@@ -156,15 +169,6 @@ int32_t main(int32_t argc, const char **argv) {
                 Log::info("Done writing %d bytes to %s", total, path.c_str());
 
                 fclose(fp);
-            }
-
-            if (!args.log) {
-                RecordWalker walker("/home/jlewallen/fieldkit/data-protocol/fk-data.proto", "DataRecord");
-                LoggingVisitor visitor;
-                PhylumInputStream stream{ geometry, reinterpret_cast<uint8_t*>(ptr), opened.head().block };
-                if (!walker.walk(stream, visitor)) {
-                    return false;
-                }
             }
         }
     }
