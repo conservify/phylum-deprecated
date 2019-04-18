@@ -18,14 +18,14 @@ bool PhylumInputStream::Next(const void **data, int *size) {
     while (true) {
         if (sector_remaining_ == 0) {
             auto follow = address_.tail_sector(g);
-            auto block_ptr = everything_ + address_.block * g.block_size();
 
             address_.position += address_.remaining_in_sector(g);
 
             auto sector = address_.sector_number(g);
 
             if (address_.tail_sector(g)) {
-                auto &sector_tail = *(FileBlockTail *)((block_ptr + (SectorSize * g.sectors_per_block())) - sizeof(FileBlockTail));
+                auto offset = ((uint64_t)address_.block * g.block_size()) + (SectorSize * g.sectors_per_block());
+                auto &sector_tail = *(FileBlockTail *)(everything_ + offset - sizeof(FileBlockTail));
 
                 if (follow) {
                     address_ = BlockAddress{ sector_tail.block.linked_block, 0 };
@@ -36,7 +36,8 @@ bool PhylumInputStream::Next(const void **data, int *size) {
                 sector_remaining_ = sector_tail.sector.bytes;
             }
             else {
-                auto &sector_tail = *(FileSectorTail *)((block_ptr + (SectorSize * (sector + 1))) - sizeof(FileSectorTail));
+                auto offset = ((uint64_t)address_.block * g.block_size()) + (SectorSize * (sector + 1));
+                auto &sector_tail = *(FileSectorTail *)(everything_ + offset - sizeof(FileSectorTail));
                 sector_remaining_ = sector_tail.bytes;
             }
 
@@ -55,6 +56,8 @@ bool PhylumInputStream::Next(const void **data, int *size) {
     *data = previous_block_.ptr;
     *size = previous_block_.size;
 
+    // std::cerr << "Next: " << sector_remaining_ << endl;
+
     position_ += sector_remaining_;
     sector_remaining_ = 0;
 
@@ -65,6 +68,8 @@ void PhylumInputStream::BackUp(int c) {
     sector_remaining_ = c;
     iter_ = previous_block_.ptr + (previous_block_.size - c);
     position_ -= c;
+
+    // std::cerr << "BackUp: " << c << endl;
 }
 
 bool PhylumInputStream::Skip(int c) {
