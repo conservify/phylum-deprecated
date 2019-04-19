@@ -72,38 +72,6 @@ bool RecordWalker::walk(PhylumInputStream &stream, RecordVisitor &visitor) {
         else {
             visitor.message(mutable_msg, read_details.size);
         }
-
-        /*
-        std::vector<const FieldDescriptor*> fields;
-        auto reflection = mutable_msg->GetReflection();
-        reflection->ListFields(*mutable_msg, &fields);
-
-        for (auto field_iter = fields.begin(); field_iter != fields.end(); field_iter++) {
-            auto field = *field_iter;
-            assert(field != nullptr);
-
-            switch (field->type()) {
-            case FieldDescriptor::TYPE_BOOL: {
-                break;
-            }
-            case FieldDescriptor::TYPE_INT32: {
-                break;
-            }
-            case FieldDescriptor::TYPE_INT64: {
-                break;
-            }
-            case FieldDescriptor::TYPE_FLOAT: {
-                break;
-            }
-            case FieldDescriptor::TYPE_STRING: {
-                break;
-            }
-            case FieldDescriptor::TYPE_MESSAGE: {
-                break;
-            }
-            }
-        }
-        */
     }
 
     return true;
