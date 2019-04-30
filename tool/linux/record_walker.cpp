@@ -82,6 +82,8 @@ bool RecordWalker::walk(PhylumInputStream &stream, RecordVisitor &visitor) {
         else {
             visitor.message(stream, mutable_msg, read_details.size);
         }
+
+        mutable_msg->Clear();
     }
 
     return true;
