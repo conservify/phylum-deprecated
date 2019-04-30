@@ -376,6 +376,13 @@ BlockedFile::SavedSector BlockedFile::save_sector(bool flushing) {
         return SavedSector{ 0, head_, allocated };
     }
 
+    if (flushing) {
+        // Zero the buffer if we're done with the contents. This way when
+        // writing partial sectors in the future we don't see old data from
+        // older blocks, even though it shouldn't cause a huge problem.
+        memset(buffer_, 0, sizeof(buffer_));
+    }
+
     return SavedSector{ buffpos_, following, allocated };
 }
 
