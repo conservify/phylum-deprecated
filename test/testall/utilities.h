@@ -83,9 +83,7 @@ private:
 
 public:
     PatternHelper() {
-        for (size_t i = 0; i < sizeof(data_); ++i) {
-            data_[i] = i;
-        }
+        fill(data_, sizeof(data_));
     }
 
 public:
@@ -102,6 +100,18 @@ public:
     }
 
 public:
+    void fill(uint8_t *data, size_t size) {
+        for (size_t i = 0; i < size; ++i) {
+            data[i] = i;
+        }
+    }
+
+    void fill(uint8_t *data, size_t size, uint8_t v) {
+        for (size_t i = 0; i < size; ++i) {
+            data[i] = v;
+        }
+    }
+
     template<typename File>
     uint64_t write(File &file, uint32_t times) {
         uint64_t total = 0;

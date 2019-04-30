@@ -177,6 +177,28 @@ bool LinuxMemoryBackend::write(BlockAddress addr, void *d, size_t n) {
     #endif
 }
 
+void LinuxMemoryBackend::dump(BlockAddress addr, size_t n) {
+    auto o = (uint64_t)addr.block * geometry_.block_size() + (addr.position);
+    assert(o + n <= size_);
+
+    auto need_nl = true;
+
+    for (auto i = (size_t)0; i < n; ++i) {
+        fprintf(stderr, "%02x ", ptr_[o + i]);
+        if ((i + 1) % 32 == 0) {
+            fprintf(stderr, "\n");
+            need_nl = false;
+        }
+        else {
+            need_nl = true;
+        }
+    }
+
+    if (need_nl) {
+        fprintf(stderr, "\n");
+    }
+}
+
 }
 
 #endif // ARDUINO

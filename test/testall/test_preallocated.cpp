@@ -621,3 +621,101 @@ TEST_F(PreallocatedSuite, OpeningFileWithBadBlockReferencedByIndex) {
     auto file3 = layout.open(data_file, OpenMode::Write);
     ASSERT_TRUE(file3);
 }
+
+TEST_F(PreallocatedSuite, MultipleWritesWriteSpanningSector) {
+    FileDescriptor data_file = { "data.fk", 100 };
+    FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
+    PatternHelper helper;
+
+    storage_.verification(VerificationMode::Appending);
+
+    ASSERT_TRUE(layout.format(files));
+
+    storage_.log().clear();
+
+    auto file1 = layout.open(data_file, OpenMode::MultipleWrites);
+
+    uint8_t small[164];
+    helper.fill(small, sizeof(small), 0xcc);
+    uint8_t large[480];
+    helper.fill(large, sizeof(large), 0x55);
+
+    file1.write(small, sizeof(small));
+    file1.write(large, sizeof(large));
+
+    auto end_address1 = file1.head();
+
+    // NO FLUSH, SIMULATE RESTART
+    // file1.flush();
+
+    auto file2 = layout.open(data_file, OpenMode::MultipleWrites);
+
+    storage_.log().clear();
+
+    auto end_address2 = file2.head();
+
+    ASSERT_NE(end_address1, end_address2);
+
+    file2.write(small, sizeof(small));
+    file2.write(large, sizeof(large));
+}
+
+TEST_F(PreallocatedSuite, MultipleWritesWriteSpanningSectorIntoLastSectorOfBlock) {
+    FileDescriptor data_file = { "data.fk", 100 };
+    FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
+    PatternHelper helper;
+
+    storage_.verification(VerificationMode::Appending);
+
+    ASSERT_TRUE(layout.format(files));
+
+    uint8_t small[164];
+    helper.fill(small, sizeof(small), 0xcc);
+    uint8_t large[480];
+    helper.fill(large, sizeof(large), 0x55);
+
+    storage_.log().clear();
+
+    auto file1 = layout.open(data_file, OpenMode::MultipleWrites);
+
+    while (true) {
+        file1.write(small, sizeof(small));
+        file1.write(large, sizeof(large));
+
+        if (file1.head().sector_number(geometry_) == 15) {
+            break;
+        }
+    }
+
+    auto end_address1 = file1.head();
+
+    if (false) {
+        sdebug() << "Dumping: " << end_address1 << endl;
+        storage_.dump(end_address1, 512);
+    }
+
+    // NO FLUSH, SIMULATE RESTART
+    // file1.flush();
+
+    auto file2 = layout.open(data_file, OpenMode::MultipleWrites);
+
+    storage_.log().clear();
+
+    auto end_address2 = file2.head();
+
+    ASSERT_NE(end_address1, end_address2);
+
+    sdebug() << " " << end_address1 << " " << end_address2 << endl;
+
+    file2.write(small, sizeof(small));
+    file2.write(large, sizeof(large));
+
+    if (false) {
+        sdebug() << "Dumping: " << end_address1 << endl;
+        storage_.dump(end_address1, 512);
+    }
+
+    storage_.log().logging(false);
+}

@@ -53,6 +53,10 @@ public:
         strict_sectors_ = enabled;
     }
 
+    uint8_t *ptr(BlockAddress addr) {
+        return ptr_ + (uint64_t)addr.block * geometry_.block_size() + (addr.position);
+    }
+
 public:
     bool initialize(Geometry geometry);
 
@@ -66,6 +70,7 @@ public:
     void randomize();
     bool read(BlockAddress addr, void *d, size_t n) override;
     bool write(BlockAddress addr, void *d, size_t n) override;
+    void dump(BlockAddress addr, size_t n);
 
 };
 
