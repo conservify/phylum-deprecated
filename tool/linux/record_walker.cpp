@@ -117,7 +117,7 @@ void LoggingVisitor::message(PhylumInputStream &stream, Message *message, size_t
     auto debug = message->ShortDebugString();
 
     #if 1
-    sdebug() << "" << sector_address << ": <" << debug.c_str() << ">" << endl;
+    sdebug() << "" << sector_address << ": <" << debug.c_str() << ">" << " (" << serialized_size << ")" << endl;
     #else
     std::cerr << "" << sector_address << " " << debug << std::endl;
     #endif
