@@ -40,12 +40,9 @@ static size_t log_message_hook(const LogMessage *m, const char *formatted, void 
 struct Args {
     fs::path image;
     fs::path directory;
+    fs::path pb_file;
+    fs::path pb_message;
     bool log{ false };
-
-    bool is_file(std::string s) {
-        std::ifstream f(s.c_str());
-        return f.good();
-    }
 
     bool parse(int32_t argc, const char **argv) {
         std::error_code ec;
@@ -54,21 +51,68 @@ struct Args {
         for (auto i = 1; i < argc; ++i) {
             std::string arg = argv[i];
 
-            if (fs::is_regular_file(arg, ec)) {
-                image = arg;
-                good = true;
+            if (in_proto) {
+                if (fs::is_regular_file(arg, ec)) {
+                    pb_file = arg;
+                }
+                else {
+                    pb_message = arg;
+                }
+
+                if (has_pb()) {
+                    in_proto = false;
+                }
+            }
+            else {
+                if (fs::is_regular_file(arg, ec)) {
+                    image = arg;
+                    good = true;
+                }
+
+                if (fs::is_directory(arg, ec)) {
+                    directory = arg;
+                }
+
+                if (arg == "--log") {
+                    log = true;
+                }
+
+                if (arg == "--proto") {
+                    in_proto = true;
+                }
             }
 
-            if (fs::is_directory(arg, ec)) {
-                directory = arg;
-            }
-
-            if (arg == "--log") {
-                log = true;
+            if (arg == "--help") {
+                return false;
             }
         }
 
+        if (in_proto) {
+            return false;
+        }
+
         return good;
+    }
+
+    bool has_pb() const {
+        return !pb_file.empty() && !pb_message.empty();
+    }
+
+    void help() {
+        std::cerr << "Usage: " << "tool" << "[--log] <DIRECTORY> <IMAGE> --proto <PROTO-FILE> <MESSAGE-TYPE>" << std::endl;
+    }
+
+private:
+    bool in_proto{ false };
+
+    static bool is_file(std::string s) {
+        std::ifstream f(s.c_str());
+        return f.good();
+    }
+
+    static bool ends_with(std::string const &value, std::string const &ending) {
+        if (ending.size() > value.size()) return false;
+        return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
     }
 };
 
@@ -78,6 +122,7 @@ int32_t main(int32_t argc, const char **argv) {
 
     Args args;
     if (!args.parse(argc, argv)) {
+        args.help();
         return 2;
     }
 
@@ -131,14 +176,15 @@ int32_t main(int32_t argc, const char **argv) {
                 return 2;
             }
 
-            if (!args.log) {
-                RecordWalker walker("/home/jlewallen/fieldkit/data-protocol/fk-data.proto", "DataRecord");
+            if (args.has_pb()) {
+                RecordWalker walker(args.pb_file, args.pb_message);
                 LoggingVisitor visitor;
                 PhylumInputStream stream{ geometry, reinterpret_cast<uint8_t*>(ptr), opened.head().block };
 
                 if (!walker.walk(stream, visitor)) {
                     return false;
                 }
+
                 if (stream.position() > 0) {
                     sdebug() << "Done: " << stream.position() << endl;
                 }
