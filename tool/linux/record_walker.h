@@ -14,6 +14,12 @@ public:
 
 };
 
+class NoopVisitor : public RecordVisitor {
+public:
+    void message(PhylumInputStream &stream, google::protobuf::Message *message, size_t serialized_size) override;
+
+};
+
 class LoggingVisitor : public RecordVisitor {
 public:
     void message(PhylumInputStream &stream, google::protobuf::Message *message, size_t serialized_size) override;

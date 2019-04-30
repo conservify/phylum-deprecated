@@ -43,6 +43,7 @@ struct Args {
     fs::path pb_file;
     fs::path pb_message;
     bool log{ false };
+    bool walk{ false };
 
     bool parse(int32_t argc, const char **argv) {
         std::error_code ec;
@@ -71,6 +72,10 @@ struct Args {
 
                 if (fs::is_directory(arg, ec)) {
                     directory = arg;
+                }
+
+                if (arg == "--walk") {
+                    walk = true;
                 }
 
                 if (arg == "--log") {
@@ -177,11 +182,17 @@ int32_t main(int32_t argc, const char **argv) {
             }
 
             if (args.has_pb()) {
+                NoopVisitor noop;
+                LoggingVisitor logging;
+                RecordVisitor *visitor = &noop;
                 RecordWalker walker(args.pb_file, args.pb_message);
-                LoggingVisitor visitor;
                 PhylumInputStream stream{ geometry, reinterpret_cast<uint8_t*>(ptr), opened.head().block };
 
-                if (!walker.walk(stream, visitor)) {
+                if (args.log) {
+                    visitor = &logging;
+                }
+
+                if (!walker.walk(stream, *visitor)) {
                     return false;
                 }
 
@@ -219,7 +230,7 @@ int32_t main(int32_t argc, const char **argv) {
         }
     }
 
-    if (args.log) {
+    if (args.walk) {
         auto file_id = (file_id_t)FILE_ID_INVALID;
         auto file_position = (uint32_t)0;
 

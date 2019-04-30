@@ -111,6 +111,9 @@ RecordWalker::Read RecordWalker::read(ZeroCopyInputStream *ri, MessageLite *mess
     return Read::success(size);
 }
 
+void NoopVisitor::message(PhylumInputStream &stream, Message *message, size_t serialized_size) {
+}
+
 void LoggingVisitor::message(PhylumInputStream &stream, Message *message, size_t serialized_size) {
     auto sector_address = stream.address().sector(stream.geometry());
 
