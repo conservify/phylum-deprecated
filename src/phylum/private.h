@@ -3,6 +3,7 @@
 
 #ifndef ARDUINO
 #include <iostream>
+#include <iomanip>
 #endif
 
 #include <cstdint>
@@ -373,7 +374,7 @@ inline ostreamtype& operator<<(ostreamtype& os, const SectorAddress &addr) {
     if (!addr.valid()) {
         return os << "<invalid>";
     }
-    return os << addr.block << ":" << addr.sector;
+    return os.printf("%" PRId32 ":%02d", addr.block, addr.sector);
 }
 
 inline ostreamtype& operator<<(ostreamtype& os, const Geometry &g) {
@@ -381,7 +382,7 @@ inline ostreamtype& operator<<(ostreamtype& os, const Geometry &g) {
 }
 
 inline ostreamtype& operator<<(ostreamtype& os, const BlockAddress &addr) {
-    return os << addr.block << ":" << addr.position;
+    return os.printf("%" PRId32 ":%04" PRId32, addr.block, addr.position);
 }
 
 inline ostreamtype& operator<<(ostreamtype& os, const BlockType &t) {
@@ -410,7 +411,7 @@ inline std::ostream& operator<<(std::ostream& os, const SectorAddress &addr) {
     if (!addr.valid()) {
         return os << "<invalid>";
     }
-    return os << addr.block << ":" << addr.sector;
+    return os << addr.block << ":" << std::setfill('0') << std::setw(2) << addr.sector;
 }
 
 inline std::ostream& operator<<(std::ostream& os, const Geometry &g) {
@@ -418,7 +419,7 @@ inline std::ostream& operator<<(std::ostream& os, const Geometry &g) {
 }
 
 inline std::ostream& operator<<(std::ostream& os, const BlockAddress &addr) {
-    return os << addr.block << ":" << addr.position;
+    return os << addr.block << ":" << std::setfill('0') << std::setw(4) << addr.position;
 }
 
 inline std::ostream& operator<<(std::ostream& os, const BlockType &t) {
