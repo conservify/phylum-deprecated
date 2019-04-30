@@ -27,6 +27,7 @@ private:
     uint32_t length_{ 0 };
     uint32_t version_{ 0 };
     uint32_t blocks_in_file_{ 0 };
+    AllocatedBlock pending_allocation_;
     OpenMode mode_{ OpenMode::Read };
     BlockAddress head_;
     BlockAddress beg_;

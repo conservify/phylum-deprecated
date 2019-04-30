@@ -340,25 +340,26 @@ BlockedFile::SavedSector BlockedFile::save_sector(bool flushing) {
 
     // If this is the tail sector in the block write the tail section that links
     // to the following block.
-    auto linked = BLOCK_INDEX_INVALID;
     auto writing_tail_sector = tail_sector();
     auto following = head_;
     auto allocated = AllocatedBlock{ };
 
     if (writing_tail_sector) {
-        if (flushing) {
+        if (!pending_allocation_.valid()) {
             // Check to see if we're at the end of our allocated space.
-            allocated = allocate();
-            // assert(allocated.valid());
-            linked = allocated.block;
+            pending_allocation_ = allocate();
+            if (pending_allocation_.valid()) {
+                assert(initialize(pending_allocation_, head_.block).valid());
+            }
         }
 
         FileBlockTail tail;
         tail.sector.bytes = buffpos_;
         tail.bytes_in_block = bytes_in_block_;
-        tail.block.linked_block = linked;
+        tail.block.linked_block = pending_allocation_.block;
         memcpy(tail_info<FileBlockTail>(buffer_), &tail, sizeof(FileBlockTail));
-        following = { linked, 0 };
+        following = { pending_allocation_.block, 0 };
+        allocated = pending_allocation_;
     }
     else {
         FileSectorTail tail;
@@ -373,7 +374,7 @@ BlockedFile::SavedSector BlockedFile::save_sector(bool flushing) {
     }
 
     if (!storage_->write(head_, buffer_, sizeof(buffer_))) {
-        return SavedSector{ 0, head_, allocated };
+        return SavedSector{ 0, head_, pending_allocation_ };
     }
 
     if (flushing) {
@@ -381,6 +382,7 @@ BlockedFile::SavedSector BlockedFile::save_sector(bool flushing) {
         // writing partial sectors in the future we don't see old data from
         // older blocks, even though it shouldn't cause a huge problem.
         memset(buffer_, 0, sizeof(buffer_));
+        pending_allocation_ = { };
     }
 
     return SavedSector{ buffpos_, following, allocated };
@@ -555,6 +557,8 @@ bool BlockedFile::exists() {
 }
 
 BlockAddress BlockedFile::initialize(AllocatedBlock allocated, block_index_t previous) {
+    assert(allocated.valid());
+
     FileBlockHead head;
 
     head.fill();

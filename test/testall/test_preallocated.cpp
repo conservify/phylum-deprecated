@@ -691,7 +691,7 @@ TEST_F(PreallocatedSuite, MultipleWritesWriteSpanningSectorIntoLastSectorOfBlock
 
     auto end_address1 = file1.head();
 
-    if (false) {
+    if (true) {
         sdebug() << "Dumping: " << end_address1 << endl;
         storage_.dump(end_address1, 512);
     }
@@ -707,12 +707,10 @@ TEST_F(PreallocatedSuite, MultipleWritesWriteSpanningSectorIntoLastSectorOfBlock
 
     ASSERT_NE(end_address1, end_address2);
 
-    sdebug() << " " << end_address1 << " " << end_address2 << endl;
-
     file2.write(small, sizeof(small));
     file2.write(large, sizeof(large));
 
-    if (false) {
+    if (true) {
         sdebug() << "Dumping: " << end_address1 << endl;
         storage_.dump(end_address1, 512);
     }
