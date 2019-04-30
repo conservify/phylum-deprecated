@@ -182,38 +182,14 @@ int32_t main(int32_t argc, const char **argv) {
             }
 
             if (args.has_pb()) {
-                auto fn = std::string{ fd->name } + ".log";
-
-                std::ofstream file;
-                file.open(fn);
-
                 NoopVisitor noop_visitor;
                 LoggingVisitor logging_visitor;
-                StreamVisitor stream_visitor(file);
                 RecordVisitor *visitor = &noop_visitor;
                 RecordWalker walker(args.pb_file, args.pb_message);
                 PhylumInputStream stream{ geometry, reinterpret_cast<uint8_t*>(ptr), opened.head().block };
 
                 if (args.log) {
                     visitor = &logging_visitor;
-                }
-
-                auto name = std::string{ fd->name };
-                if (name == "data.fk") {
-                    auto addr1 = BlockAddress{ 593151, 14*512 };
-                    auto addr2 = BlockAddress{ 593151, 15*512 };
-                    auto size1 = 0;
-                    auto size2 = 0;
-
-                    for (auto i = 0; i < 3; ++i) {
-                        size1 = walker.single(storage.ptr(addr1));
-                        size2 = walker.single(storage.ptr(addr2));
-
-                        addr1 = addr1.advance(size1);
-                        addr2 = addr2.advance(size2);
-                    }
-
-                    break;
                 }
 
                 if (!walker.walk(stream, *visitor)) {
@@ -223,8 +199,6 @@ int32_t main(int32_t argc, const char **argv) {
                 if (stream.position() > 0) {
                     sdebug() << "Done: " << stream.position() << endl;
                 }
-
-                file.close();
             }
 
             if (!args.directory.empty() && opened.size() > 0) {
