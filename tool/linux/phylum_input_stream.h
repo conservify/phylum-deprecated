@@ -37,7 +37,7 @@ private:
     phylum::BlockAddress address_;
     uint8_t *everything_;
     uint8_t *iter_;
-    uint32_t position_;
+    uint64_t position_;
     uint32_t sector_remaining_;
 
     struct Block {

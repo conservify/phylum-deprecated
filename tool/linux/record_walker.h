@@ -3,6 +3,7 @@
 #include <string>
 
 #include <google/protobuf/descriptor.h>
+#include <google/protobuf/descriptor.pb.h>
 #include <google/protobuf/dynamic_message.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 
@@ -26,10 +27,26 @@ public:
 
 };
 
+class StreamVisitor : public RecordVisitor {
+private:
+    std::ostream &stream_;
+
+public:
+    StreamVisitor(std::ostream &stream) : stream_(stream) {
+    }
+
+public:
+    void message(PhylumInputStream &stream, google::protobuf::Message *message, size_t serialized_size) override;
+
+};
+
 class RecordWalker {
 private:
+    google::protobuf::DescriptorPool pool;
+    google::protobuf::DynamicMessageFactory factory;
     std::string proto_file_;
     std::string message_name_;
+    std::string full_message_name_;
 
 public:
     struct Read {
@@ -54,5 +71,9 @@ public:
 public:
     bool walk(PhylumInputStream &stream, RecordVisitor &visitor);
     Read read(google::protobuf::io::ZeroCopyInputStream *ri, google::protobuf::MessageLite *message);
+    uint32_t single(uint8_t *ptr);
+
+private:
+    google::protobuf::Message *get_message();
 
 };

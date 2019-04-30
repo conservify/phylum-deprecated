@@ -77,4 +77,3 @@ int64 PhylumInputStream::ByteCount() const {
     assert(false);
     return 0;
 }
-
