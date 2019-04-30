@@ -1,6 +1,6 @@
 BUILD ?= $(abspath build)
 
-all: build test
+all: build
 
 automated: build test
 
