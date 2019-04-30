@@ -60,17 +60,27 @@ bool RecordWalker::walk(PhylumInputStream &stream, RecordVisitor &visitor) {
 
     while (true) {
         auto read_details = read(&stream, mutable_msg);
+        auto sector_address = stream.address().sector(stream.geometry());
+
         if (read_details.is_eos) {
             break;
         }
         else if (read_details.is_incomplete) {
-            sdebug() << "Incomplete message @ " << stream.position() << " size = " << read_details.size << " bytes" << endl;
+            #if 1
+            sdebug() << "" << sector_address << ": incomplete message @ " << stream.position() << " size = " << read_details.size << " bytes" << endl;
+            #else
+            std::cerr << "" << sector_address << ": incomplete message @ " << stream.position() << " size = " << read_details.size << " bytes" << std::endl;
+            #endif
         }
         else if (!read_details) {
-            sdebug() << "Failed message @ " << stream.position() << " size = " << read_details.size << " bytes" << endl;
+            #if 1
+            sdebug() << "" << sector_address << ": failed message @ " << stream.position() << " size = " << read_details.size << " bytes" << endl;
+            #else
+            std::cerr << "" << sector_address << ": failed message @ " << stream.position() << " size = " << read_details.size << " bytes" << std::endl;
+            #endif
         }
         else {
-            visitor.message(mutable_msg, read_details.size);
+            visitor.message(stream, mutable_msg, read_details.size);
         }
     }
 
@@ -81,6 +91,7 @@ RecordWalker::Read RecordWalker::read(ZeroCopyInputStream *ri, MessageLite *mess
     CodedInputStream cis(ri);
 
     uint32_t size;
+
     if (!cis.ReadVarint32(&size)) {
         return Read::eos();
     }
@@ -100,6 +111,14 @@ RecordWalker::Read RecordWalker::read(ZeroCopyInputStream *ri, MessageLite *mess
     return Read::success(size);
 }
 
-void LoggingVisitor::message(Message *message, size_t serialized_size) {
-    // std::cout << "Message<" << ">" << std::endl;
+void LoggingVisitor::message(PhylumInputStream &stream, Message *message, size_t serialized_size) {
+    auto sector_address = stream.address().sector(stream.geometry());
+
+    auto debug = message->ShortDebugString();
+
+    #if 1
+    sdebug() << "" << sector_address << ": <" << debug.c_str() << ">" << endl;
+    #else
+    std::cerr << "" << sector_address << " " << debug << std::endl;
+    #endif
 }

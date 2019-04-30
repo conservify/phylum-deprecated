@@ -24,6 +24,14 @@ public:
         return position_;
     }
 
+    phylum::Geometry geometry() const {
+        return geometry_;
+    }
+
+    phylum::BlockAddress address() const {
+        return address_;
+    }
+
 private:
     phylum::Geometry geometry_;
     phylum::BlockAddress address_;

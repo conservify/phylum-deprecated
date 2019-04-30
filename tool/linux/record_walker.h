@@ -10,13 +10,13 @@
 
 class RecordVisitor {
 public:
-    virtual void message(google::protobuf::Message *message, size_t serialized_size) = 0;
+    virtual void message(PhylumInputStream &stream, google::protobuf::Message *message, size_t serialized_size) = 0;
 
 };
 
 class LoggingVisitor : public RecordVisitor {
 public:
-    void message(google::protobuf::Message *message, size_t serialized_size) override;
+    void message(PhylumInputStream &stream, google::protobuf::Message *message, size_t serialized_size) override;
 
 };
 
