@@ -3,6 +3,7 @@
 
 #include "phylum/phylum.h"
 #include "phylum/file_system.h"
+#include "phylum/blake2b.h"
 #include "backends/linux_memory/linux_memory.h"
 #include "utilities.h"
 #include "lorem.h"
@@ -12,6 +13,8 @@ namespace phylum {
 using block_index_t = uint32_t;
 using block_offset_t = uint32_t;
 using SequenceNumber = uint32_t;
+
+constexpr size_t HashSize = 32;
 
 class BlockOperations;
 
@@ -100,9 +103,6 @@ inline ostreamtype& operator<<(ostreamtype& os, const BlockHead2 &b) {
     }
     }
 }
-
-
-constexpr size_t HashSize = 32;
 
 class BlockOperations;
 
