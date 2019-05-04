@@ -4,6 +4,6 @@ conservifyProperties()
 
 timestamps {
     node () {
-        conservifyBuild(name: 'phylum')
+        conservifyBuild(name: 'phylum', test: true)
     }
 }
