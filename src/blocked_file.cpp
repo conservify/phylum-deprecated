@@ -62,6 +62,7 @@ bool BlockedFile::seek(BlockAddress from, uint32_t position_at_from, uint64_t de
     #endif
         sdebug() << "Seek: length=" << length_ << " position=" << position_ << " desired=" << desired <<
             " endp=" << position_at_from << " info=" << info.bytes << " head=" << head_ << " seek_offset=" << seek_offset_ << endl;
+        sdebug() << "SeekInfo: bytes=" << info.bytes << " bytes_in_block=" << info.bytes_in_block << " addr=" << info.address << " blocks=" << info.blocks << endl;
     }
 
     return success;
@@ -127,6 +128,12 @@ BlockedFile::SeekInfo BlockedFile::seek(BlockAddress from, uint32_t position_at_
             }
             else {
                 if (scanned_block) {
+                    if (desired < tail.sector.bytes) {
+                        bytes += desired;
+                        bytes_in_block += desired;
+                        addr.add(desired);
+                        return { addr, version, bytes, bytes_in_block, blocks };
+                    }
                     break;
                 }
                 scanned_block = true;

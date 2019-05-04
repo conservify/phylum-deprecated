@@ -717,3 +717,31 @@ TEST_F(PreallocatedSuite, MultipleWritesWriteSpanningSectorIntoLastSectorOfBlock
 
     storage_.log().logging(false);
 }
+
+TEST_F(PreallocatedSuite, SeekingIntoTailSectorOfBlock) {
+    FileDescriptor data_file = { "data.fk", 0 };
+    FileDescriptor* files[] = { &data_file };
+    FileLayout<1> layout{ storage_ };
+
+    ASSERT_TRUE(layout.format(files));
+
+    auto position = 0;
+    auto file = layout.open(data_file, OpenMode::Write);
+
+    PatternHelper helper;
+    while (true) {
+        helper.write(file, 1);
+
+        auto addr = file.head();
+        if (addr.tail_sector(geometry_)) {
+            if (position != 0) {
+                break;
+            }
+            position = file.tell();
+        }
+    }
+    file.close();
+
+    auto reading = layout.open(data_file);
+    ASSERT_TRUE(reading.seek(position));
+}
