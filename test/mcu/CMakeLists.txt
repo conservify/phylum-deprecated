@@ -13,7 +13,14 @@ target_link_libraries(phylum-mcu-test arduino-logging)
 find_package(SPI)
 target_link_libraries(phylum-mcu-test SPI)
 
+find_package(Wire)
+target_link_libraries(phylum-mcu-test Wire)
+
+find_package(SerialFlash)
+target_link_libraries(phylum-mcu-test SerialFlash)
+
 add_definitions(-DPHYLUM_DEBUG=0)
+add_definitions(-DPHYLUM_ENABLE_SERIAL_FLASH)
 
 target_include_directories(phylum-mcu-test PUBLIC ./ ../../src
   ../../src/backends/arduino_sd ../../src/backends/arduino_serial_flash)

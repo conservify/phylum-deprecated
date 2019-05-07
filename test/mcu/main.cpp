@@ -17,10 +17,26 @@ using Log = SimpleLog<LogName>;
 void setup() {
     Serial.begin(115200);
 
-    Log::info("Free Memory: %lu", free_memory());
-
     while (!Serial) {
         delay(10);
+    }
+
+    Log::info("Free Memory: %lu", free_memory());
+
+    auto board = &sonar_board;
+
+    board->disable_everything();
+    delay(100);
+    board->enable_everything();
+    delay(100);
+
+    Log::info("Ready");
+
+    NoopStorageBackendCallbacks callbacks;
+    ArduinoSerialFlashBackend storage{ callbacks };
+
+    if (!storage.initialize(board->flash_cs(), 2048)) {
+        Log::error("Error initializing Flash");
     }
 }
 

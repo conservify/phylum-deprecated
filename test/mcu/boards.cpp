@@ -1,4 +1,19 @@
+#include <Arduino.h>
+#include <SPI.h>
+#include <Wire.h>
+#include <wiring_private.h>
+
 #include "boards.h"
+
+TwoWire Wire4and3{ &sercom2, 4, 3 };
+
+extern "C" {
+
+void SERCOM2_Handler(void) {
+    Wire4and3.onService();
+}
+
+}
 
 constexpr uint8_t FK_SONAR_PIN_PERIPHERALS_ENABLE = 8;
 constexpr uint8_t FK_SONAR_PIN_FLASH_CS = 6;
@@ -65,4 +80,107 @@ CoreBoard board{
     }
 };
 
+void Board::disable_cs(uint8_t pin) {
+    pinMode(pin, INPUT);
+}
 
+void Board::enable_cs(uint8_t pin) {
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, HIGH);
+}
+
+void Board::low(uint8_t pin) {
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, LOW);
+}
+
+void Board::high(uint8_t pin) {
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, HIGH);
+}
+
+SpiWrapper Board::spi() {
+    return SpiWrapper::spi();
+}
+
+TwoWireWrapper Board::i2c1() {
+    return TwoWireWrapper::i2c1();
+}
+
+TwoWireWrapper Board::i2c2() {
+    return TwoWireWrapper::i2c2();
+}
+
+SpiWrapper SpiWrapper::spi() {
+    return SpiWrapper { &SPI };
+}
+
+void SpiWrapper::begin() {
+    reinterpret_cast<SPIClass*>(ptr_)->begin();
+}
+
+void SpiWrapper::end() {
+    reinterpret_cast<SPIClass*>(ptr_)->end();
+
+    pinMode(PIN_SPI_MISO, INPUT);
+    pinMode(PIN_SPI_MOSI, INPUT);
+    pinMode(PIN_SPI_SCK, INPUT);
+}
+
+TwoWireWrapper TwoWireWrapper::i2c1() {
+    return { &Wire };
+}
+
+TwoWireWrapper TwoWireWrapper::i2c2() {
+    return { &Wire4and3 };
+}
+
+void TwoWireWrapper::begin() {
+    auto bus = reinterpret_cast<TwoWire*>(ptr_);
+
+    bus->begin();
+
+    if (bus == &Wire4and3) {
+        pinPeripheral(4, PIO_SERCOM_ALT);
+        pinPeripheral(3, PIO_SERCOM_ALT);
+    }
+}
+
+void TwoWireWrapper::end() {
+    auto bus = reinterpret_cast<TwoWire*>(ptr_);
+
+    bus->end();
+}
+
+CoreBoard::CoreBoard(CoreBoardConfig config) : Board(config.config), config_(config) {
+}
+
+void CoreBoard::disable_everything() {
+    Board::disable_everything();
+    low(config_.gps_enable);
+    low(config_.modules_enable);
+    low(config_.wifi_enable);
+}
+
+void CoreBoard::enable_everything() {
+    Board::enable_everything();
+    high(config_.wifi_enable);
+    high(config_.modules_enable);
+    high(config_.gps_enable);
+}
+
+void CoreBoard::disable_gps() {
+    low(config_.gps_enable);
+}
+
+void CoreBoard::enable_gps() {
+    high(config_.gps_enable);
+}
+
+void CoreBoard::disable_wifi() {
+    low(config_.wifi_enable);
+}
+
+void CoreBoard::enable_wifi() {
+    high(config_.wifi_enable);
+}
