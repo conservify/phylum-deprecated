@@ -1,6 +1,9 @@
 #ifndef __PHYLUM_INODES_H_INCLUDED
 #define __PHYLUM_INODES_H_INCLUDED
 
+#include <cstring>
+#include <cassert>
+
 #include <phylum/backend.h>
 #include <phylum/block_alloc.h>
 #include <phylum/persisted_tree.h>

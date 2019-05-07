@@ -1,5 +1,6 @@
 #include "phylum/file_index.h"
 #include "phylum/layout.h"
+#include "phylum/caching_storage.h"
 
 namespace phylum {
 
