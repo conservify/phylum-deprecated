@@ -78,7 +78,7 @@ public:
 
 FileSystem::FileSystem(StorageBackend &storage, BlockManager &allocator) :
     storage_(&storage), allocator_(&allocator), sbm_{ storage, allocator },
-    nodes_{ storage, allocator }, journal_(storage, allocator),
+    nodes_{ storage, allocator },
     fpm_(storage, allocator) {
 }
 
@@ -104,10 +104,6 @@ bool FileSystem::format() {
 
     auto &sb = sbm_.block();
 
-    if (!journal_.format(sb.journal)) {
-        return false;
-    }
-
     if (!fpm_.format(sb.free)) {
         return false;
     }
@@ -125,10 +121,6 @@ bool FileSystem::mount(bool wipe) {
     }
 
     auto &sb = sbm_.block();
-
-    if (!journal_.locate(sb.journal)) {
-        return false;
-    }
 
     if (!fpm_.locate(sb.free)) {
         return false;

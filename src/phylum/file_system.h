@@ -7,7 +7,6 @@
 #include "phylum/crc.h"
 #include "phylum/inodes.h"
 #include "phylum/backend_nodes.h"
-#include "phylum/journal.h"
 #include "phylum/free_pile.h"
 
 namespace phylum {
@@ -126,7 +125,6 @@ private:
     TreeFileSystemSuperBlockManager sbm_;
     StorageBackendNodeStorage<NodeType> nodes_;
     BlockAddress tree_addr_;
-    Journal journal_;
     FreePileManager fpm_;
 
 public:
@@ -143,10 +141,6 @@ public:
 
     TreeFileSystemSuperBlock &sb() {
         return sbm_.block();
-    }
-
-    Journal &journal() {
-        return journal_;
     }
 
     FreePileManager &fpm() {

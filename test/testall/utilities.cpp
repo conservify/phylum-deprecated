@@ -3,7 +3,6 @@
 #include "phylum/persisted_tree.h"
 #include "phylum/node_serializer.h"
 #include "phylum/backend_nodes.h"
-#include "phylum/journal.h"
 #include "phylum/layout.h"
 
 std::map<uint64_t, uint64_t> random_data() {
@@ -153,21 +152,6 @@ void BlockHelper::dump(block_index_t block) {
         break;
     }
     case BlockType::SuperBlock: {
-        break;
-    }
-    case BlockType::Journal: {
-        auto layout = get_journal_layout(*storage_, empty_allocator, BlockAddress{ block, SectorSize });
-        while (layout.walk_single_block(sizeof(JournalEntry))) {
-            JournalEntry entry;
-            storage_->read(layout.address(), &entry, sizeof(entry));
-            if (!entry.valid()) {
-                break;
-            }
-
-            sdebug() << "  " << (int32_t)entry.type;
-
-            layout.add(sizeof(JournalEntry));
-        }
         break;
     }
     case BlockType::Leaf: {
