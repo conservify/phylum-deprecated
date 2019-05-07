@@ -30,13 +30,12 @@ void setup() {
     board->enable_everything();
     delay(100);
 
-    Log::info("Ready");
-
     NoopStorageBackendCallbacks callbacks;
     ArduinoSerialFlashBackend storage{ callbacks };
 
-    if (!storage.initialize(board->flash_cs(), 2048)) {
+    if (!storage.initialize(board->flash_cs(), 2048, 0)) {
         Log::error("Error initializing Flash");
+        return;
     }
 }
 

@@ -5,8 +5,6 @@
 #include "phylum/block_alloc.h"
 #include "phylum/visitor.h"
 
-#include "arduino_serial_flash.h"
-
 namespace phylum {
 
 class SerialFlashAllocator : public ReusableBlockAllocator {

@@ -16,7 +16,7 @@ static inline uint32_t get_sf_address(const Geometry &g, BlockAddress a) {
 ArduinoSerialFlashBackend::ArduinoSerialFlashBackend(StorageBackendCallbacks &callbacks) : callbacks_(&callbacks) {
 }
 
-bool ArduinoSerialFlashBackend::initialize(uint8_t cs, sector_index_t sector_size) {
+bool ArduinoSerialFlashBackend::initialize(uint8_t cs, sector_index_t sector_size, uint32_t maximum_blocks) {
     if (!serial_flash_.begin(cs)) {
         return false;
     }
@@ -34,9 +34,9 @@ bool ArduinoSerialFlashBackend::initialize(uint8_t cs, sector_index_t sector_siz
     auto pages_per_block = (page_index_t)(block_size / (sectors_per_page * sector_size));
     auto number_of_blocks = (block_index_t)(capacity / block_size);
 
-    if (number_of_blocks > SerialFlashAllocator::MaximumBlocks) {
-        sdebug() << "Limited number of blocks to " << SerialFlashAllocator::MaximumBlocks << " from " << number_of_blocks << endl;
-        number_of_blocks = SerialFlashAllocator::MaximumBlocks;
+    if (maximum_blocks > 0 && number_of_blocks > maximum_blocks) {
+        sdebug() << "Limited number of blocks to " << maximum_blocks << " from " << number_of_blocks << endl;
+        number_of_blocks = maximum_blocks;
     }
 
     geometry_ = Geometry{ number_of_blocks, pages_per_block, sectors_per_page, sector_size };

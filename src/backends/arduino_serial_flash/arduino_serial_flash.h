@@ -11,6 +11,8 @@
 #include <phylum/private.h>
 #include <phylum/backend.h>
 
+#include "serial_flash_allocator.h"
+
 namespace phylum {
 
 class StorageBackendCallbacks {
@@ -37,7 +39,7 @@ public:
     ArduinoSerialFlashBackend(StorageBackendCallbacks &callbacks);
 
 public:
-    bool initialize(uint8_t cs, sector_index_t sector_size = 512);
+    bool initialize(uint8_t cs, sector_index_t sector_size = 512, uint32_t maximum_blocks = SerialFlashAllocator::MaximumBlocks);
     void geometry(Geometry &g) {
         geometry_ = g;
     }
