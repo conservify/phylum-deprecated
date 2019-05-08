@@ -32,6 +32,8 @@ public:
         return address_;
     }
 
+    void skip_sector();
+
 private:
     phylum::Geometry geometry_;
     phylum::BlockAddress address_;

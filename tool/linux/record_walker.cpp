@@ -57,28 +57,62 @@ google::protobuf::Message *RecordWalker::get_message() {
 }
 
 bool RecordWalker::walk(PhylumInputStream &stream, RecordVisitor &visitor) {
+    auto g = stream.geometry();
     auto message = get_message();
     assert(message != nullptr);
 
     while (true) {
         auto read_details = read(&stream, message);
         auto stream_address = stream.address();
-        auto sector_address = stream_address.sector(stream.geometry());
-        auto position = stream_address.position;
+        auto sector_address = stream_address.sector(g);
+        auto block_position = stream_address.position;
+        auto position = stream_address.block * g.block_size() + stream_address.position;
 
         if (read_details.is_eos) {
             break;
         }
         else if (read_details.is_incomplete) {
-            std::cerr << sector_address << " [" << std::setfill(' ') << std::setw(4) << position <<
-                "]: incomplete message @ " << stream.position() << " size = " << read_details.size << " bytes" << std::endl;
+            auto first = corruption_at_ == 0;
+            std::cerr << sector_address << " [" << std::setfill(' ') << std::setw(4) << block_position << "]: " <<
+                "(" << (first ? "corruption-NEW" : "corruption-OLD") << ") incomplete @ " << position <<
+                " size = " << read_details.size << " bytes" << std::endl;
+            if (first) {
+                corruption_at_ = position;
+            }
+            stream.skip_sector();
         }
         else if (!read_details) {
-            std::cerr << sector_address << " [" << std::setfill(' ') << std::setw(4) << position <<
-                "]: failed message @ " << stream.position() << " size = " << read_details.size << " bytes" << std::endl;
+            auto first = corruption_at_ == 0;
+            std::cerr << sector_address << " [" << std::setfill(' ') << std::setw(4) << block_position << "]: " <<
+                "(" << (first ? "corruption-NEW" : "corruption-OLD") << ") failed @ " << position <<
+                " size = " << read_details.size << " bytes" << std::endl;
+            if (first) {
+                corruption_at_ = position;
+            }
+            stream.skip_sector();
         }
         else {
-            visitor.message(stream, message, read_details.size);
+            auto valid = read_details.size > 3; // NOTE: HACK
+            if (!valid) {
+                auto first = corruption_at_ == 0;
+                std::cerr << sector_address << " [" << std::setfill(' ') << std::setw(4) << block_position << "]: " <<
+                    "(" << (first ? "corruption-NEW" : "corruption-OLD") << ") failed @ " << position <<
+                    " size = " << read_details.size << " bytes" << std::endl;
+                if (first) {
+                    corruption_at_ = position;
+                }
+                stream.skip_sector();
+            }
+            else {
+                if (corruption_at_ > 0) {
+                    std::cerr << sector_address << " [" << std::setfill(' ') << std::setw(4) << block_position << "]: " <<
+                        "(corruption-END) skipped to " << position << ", losing " << ((int64_t)position - corruption_at_) <<
+                        " bytes (began = " << corruption_at_ << ")" << std::endl;
+                }
+                message_at_ = position;
+                corruption_at_ = 0;
+                visitor.message(stream, message, read_details.size);
+            }
         }
 
         message->Clear();

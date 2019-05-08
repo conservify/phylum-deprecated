@@ -9,6 +9,13 @@ PhylumInputStream::PhylumInputStream(Geometry geometry, uint8_t *everything, blo
     : geometry_(geometry), address_{ block, 0 }, everything_(everything), iter_(nullptr), position_(0), sector_remaining_(0) {
 }
 
+void PhylumInputStream::skip_sector() {
+    auto &g = geometry_;
+    previous_block_ = { };
+    address_.position += address_.remaining_in_sector(g);
+    sector_remaining_ = 0;
+}
+
 bool PhylumInputStream::Next(const void **data, int *size) {
     auto &g = geometry_;
 
@@ -63,6 +70,7 @@ bool PhylumInputStream::Next(const void **data, int *size) {
 }
 
 void PhylumInputStream::BackUp(int c) {
+    assert(previous_block_.ptr != nullptr);
     sector_remaining_ = c;
     iter_ = previous_block_.ptr + (previous_block_.size - c);
     position_ -= c;

@@ -47,6 +47,8 @@ private:
     std::string proto_file_;
     std::string message_name_;
     std::string full_message_name_;
+    uint64_t message_at_{ 0 };
+    uint64_t corruption_at_{ 0 };
 
 public:
     struct Read {
