@@ -5,8 +5,10 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#if !defined(ARDUINO)
 #include <iomanip>
 #include <iostream>
+#endif
 
 #include "phylum/keys.h"
 
@@ -290,6 +292,7 @@ public:
         accept(root, depth, visitor);
     }
 
+    #if !defined(ARDUINO)
     void dump(std::ostream &os, Node *node, uint32_t level, bool summarize) {
         if (level > 0) {
             os << "Level " << level << " " << node;
@@ -336,6 +339,7 @@ public:
             dump(os, root, depth, summarize);
         }
     }
+    #endif
 
 public:
     // Used when debugging
