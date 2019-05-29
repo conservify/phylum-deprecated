@@ -71,6 +71,7 @@ public:
     bool read(BlockAddress addr, void *d, size_t n) override;
     bool write(BlockAddress addr, void *d, size_t n) override;
     void dump(BlockAddress addr, size_t n);
+    bool eraseAll() override;
 
 };
 

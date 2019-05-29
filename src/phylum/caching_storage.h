@@ -35,6 +35,10 @@ public:
         return target.erase(block);
     }
 
+    virtual bool eraseAll() override {
+        return target.eraseAll();
+    }
+
     virtual bool read(BlockAddress addr, void *d, size_t n) override;
 
     virtual bool write(BlockAddress addr, void *d, size_t n) override;

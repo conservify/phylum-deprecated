@@ -31,6 +31,7 @@ public:
     bool erase(block_index_t block) override;
     bool read(BlockAddress addr, void *d, size_t n) override;
     bool write(BlockAddress addr, void *d, size_t n) override;
+    bool eraseAll() override;
 
 };
 

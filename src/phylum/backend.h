@@ -14,6 +14,7 @@ public:
     virtual bool erase(block_index_t block) = 0;
     virtual bool read(BlockAddress addr, void *d, size_t n) = 0;
     virtual bool write(BlockAddress addr, void *d, size_t n) = 0;
+    virtual bool eraseAll() = 0;
 
 };
 

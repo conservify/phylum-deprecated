@@ -78,6 +78,10 @@ void LinuxMemoryBackend::geometry(Geometry g) {
     geometry_ = g;
 }
 
+bool LinuxMemoryBackend::eraseAll() {
+    return false;
+}
+
 bool LinuxMemoryBackend::erase(block_index_t block) {
     #if defined(PHYLUM_READ_ONLY)
     assert(false);

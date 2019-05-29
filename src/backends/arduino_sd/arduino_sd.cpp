@@ -46,6 +46,10 @@ void ArduinoSdBackend::geometry(Geometry g) {
     geometry_ = g;
 }
 
+bool ArduinoSdBackend::eraseAll() {
+    return false;
+}
+
 bool ArduinoSdBackend::erase(block_index_t block) {
     #if defined(PHYLUM_READ_ONLY)
     assert(false);
