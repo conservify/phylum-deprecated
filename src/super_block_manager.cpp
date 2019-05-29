@@ -97,6 +97,7 @@ bool SuperBlockManager::find_link(block_index_t block, SuperBlockLink &found, Se
         SectorAddress addr{ block, s };
 
         if (!read(addr, link)) {
+            sdebug() << "Read failed: " << addr << endl;
             return false;
         }
 
@@ -137,6 +138,7 @@ bool SuperBlockManager::create(MinimumSuperBlock &sb, size_t size, std::function
         assert(block != BLOCK_INDEX_INVALID);
 
         if (!storage_->erase(block)) {
+            sdebug() << "Erase failed: " << block << endl;
             return false;
         }
 
@@ -148,12 +150,15 @@ bool SuperBlockManager::create(MinimumSuperBlock &sb, size_t size, std::function
         }
         else {
             if (!write({ block, SuperBlockStartSector }, link)) {
+                sdebug() << "Write failed: " << block << endl;
                 return false;
             }
         }
 
         link.chained_block = block;
         link.header.timestamp--;
+
+        sdebug() << "Write block: " << block << endl;
     }
 
     // Overwrite both so an older one doesn't confuse us.
@@ -161,24 +166,37 @@ bool SuperBlockManager::create(MinimumSuperBlock &sb, size_t size, std::function
         link.header.type = BlockType::Anchor;
 
         if (!storage_->erase(anchor)) {
+            sdebug() << "Erase failed: " << anchor << endl;
             return false;
         }
 
         if (!write({ anchor, SuperBlockStartSector }, link)) {
+            sdebug() << "Write failed: " << anchor << endl;
             return false;
         }
 
         link.header.timestamp--;
+
+        sdebug() << "Write anchor: " << anchor << endl;
     }
 
     update();
 
     SectorAddress addr = { super_block_block, SuperBlockStartSector };
     if (!storage_->write({ storage_->geometry(), addr, 0 }, &sb, size)) {
+        sdebug() << "Write failed: " << addr << endl;
         return false;
     }
 
-    return locate(sb, size);
+    sdebug() << "Create done, locating: " << addr << endl;
+    if (locate(sb, size)) {
+        return true;
+    }
+
+    sdebug() << "Yikes, erasing everything." << endl;
+    storage_->eraseAll();
+    sdebug() << "Done." << endl;
+    return false;
 }
 
 bool SuperBlockManager::rollover(SectorAddress addr, SectorAddress &relocated, PendingWrite pending) {
