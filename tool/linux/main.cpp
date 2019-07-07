@@ -33,7 +33,7 @@ uint64_t get_file_size(const char* filename) {
     return st.st_size;
 }
 
-static size_t log_message_hook(const LogMessage *m, const char *formatted, void *arg) {
+static size_t log_message_hook(const LogMessage *m, const char *fstring, va_list args, void *arg) {
     return 0;
 }
 
