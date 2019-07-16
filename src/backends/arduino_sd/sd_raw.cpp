@@ -7,24 +7,28 @@
 #include "sd_raw.h"
 #include "sd_raw_internal.h"
 
+#if !defined(SD_SPI)
+#define SD_SPI SPI
+#endif
+
 uint8_t sd_raw_cs_high(sd_raw_t *sd) {
     digitalWrite(sd->cs, HIGH);
-    SPI.endTransaction();
+    SD_SPI.endTransaction();
     return true;
 }
 
 uint8_t sd_raw_cs_low(sd_raw_t *sd) {
-    SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
+    SD_SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
     digitalWrite(sd->cs, LOW);
     return true;
 }
 
 static uint8_t sd_raw_spi_read() {
-    return SPI.transfer(0xff);
+    return SD_SPI.transfer(0xff);
 }
 
 static uint8_t sd_raw_spi_write(uint8_t value) {
-    return SPI.transfer(value);
+    return SD_SPI.transfer(value);
 }
 
 uint8_t sd_raw_flush(sd_raw_t *sd, uint16_t timeoutMs) {
@@ -85,15 +89,15 @@ uint8_t sd_raw_error(sd_raw_t *sd, uint32_t error) {
 }
 
 static uint8_t sd_raw_spi_configure() {
-    SPI.begin();
-    SPI.setClockDivider(255);
+    SD_SPI.begin();
+    SD_SPI.setClockDivider(255);
 
     // Card takes 74 clock cycles to start up.
     for (uint8_t i = 0; i < 10; i++) {
-        SPI.transfer(0xff);
+        SD_SPI.transfer(0xff);
     }
 
-    SPI.setClockDivider(SPI_FULL_SPEED);
+    SD_SPI.setClockDivider(SPI_FULL_SPEED);
 
     return true;
 }
