@@ -59,7 +59,7 @@ public:
     TakenBlockTracker();
 
 public:
-    void block(block_index_t block) override;
+    void block(VisitInfo info) override;
     bool is_free(block_index_t block);
 
 };

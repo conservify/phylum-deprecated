@@ -26,13 +26,14 @@ public:
 
 };
 
-class SimpleFile : public File {
+class SimpleFile : public File, public BlockVisitor {
 private:
     ExtentBlockedFile blocked_;
     FileDescriptor *fd_{ nullptr };
     FileAllocation *file_{ nullptr };
     uint32_t previous_index_block_{ 0 };
     FileIndex index_;
+    uint32_t seeking_nblocks_{ BLOCK_INDEX_INVALID };
 
 public:
     SimpleFile() {
@@ -111,6 +112,8 @@ public:
     bool format();
 
     void close() override;
+
+    void block(VisitInfo info) override;
 
 };
 

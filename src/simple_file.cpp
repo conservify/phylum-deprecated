@@ -35,10 +35,14 @@ bool SimpleFile::seek(uint64_t desired) {
         return blocked_.seek({ file_->data.start, 0 }, 0, desired, nullptr);
     }
 
-    if (!blocked_.seek(end.address, end.position, desired, nullptr)) {
+    seeking_nblocks_ = 0;
+
+    if (!blocked_.seek(end.address, end.position, desired, this)) {
         phylog().errors() << "File seek failed: " << end.address << " pos=" << end.position << " desired=" << desired << endl;
         return false;
     }
+
+    seeking_nblocks_ = BLOCK_INDEX_INVALID;
 
     return true;
 }
@@ -144,6 +148,20 @@ uint64_t SimpleFile::maximum_size() const {
 
 FileIndex &SimpleFile::index() {
     return index_;
+}
+
+void SimpleFile::block(VisitInfo info) {
+    if (seeking_nblocks_ != BLOCK_INDEX_INVALID) {
+        seeking_nblocks_++;
+
+        if (seeking_nblocks_ % BlockedFile::IndexFrequency == 0) {
+            sdebug() << "Writing new index: " << info.block << endl;
+            auto address = BlockAddress{ info.block, 0 };
+            if (!index().append(info.position_in_file, address)) {
+                phylog().errors() << "Fixed index write failed!" << endl;
+            }
+        }
+    }
 }
 
 }

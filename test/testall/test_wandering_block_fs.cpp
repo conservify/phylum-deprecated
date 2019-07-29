@@ -120,7 +120,7 @@ TEST_F(WanderingBlockSuite, CreatingLargeFile) {
 struct CountingVisitor : BlockVisitor {
     uint32_t counter{ 0 };
 
-    void block(block_index_t block) override {
+    void block(VisitInfo info) override {
         counter++;
     }
 

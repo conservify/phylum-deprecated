@@ -142,7 +142,7 @@ BlockedFile::SeekInfo BlockedFile::seek(BlockAddress from, uint32_t position_at_
             }
 
             if (visitor != nullptr) {
-                visitor->block(this_block);
+                visitor->block(VisitInfo{ this_block, bytes + position_ });
             }
         }
         else {
@@ -466,8 +466,8 @@ bool BlockedFile::erase_all_blocks() {
         }
 
     public:
-        void block(block_index_t block) override {
-            file_->free(block);
+        void block(VisitInfo info) override {
+            file_->free(info.block);
         }
     };
 

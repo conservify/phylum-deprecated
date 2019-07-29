@@ -35,7 +35,8 @@ bool SuperBlockManager::walk(block_index_t desired, SuperBlockLink &link, Sector
 
     for (auto i = 0; i < chain_length() + 1; ++i) {
         if (visitor != nullptr) {
-            visitor->block(link.chained_block);
+            auto info = VisitInfo{ link.chained_block, 0 };
+            visitor->block(info);
         }
 
         if (!find_link(link.chained_block, link, where)) {

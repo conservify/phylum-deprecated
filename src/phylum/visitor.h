@@ -5,9 +5,14 @@
 
 namespace phylum {
 
+struct VisitInfo {
+    block_index_t block;
+    uint32_t position_in_file;
+};
+
 class BlockVisitor {
 public:
-    virtual void block(block_index_t index) = 0;
+    virtual void block(VisitInfo info) = 0;
 
 };
 

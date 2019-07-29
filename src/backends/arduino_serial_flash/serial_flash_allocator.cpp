@@ -261,7 +261,8 @@ TakenBlockTracker::TakenBlockTracker() {
     set_block_taken(map_, 2);
 }
 
-void TakenBlockTracker::block(block_index_t block) {
+void TakenBlockTracker::block(VisitInfo info) {
+    auto block = info.block;
     if (block < sizeof(map_) * 8) {
         set_block_taken(map_, block);
     }
