@@ -422,7 +422,7 @@ TEST_F(PreallocatedSuite, ResilienceIndexWriteFails) {
 
     // This is a little larger than 70 * 1024 because the file was truncated in
     // the middle of a pattern, so it's 64 bytes more.
-    ASSERT_EQ((uint32_t)(71648), file.size());
+    ASSERT_EQ((uint32_t)(79260), file.size());
 
     // This will yield an index record on the block after the one we failed to
     // write. Which, I don't think is a huge deal.
