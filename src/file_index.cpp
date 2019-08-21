@@ -2,6 +2,8 @@
 #include "phylum/layout.h"
 #include "phylum/caching_storage.h"
 
+using namespace alogging;
+
 namespace phylum {
 
 class ExtentAllocator : public BlockAllocator {

@@ -2,6 +2,8 @@
 
 #ifndef ARDUINO
 
+using namespace alogging;
+
 namespace phylum {
 
 uint8_t LinuxMemoryBackend::EraseByte = 0xff;

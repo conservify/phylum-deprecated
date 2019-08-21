@@ -7,6 +7,8 @@
 #include "arduino_serial_flash.h"
 #include "serial_flash_allocator.h"
 
+using namespace alogging;
+
 namespace phylum {
 
 static inline uint32_t get_sf_address(const Geometry &g, BlockAddress a) {

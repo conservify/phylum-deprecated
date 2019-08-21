@@ -2,6 +2,8 @@
 #include "phylum/private.h"
 #include "phylum/super_block_manager.h"
 
+using namespace alogging;
+
 namespace phylum {
 
 constexpr uint16_t SuperBlockStartSector = 0;

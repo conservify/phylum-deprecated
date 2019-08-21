@@ -4,6 +4,8 @@
 #include "phylum/simple_file.h"
 #include "size_calcs.h"
 
+using namespace alogging;
+
 namespace phylum {
 
 AllocatedBlock ExtentBlockedFile::allocate() {

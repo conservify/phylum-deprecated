@@ -8,6 +8,8 @@
 
 #include "arduino_sd.h"
 
+using namespace alogging;
+
 namespace phylum {
 
 static inline uint32_t get_sd_block(const Geometry &g, BlockAddress a) {

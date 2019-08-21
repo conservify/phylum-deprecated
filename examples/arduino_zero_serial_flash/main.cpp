@@ -6,6 +6,7 @@
 #include <backends/arduino_serial_flash/arduino_serial_flash.h>
 #include <backends/arduino_serial_flash/serial_flash_allocator.h>
 
+using namespace alogging;
 using namespace phylum;
 
 typedef struct board_configuration_t {

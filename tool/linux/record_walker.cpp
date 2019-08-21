@@ -15,6 +15,8 @@ using namespace google::protobuf;
 using namespace google::protobuf::io;
 using namespace google::protobuf::compiler;
 
+using namespace alogging;
+
 RecordWalker::RecordWalker(std::string proto_file, std::string message_name)
     : proto_file_(proto_file), message_name_(message_name) {
 }

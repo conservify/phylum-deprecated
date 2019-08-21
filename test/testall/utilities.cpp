@@ -5,6 +5,8 @@
 #include "phylum/backend_nodes.h"
 #include "phylum/layout.h"
 
+using namespace alogging;
+
 std::map<uint64_t, uint64_t> random_data() {
     std::map<uint64_t, uint64_t> data;
 

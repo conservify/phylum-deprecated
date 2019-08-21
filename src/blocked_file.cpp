@@ -4,6 +4,8 @@
 #include "phylum/blocked_file.h"
 #include "size_calcs.h"
 
+using namespace alogging;
+
 namespace phylum {
 
 bool AllocatedBlockedFile::preallocate(uint32_t expected_size) {

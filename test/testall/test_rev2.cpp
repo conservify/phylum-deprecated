@@ -8,6 +8,8 @@
 #include "utilities.h"
 #include "lorem.h"
 
+using namespace alogging;
+
 namespace phylum {
 
 using block_index_t = uint32_t;

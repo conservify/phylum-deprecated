@@ -8,6 +8,7 @@
 #include "utilities.h"
 #include "size_calcs.h"
 
+using namespace alogging;
 using namespace phylum;
 
 class PreallocatedSuite : public ::testing::Test {

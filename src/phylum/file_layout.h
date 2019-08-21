@@ -48,12 +48,12 @@ public:
         fds_ = fds;
 
         if (!allocate(fds)) {
-            phylog().errors() << "Format allocation failed" << endl;
+            phylog().errors() << "Format allocation failed" << alogging::endl;
             return false;
         }
 
         if (!table.erase()) {
-            phylog().errors() << "Format erase table failed" << endl;
+            phylog().errors() << "Format erase table failed" << alogging::endl;
             return false;
         }
 
@@ -63,7 +63,7 @@ public:
             memcpy(&entry.fd, fds_[i], sizeof(FileDescriptor));
             memcpy(&entry.alloc, &allocations_[i], sizeof(FileAllocation));
             if (!table.write(entry)) {
-                phylog().errors() << "Format file write table failed: " << fds_[i]->name << endl;
+                phylog().errors() << "Format file write table failed: " << fds_[i]->name << alogging::endl;
                 return false;
             }
 
@@ -75,7 +75,7 @@ public:
                 OpenMode::Write
             };
             if (!file.format()) {
-                phylog().errors() << "Format file failed: " << fds_[i]->name << endl;
+                phylog().errors() << "Format file failed: " << fds_[i]->name << alogging::endl;
                 return false;
             }
         }
@@ -92,17 +92,17 @@ public:
             FileTableEntry entry;
 
             if (!table.read(entry)) {
-                phylog().errors() << "Mounting error, table read failed: " << fds_[i]->name << endl;
+                phylog().errors() << "Mounting error, table read failed: " << fds_[i]->name << alogging::endl;
                 return false;
             }
 
             if (!entry.magic.valid()) {
-                phylog().errors() << "Mounting error, table entry invalid: " << fds_[i]->name << endl;
+                phylog().errors() << "Mounting error, table entry invalid: " << fds_[i]->name << alogging::endl;
                 return false;
             }
 
             if (!entry.fd.compatible(fds[i])) {
-                phylog().errors() << "Mounting error, table entry incompatible: " << fds_[i]->name << endl;
+                phylog().errors() << "Mounting error, table entry incompatible: " << fds_[i]->name << alogging::endl;
                 return false;
             }
 
@@ -138,7 +138,7 @@ public:
             if (fds_[i] == &fd) {
                 auto file = SimpleFile{ storage_, fds_[i], &allocations_[i], (uint32_t)i, mode };
                 if (!file.initialize()) {
-                    phylog().errors() << "Error initializing file: " << fds_[i]->name << endl;
+                    phylog().errors() << "Error initializing file: " << fds_[i]->name << alogging::endl;
                     return SimpleFile{ };
                 }
                 return file;
@@ -163,7 +163,7 @@ private:
 
         for (size_t i = 0; i < SIZE; ++i) {
             if (!allocator.allocate((uint8_t)i, fds[i], allocations_[i])) {
-                phylog().errors() << "Allocation failed: " << fds[i]->name << endl;
+                phylog().errors() << "Allocation failed: " << fds[i]->name << alogging::endl;
                 return false;
             }
         }

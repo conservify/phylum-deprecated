@@ -212,7 +212,7 @@ inline static int32_t undo_everything_after(LinuxMemoryBackend &storage, Predica
         }
         if (seen && l.can_undo()) {
             if (log) {
-                sdebug() << "Undo: " << l << endl;
+                sdebug() << "Undo: " << l << alogging::endl;
             }
             l.undo();
             c++;

@@ -1,5 +1,7 @@
 #include "phylum/unused_block_reclaimer.h"
 
+using namespace alogging;
+
 namespace phylum {
 
 bool UnusedBlockReclaimer::walk(BlockAddress address) {

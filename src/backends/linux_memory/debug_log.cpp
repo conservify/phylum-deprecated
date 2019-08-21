@@ -2,6 +2,8 @@
 
 #ifndef ARDUINO
 
+using namespace alogging;
+
 namespace phylum {
 
 void LogEntry::backup() {

@@ -1,5 +1,7 @@
 #include "serial_flash_allocator.h"
 
+using namespace alogging;
+
 namespace phylum {
 
 SerialFlashAllocator::SerialFlashAllocator(StorageBackend &storage) : storage_(&storage) {

@@ -4,6 +4,8 @@
 #include "phylum/file_preallocator.h"
 #include "size_calcs.h"
 
+using namespace alogging;
+
 namespace phylum {
 
 bool FilePreallocator::allocate(uint8_t id, FileDescriptor *fd, FileAllocation &file) {

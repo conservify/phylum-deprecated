@@ -25,6 +25,7 @@ constexpr const char LogName[] = "Read";
 
 using Log = SimpleLog<LogName>;
 
+using namespace alogging;
 using namespace phylum;
 
 uint64_t get_file_size(const char* filename) {

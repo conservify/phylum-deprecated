@@ -3,6 +3,7 @@
 #include <phylum/phylum.h>
 #include <backends/arduino_sd/arduino_sd.h>
 
+using namespace alogging;
 using namespace phylum;
 
 constexpr const char LogName[] = "Read";
