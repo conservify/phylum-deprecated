@@ -43,8 +43,10 @@ struct Args {
     fs::path directory;
     fs::path pb_file;
     fs::path pb_message;
+    std::string file{ "" };
     bool log{ false };
     bool walk{ false };
+    bool unmarshal{ false };
 
     bool parse(int32_t argc, const char **argv) {
         std::error_code ec;
@@ -75,12 +77,20 @@ struct Args {
                     directory = arg;
                 }
 
+                if (arg == "--file") {
+                    file = argv[++i];
+                }
+
                 if (arg == "--walk") {
                     walk = true;
                 }
 
                 if (arg == "--log") {
                     log = true;
+                }
+
+                if (arg == "--unmarshal") {
+                    unmarshal = true;
                 }
 
                 if (arg == "--proto") {
@@ -106,6 +116,10 @@ struct Args {
 
     void help() {
         std::cerr << "Usage: " << "tool" << "[--log] <DIRECTORY> <IMAGE> --proto <PROTO-FILE> <MESSAGE-TYPE>" << std::endl;
+    }
+
+    bool for_file(std::string name) {
+        return file == "" || file == name;
     }
 
 private:
@@ -173,60 +187,74 @@ int32_t main(int32_t argc, const char **argv) {
     }
 
     for (auto fd : descriptors) {
-        auto opened = fs.open(*fd);
-        if (opened) {
-            Log::info("File: %s size = %d", fd->name, (uint32_t)opened.size());
+        std::string name = fd->name;
+        if (args.for_file(name)) {
+            auto opened = fs.open(*fd);
+            if (opened) {
+                Log::info("File: %s size = %d", fd->name, (uint32_t)opened.size());
 
-            if (!opened.seek(0)) {
-                Log::error("Error seeking to beginning of file!");
-                return 2;
-            }
-
-            if (args.has_pb()) {
-                NoopVisitor noop_visitor;
-                LoggingVisitor logging_visitor;
-                RecordVisitor *visitor = &noop_visitor;
-                RecordWalker walker(args.pb_file, args.pb_message);
-                PhylumInputStream stream{ geometry, reinterpret_cast<uint8_t*>(ptr), opened.head().block };
-
-                if (args.log) {
-                    visitor = &logging_visitor;
-                }
-
-                if (!walker.walk(stream, *visitor)) {
-                    return false;
-                }
-
-                if (stream.position() > 0) {
-                    sdebug() << "Done: " << stream.position() << endl;
-                }
-            }
-
-            if (!args.directory.empty() && opened.size() > 0) {
-                auto path = args.directory / fs::path{ fd->name };
-                auto total = 0;
-
-                auto fp = fopen(path.c_str(), "wb");
-                if (fp == nullptr) {
+                if (!opened.seek(0)) {
+                    Log::error("Error seeking to beginning of file!");
                     return 2;
                 }
 
-                while (true) {
-                    uint8_t buffer[512];
+                if (args.has_pb()) {
+                    NoopVisitor noop_visitor;
+                    PrintDetailsVisitor logging_visitor;
+                    LogsVisitor logs_visitor;
+                    DataVisitor data_visitor;
+                    RecordVisitor *visitor = &noop_visitor;
+                    RecordWalker walker(args.pb_file, args.pb_message);
+                    PhylumInputStream stream{ geometry, reinterpret_cast<uint8_t*>(ptr), opened.head().block };
 
-                    auto read = opened.read(buffer, sizeof(buffer));
-                    if (read == 0) {
-                        break;
+                    if (args.log) {
+                        visitor = &logging_visitor;
                     }
 
-                    total += read;
+                    if (args.unmarshal) {
+                        if (name == "data.fk") {
+                            visitor = &data_visitor;
+                        }
+                        if (name == "logs-a.fklog" || name == "logs-b.fklog") {
+                            visitor = &logs_visitor;
+                        }
+                    }
 
-                    assert(fwrite(buffer, 1, read, fp) == (size_t)read);
+                    if (!walker.walk(stream, *visitor)) {
+                        return false;
+                    }
+
+                    if (stream.position() > 0) {
+                        sdebug() << "Done: " << stream.position() << endl;
+                    }
                 }
 
-                Log::info("Done writing %d bytes to %s", total, path.c_str());
+                if (!args.directory.empty() && opened.size() > 0) {
+                    auto path = args.directory / fs::path{ fd->name };
+                    auto total = 0;
 
-                fclose(fp);
+                    auto fp = fopen(path.c_str(), "wb");
+                    if (fp == nullptr) {
+                        return 2;
+                    }
+
+                    while (true) {
+                        uint8_t buffer[512];
+
+                        auto read = opened.read(buffer, sizeof(buffer));
+                        if (read == 0) {
+                            break;
+                        }
+
+                        total += read;
+
+                        assert(fwrite(buffer, 1, read, fp) == (size_t)read);
+                    }
+
+                    Log::info("Done writing %d bytes to %s", total, path.c_str());
+
+                    fclose(fp);
+                }
             }
         }
     }
@@ -322,4 +350,3 @@ int32_t main(int32_t argc, const char **argv) {
 
     return 0;
 }
-

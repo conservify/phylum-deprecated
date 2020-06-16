@@ -21,9 +21,32 @@ public:
 
 };
 
-class LoggingVisitor : public RecordVisitor {
+class PrintDetailsVisitor : public RecordVisitor {
 public:
     void message(PhylumInputStream &stream, google::protobuf::Message *message, size_t serialized_size) override;
+
+};
+
+class LogsVisitor : public RecordVisitor {
+public:
+    void message(PhylumInputStream &stream, google::protobuf::Message *message, size_t serialized_size) override;
+
+};
+
+class DataVisitor : public RecordVisitor {
+private:
+    bool header_{ false };
+    std::vector<std::string> sensor_names_;
+    std::vector<float> sensor_values_;
+    int64_t time_;
+    int32_t reading_;
+
+public:
+    void message(PhylumInputStream &stream, google::protobuf::Message *message, size_t serialized_size) override;
+
+private:
+    void dump_header();
+    void dump_readings();
 
 };
 
@@ -71,7 +94,7 @@ public:
     RecordWalker(std::string proto_file, std::string message_name);
 
 public:
-    bool walk(PhylumInputStream &stream, RecordVisitor &visitor);
+    bool walk(PhylumInputStream &stream, RecordVisitor &visitor, bool verbose = false);
     Read read(google::protobuf::io::ZeroCopyInputStream *ri, google::protobuf::MessageLite *message);
     uint32_t single(uint8_t *ptr);
 

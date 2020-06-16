@@ -6,3 +6,4 @@ GRTAGS
 GSYMS
 GTAGS
 dependencies.cmake
+.ccls-cache
